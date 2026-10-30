@@ -1,3 +1,4 @@
+
 name: Build Android APK
 
 on:
@@ -8,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -34,16 +36,13 @@ jobs:
           cp node_modules/html2canvas/dist/html2canvas.min.js www/lib/
           cp node_modules/jspdf/dist/jspdf.umd.min.js www/lib/
 
-            - name: Add Android platform
+      - name: Add Android platform
         run: |
           rm -rf android
           npx cap add android
+          sed -i 's/minSdkVersion = 22/minSdkVersion = 23/g' android/variables.gradle
           sed -i 's/minSdkVersion 22/minSdkVersion 23/g' android/variables.gradle
-          sed -i 's/minSdk = 22/minSdk = 23/g' android/variables.gradle
-          cat android/variables.gradle
-        
-          
-          
+          grep -n 'minSdk' android/variables.gradle
 
       - name: Allow fingerprint permission
         run: |
@@ -70,3 +69,4 @@ jobs:
         with:
           name: factori-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          
