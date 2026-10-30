@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>پنل لایسنس فاکتوری</title>
+<style>
+body{margin:0;background:#101827;color:#fff;font:15px Tahoma;padding:20px}
+.card{background:#1b293d;padding:18px;border-radius:14px;margin:15px auto;max-width:650px}
+input{width:95%;padding:13px;border-radius:9px;background:#101827;color:white;border:1px solid #49617f}
+button{padding:12px 18px;border:0;border-radius:9px;background:#397ee8;color:white;margin:8px}
+.code{direction:ltr;text-align:center;font-size:20px;padding:15px;background:#101827}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>🔐 مدیریت لایسنس فاکتوری</h2>
+<input id="password" type="password" placeholder="رمز مدیر">
+<button onclick="login()">ورود</button>
+<p id="message"></p>
+</div>
+<div id="panel" hidden>
+<div class="card">
+<h3>صدور لایسنس جدید</h3>
+<button onclick="createLicense()">تولید کد</button>
+<div id="newCode"></div>
+</div>
+<div class="card">
+<h3>فهرست لایسنس‌ها</h3>
+<button onclick="loadLicenses()">بروزرسانی</button>
+<div id="licenses"></div>
+</div>
+</div>
+<script>
+const API="https://rtlwztotaolbnjdtsjqy.supabase.co/functions/v1/admin-license-manager";
+let password="";
+async function request(action,extra={}){
+ const r=await fetch(API,{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({action,password,...extra})
+ });
+ const d=await r.json();
+ if(!r.ok||!d.ok)throw Error(d.error||"خطا");
+ return d;
+}
+async function login(){
+ password=document.getElementById("password").value;
+ try{
+  await request("list");
+  document.getElementById("panel").hidden=false;
+  document.getElementById("message").textContent="ورود موفق";
+  loadLicenses();
+ }catch(e){
+  document.getElementById("message").textContent=e.message;
+ }
+}
+async function createLicense(){
+ try{
+  const d=await request("create");
+  document.getElementById("newCode").innerHTML=
+   '<div class="code" id="code">'+d.code+'</div>'+
+   '<button onclick="copyCode()">کپی کد</button>';
+  loadLicenses();
+ }catch(e){alert(e.message)}
+}
+function copyCode(){
+ navigator.clipboard.writeText(document.getElementById("code").textContent);
+}
+async function loadLicenses(){
+ try{
+  const d=await request("list");
+  document.getElementById("licenses").innerHTML=
+   d.licenses.map(x=>'<div class="card">'+
+   '<b>'+x.status+'</b><br>'+
+   new Date(x.created_at).toLocaleString("fa-IR")+
+   '</div>').join("");
+ }catch(e){alert(e.message)}
+}
+</script>
+</body>
+</html>
