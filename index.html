@@ -66,10 +66,6 @@ nav{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));pad
 .av{width:42px;height:42px;border-radius:14px;background:var(--gr);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}
 .li{padding:12px 0}
 .jd{display:grid;grid-template-columns:1.1fr 1.5fr 1fr;gap:6px}.jd select{padding:10px 6px}
-.sw{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap}.sw button{width:38px;height:38px;border-radius:50%;border:3px solid var(--card);box-shadow:0 0 0 1px var(--bd)}.sw .on{box-shadow:0 0 0 3px var(--pr)}
-.pp{border-color:var(--ac)}.pp .ph{border-bottom-color:var(--ac)}.pp .pb2>div,.pp .tt2,.pp .sg>div{border-color:var(--ac)}.pp th{background:var(--ac)}.pp td,.pp th{border-color:var(--ac)}.pp .tt2 .gt{background:var(--al)}
-.pp.t2{border:0;border-radius:16px;overflow:hidden}.pp.t2 .ph{background:var(--ac);color:#fff;margin:-16px -16px 12px;padding:16px;border:0}.pp.t2 .pb2>div{border:0;border-radius:10px;background:var(--as)}.pp.t2 td,.pp.t2 th{border:0}.pp.t2 tr:nth-child(even) td{background:#f1f5f9}.pp.t2 .tt2{border:0;border-radius:10px;overflow:hidden;background:#f1f5f9}.pp.t2 .sg>div{border:1px dashed var(--ac);border-radius:10px}
-.pp.t3{border:0;border-top:6px solid var(--ac);box-shadow:0 0 0 1px #e2e8f0}.pp.t3 .ph{border-bottom:1px solid #cbd5e1}.pp.t3 h3{color:var(--ac)}.pp.t3 .pb2>div{border:0;border-bottom:1px solid #e2e8f0}.pp.t3 th{background:none;color:var(--ac);border:0;border-bottom:2px solid var(--ac)}.pp.t3 td{border:0;border-bottom:1px solid #e2e8f0}.pp.t3 .tt2{border:0}.pp.t3 .tt2 .gt{background:none;color:var(--ac);font-size:15px}.pp.t3 .sg>div{border:0;border-top:1px solid #94a3b8}
 </style>
 </head>
 <body>
@@ -112,7 +108,6 @@ MN=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شه
 function jpick(k){if(!D[k])D[k]=today();const[y,m,d]=g2j(...D[k].split('-').map(Number)),cy=g2j(...today().split('-').map(Number))[0],ys=[];for(let i=Math.min(cy,y)-4;i<=Math.max(cy,y)+4;i++)ys.push(i);
  const o=(a,l,c)=>a.map(x=>`<option value="${x}" ${x==c?'selected':''}>${l(x)}</option>`).join(''),r=(n)=>Array.from({length:n},(_,i)=>i+1);
  return `<div class="jd"><select data-j="${k}">${o(ys,x=>x.toLocaleString('fa-IR',{useGrouping:false}),y)}</select><select data-j="${k}">${o(r(12),x=>MN[x-1],m)}</select><select data-j="${k}">${o(r(31),x=>fa(x),d)}</select></div>`}
-const COLS=['#1e293b','#0f766e','#4338ca','#b91c1c','#c2410c','#7c3aed'],mix=(h,a)=>'#'+[1,3,5].map(i=>Math.round(255-(255-parseInt(h.substr(i,2),16))*a).toString(16).padStart(2,'0')).join('');
 /* ---- lists ---- */
 const invRows=l=>l.length?l.map(i=>`<div class="li"><div><b>#${fa(i.no)}</b> ${esc(C(i.cid).n)}<br><small>${dstr(i.dt)} · ${money(tot(i))}</small></div><div class="ac"><button data-a="vinv" data-id="${i.id}">مشاهده</button><button data-a="einv" data-id="${i.id}">ویرایش</button><button class="dg" data-a="dinv" data-id="${i.id}">حذف</button></div></div>`).join(''):'<p class="em">فاکتوری نیست.</p>',
 payRows=l=>l.length?l.slice().reverse().map(p=>`<div class="li"><div><b>${money(p.amt)}</b> ${esc(C(p.cid).n)}<br><small>${dstr(p.dt)} · ${p.kind=='cheque'?`چک ${esc(p.no)} · صیاد ${esc(p.sayad)} · سررسید ${dstr(p.cdt)}`:'نقدی'}</small></div><div class="ac"><button class="dg" data-a="dpay" data-id="${p.id}">حذف</button></div></div>`).join(''):'<p class="em">پرداختی ثبت نشده.</p>';
@@ -134,9 +129,8 @@ pay:()=>`<h1>پرداخت‌ها</h1><button class="b w100" style="margin:0 0 10
 payf:()=>`<h1>ثبت پرداخت</h1><div class="c"><div><label>مشتری</label>${sel('cid',db.cust,D.cid,'انتخاب مشتری…')}</div><div><label>نوع پرداخت</label><select data-f="kind"><option value="cash" ${D.kind=='cash'?'selected':''}>نقدی</option><option value="cheque" ${D.kind=='cheque'?'selected':''}>چک</option></select></div>${f('مبلغ','amt',D.amt,'inputmode=numeric')}<div><label>تاریخ پرداخت</label>${jpick('dt')}</div>${D.kind=='cheque'?`<div class="chq"><b>اطلاعات چک</b>${f('شماره چک','no',D.no)}${f('شناسه صیاد','sayad',D.sayad,'inputmode=numeric')}<div><label>تاریخ سررسید</label>${jpick('cdt')}</div>${f('بانک (اختیاری)','bank',D.bank)}</div>`:''}</div><div class="r"><button class="b" data-a="spay">ثبت (کسر از حساب مشتری)</button><button class="b s" data-a="back">انصراف</button></div>`,
 set:()=>{const im=(k,l)=>`<div><label>${l}</label><input type="file" accept="image/*" data-img="${k}" style="padding:6px;font-size:12px"><button class="lnk" data-a="sketch" data-id="${k}">${k=='sm'?'یا امضا را بکش':'یا لوگو را بکش'}</button>${k=='lg'?`<button class="lnk" data-a="tlogo">ساخت لوگو از نام</button>`:''}${db[k]?`<img class="th" src="${db[k]}"><button class="x" data-a="rm" data-id="${k}">×</button>`:''}</div>`;
  return `<h1>تنظیمات</h1><div class="c"><h2>مشخصات فروشنده</h2><div class="g"><div><label>نام فروشگاه</label><input data-d="sn" value="${esc(db.sn)}"></div><div><label>تلفن</label><input data-d="sp" value="${esc(db.sp)}"></div></div><div><label>آدرس</label><input data-d="ad" value="${esc(db.ad)}"></div><div><label>واحد پول</label><select data-d="cu"><option ${db.cu=='ریال'?'selected':''}>ریال</option><option ${db.cu=='تومان'?'selected':''}>تومان</option></select></div><div class="g">${im('lg','انتخاب لوگو')}${im('sm','انتخاب مهر / امضا')}</div></div>
-<div class="c"><h2>سبک فاکتور</h2><div class="r" style="margin:0">${[['1','رسمی'],['2','مدرن'],['3','مینیمال']].map(([k,l])=>`<button class="b ${(db.tpl||'1')==k?'':'s'}" data-a="tpl" data-id="${k}">${l}</button>`).join('')}</div><label style="margin-top:12px">رنگ فاکتور</label><div class="sw">${COLS.map(c=>`<button data-a="col" data-id="${c}" class="${(db.col||COLS[0])==c?'on':''}" style="background:${c}"></button>`).join('')}</div><button class="b s w100" data-a="prev">پیش‌نمایش نمونه</button></div>
 <div class="c"><h2>امنیت</h2><button class="b s w100" style="margin:0" data-a="bio">${db.bio?'غیرفعال‌سازی اثر انگشت':'فعال‌سازی اثر انگشت'}</button><div><label>رمز جدید</label><input id="np" type="password"></div><button class="b s w100" data-a="chpw">تغییر رمز</button></div>
-<div class="c"><h2>پشتیبان‌گیری</h2><div class="r" style="margin:0"><button class="b s" data-a="bkf">ذخیره فایل پشتیبان</button><button class="b s" data-a="rsf">بازیابی از فایل</button></div><textarea id="bx" hidden rows="3" placeholder="برای بازیابی، متن پشتیبان را بچسبان (جایگزین اطلاعات فعلی می‌شود)" style="margin-top:8px"></textarea></div><button class="b dg w100" data-a="out">خروج</button>`}
+<div class="c"><h2>پشتیبان‌گیری</h2><div class="r" style="margin:0"><button class="b s" data-a="bk">کپی پشتیبان</button><button class="b s" data-a="rs">بازیابی</button></div><textarea id="bx" rows="3" placeholder="برای بازیابی، متن پشتیبان را بچسبان (جایگزین اطلاعات فعلی می‌شود)" style="margin-top:8px"></textarea></div><button class="b dg w100" data-a="out">خروج</button>`}
 };
 VIEWS.home=()=>{const s=sum(db.inv.map(tot)),r=sum(db.pay.map(p=>p.amt)),pf=sum(db.inv.map(profit)),h=new Date().getHours(),
  st=(i,a,b,c)=>`<div class="st ${c||''}"><i>${i}</i><div><small>${a}</small><b>${b}</b></div></div>`;
@@ -148,7 +142,7 @@ function lockV(){const lg='<div class="logo">🧾</div>';
  return `<div class="au">${lg}<h1>ورود</h1><input id="p1" type="password" placeholder="رمز"><button class="b w100" data-a="login">ورود</button>${db.bio?'<button class="b s w100" data-a="biolog">ورود با اثر انگشت</button>':''}</div>`}
 const LG='<svg viewBox="240 170 640 700"><path d="M312 190H612L762 340V760a50 50 0 0 1-50 50H312a50 50 0 0 1-50-50V240a50 50 0 0 1 50-50Z" fill="#fff"/><path d="M612 190L762 340H612Z" fill="#cbd5e1"/><rect x="322" y="400" width="300" height="36" rx="18" fill="#0f766e"/><rect x="322" y="480" width="340" height="36" rx="18" fill="#cbd5e1"/><rect x="322" y="560" width="260" height="36" rx="18" fill="#cbd5e1"/><rect x="322" y="650" width="180" height="44" rx="20" fill="#4338ca"/><circle cx="700" cy="740" r="142" fill="#fff"/><circle cx="700" cy="740" r="120" fill="#10b981"/><path d="M640 745L683 790L765 690" fill="none" stroke="#fff" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function lockV2(){const ft=(i,a,b)=>`<div class="ft"><i>${i}</i><div><b>${a}</b><small>${b}</small></div></div>`;
- if(lk=='sp')return `<div class="au"><div class="logo">${LG}</div><h1>فاکتوری</h1><p>مدیریت فروش، مشتری و انبار؛ ساده و حرفه‌ای</p>${ft('🧾','فاکتور رسمی','خروجی PDF و تصویر با مهر و امضا')}${ft('👥','حساب مشتری‌ها','پرداخت نقدی و چک، صورتحساب کلی')}${ft('📊','انبار و سود و زیان','گزارش لحظه‌ای فروش و دریافتی')}<button class="b" data-a="start">شروع</button><div class="v">نسخه ۱٫۲</div></div>`;
+ if(lk=='sp')return `<div class="au"><div class="logo">${LG}</div><h1>فاکتوری</h1><p>مدیریت فروش، مشتری و انبار؛ ساده و حرفه‌ای</p>${ft('🧾','فاکتور رسمی','خروجی PDF و تصویر با مهر و امضا')}${ft('👥','حساب مشتری‌ها','پرداخت نقدی و چک، صورتحساب کلی')}${ft('📊','انبار و سود و زیان','گزارش لحظه‌ای فروش و دریافتی')}<button class="b" data-a="start">شروع</button><div class="v">نسخه ۱٫۰</div></div>`;
  if(lk=='set')return `<div class="au"><div class="logo">${LG}</div><h1>رمز ورود</h1><p>یک رمز برای محافظت از اطلاعاتت انتخاب کن</p><input id="p1" type="password" placeholder="رمز (حداقل ۴ کاراکتر)"><input id="p2" type="password" placeholder="تکرار رمز"><button class="b" data-a="setpw">ثبت رمز و ورود</button></div>`;
  return `<div class="au"><div class="logo">${LG}</div><h1>خوش آمدی</h1><p>${esc(db.sn||'برای ادامه رمز را وارد کن')}</p><input id="p1" type="password" placeholder="رمز"><button class="b" data-a="login">ورود</button>${db.bio?'<button class="b s" data-a="biolog">ورود با اثر انگشت</button>':''}</div>`}
 function render(){const a=$('app');if(lock){a.innerHTML=lockV2();return}
@@ -163,7 +157,7 @@ function paper(i){const c=C(i.cid),u=db.cu;
 function stmt(id){const c=C(id);let r=0;
  const L=[...db.inv.filter(i=>i.cid==id).map(i=>({d:i.dt,t:'فاکتور '+fa(i.no),a:tot(i),b:0})),...db.pay.filter(p=>p.cid==id).map(p=>({d:p.dt,t:p.kind=='cheque'?'دریافت چک '+p.no:'دریافت نقدی',a:0,b:num(p.amt)}))].sort((x,y)=>x.d>y.d?1:-1);
  return `<div class="ph"><div>${db.lg?`<img src="${db.lg}">`:''}</div><h3>صورتحساب کلی</h3><div class="rt">تاریخ: ${dstr(today())}</div></div><div class="pb2"><div><b>فروشنده</b><br>${esc(db.sn||'—')}<br>${ln('تلفن: ',db.sp)}</div><div><b>مشتری</b><br>${esc(c.n)}<br>${ln('تلفن: ',c.ph)}</div></div><table><tr><th>تاریخ</th><th>شرح</th><th>بدهکار</th><th>بستانکار</th><th>مانده</th></tr>${L.map(x=>{r+=x.a-x.b;return `<tr><td>${dstr(x.d)}</td><td class="l">${x.t}</td><td>${x.a?fa(x.a):'—'}</td><td>${x.b?fa(x.b):'—'}</td><td>${fa(r)}</td></tr>`}).join('')}</table><div class="tt2"><div class="gt"><span>مانده نهایی</span><span>${money(r)}</span></div></div><div class="sg"><div>مهر و امضای فروشنده${db.sm?`<img src="${db.sm}">`:''}</div><div>امضای مشتری</div></div>`}
-function ov(h){$('ov').innerHTML=`<div class="bar"><button class="b s" style="background:var(--card)" data-a="cls">بستن</button><button class="b" data-a="pdf">PDF</button><button class="b" data-a="png">تصویر</button></div><div class="pp t${db.tpl||1}" id="paper" style="--ac:${db.col||COLS[0]};--al:${mix(db.col||COLS[0],.15)};--as:${mix(db.col||COLS[0],.09)}">${h}</div>`;$('ov').className='on';$('ov').scrollTop=0}
+function ov(h){$('ov').innerHTML=`<div class="bar"><button class="b s" style="background:var(--card)" data-a="cls">بستن</button><button class="b" data-a="pdf">PDF</button><button class="b" data-a="png">تصویر</button></div><div class="pp" id="paper">${h}</div>`;$('ov').className='on';$('ov').scrollTop=0}
 async function exp(k){$('ov').scrollTop=0;toast('در حال ساخت…');
  try{const c=await html2canvas($('paper'),{scale:2,backgroundColor:'#fff'});let bl,nm='invoice';
   if(k=='png'){bl=await new Promise(r=>c.toBlob(r,'image/png'));nm+='.png'}
@@ -172,22 +166,18 @@ async function exp(k){$('ov').scrollTop=0;toast('در حال ساخت…');
   const fl=new File([bl],nm,{type:bl.type});
   try{if(navigator.canShare&&navigator.canShare({files:[fl]})){await navigator.share({files:[fl]});return}}catch(e){if(e.name=='AbortError')return}
   const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=nm;document.body.appendChild(a);a.click();a.remove();toast('اگر ذخیره نشد، صفحه را در Chrome باز کن')
- }catch(e){toast('ساخت خروجی ناموفق بود: '+(e&&e.message||e))}}
+ }catch(e){toast('ساخت خروجی ناموفق بود (اینترنت؟)')}}
 
 /* ---- fingerprint (WebAuthn) ---- */
 async function bioOn(){try{const cr=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'فاکتوری'},user:{id:crypto.getRandomValues(new Uint8Array(16)),name:'user',displayName:'کاربر'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required'},timeout:60000}});db.bio=btoa(String.fromCharCode(...new Uint8Array(cr.rawId)));save();return true}catch(e){return false}}
 async function bioLogin(){try{await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:Uint8Array.from(atob(db.bio),c=>c.charCodeAt(0))}],userVerification:'required',timeout:60000}});return true}catch(e){return false}}
-const BA=()=>{const c=window.Capacitor;return c&&c.isNativePlatform&&c.isNativePlatform()&&c.Plugins.NativeBiometric};
-const bioAsk=()=>BA().verifyIdentity({reason:'تأیید هویت',title:'فاکتوری',subtitle:'اثر انگشت خود را تأیید کنید',useFallback:false,maxAttempts:3});
-async function bioOn(){const B=BA();if(!B)return false;try{const i=await B.isAvailable();if(!i.isAvailable){toast('اثر انگشتی روی گوشی ثبت نشده است');return false}await bioAsk();db.bio='native';save();return true}catch(e){return false}}
-async function bioLogin(){if(!BA())return false;try{await bioAsk();return true}catch(e){return false}}
 function img(t,k){const fl=t.files[0];if(!fl)return;const r=new FileReader();r.onerror=()=>toast('خواندن فایل ممکن نشد');r.onload=()=>{const im=new Image();im.onerror=()=>toast('تصویر معتبر نیست');im.onload=()=>{const m=k=='lg'?240:320,s=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);db[k]=c.toDataURL('image/png');save();render();toast('ثبت شد')};im.src=r.result};r.readAsDataURL(fl)}
 const nd=x=>({no:String(db.seq+1),dt:today(),cid:'',items:[{pid:'',q:'1',p:''}],ds:'',tx:'',...x});
 
 /* ---- actions ---- */
 const A={
 tab:id=>go(id),
-start:()=>{lk=db.pw?'in':'set';render();if(lk=='in'&&db.bio)A.biolog()},
+start:()=>{lk=db.pw?'in':'set';render()},
 setpw:async()=>{const p=$('p1').value;if(p.length<4)return toast('حداقل ۴ کاراکتر');if(p!==$('p2').value)return toast('رمزها یکسان نیست');db.pw=await H(p);save();lock=false;go('home')},
 login:async()=>{if(await H($('p1').value)===db.pw){lock=false;go('home')}else toast('رمز اشتباه است')},
 biolog:async()=>{if(await bioLogin()){lock=false;go('home')}else toast('تأیید اثر انگشت ناموفق بود')},
@@ -225,12 +215,6 @@ sketch:k=>{$('ov').innerHTML=`<div class="bar"><button class="b s" style="backgr
  c.onpointerdown=e=>{d=1;x.beginPath();x.moveTo(...p(e));c.setPointerCapture(e.pointerId)};c.onpointermove=e=>{if(d){x.lineTo(...p(e));x.stroke()}};c.onpointerup=()=>d=0},
 clr:()=>{const c=$('cv');c.getContext('2d').clearRect(0,0,c.width,c.height)},
 ok:k=>{db[k]=$('cv').toDataURL('image/png');save();$('ov').className='';render();toast('ثبت شد')},
-bkf:async()=>{const d=JSON.stringify(db),nm='factori-backup-'+today()+'.json',cp=window.Capacitor;
- try{if(cp&&cp.isNativePlatform&&cp.isNativePlatform()){const P=cp.Plugins,w=await P.Filesystem.writeFile({path:nm,data:btoa(unescape(encodeURIComponent(d))),directory:'CACHE'});await P.Share.share({title:nm,url:w.uri});return}
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d],{type:'application/json'}));a.download=nm;document.body.appendChild(a);a.click();a.remove();toast('فایل پشتیبان ساخته شد')}catch(e){toast('ساخت فایل ناموفق بود')}},
-rsf:()=>{const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.inv))throw 0;db=Object.assign({cust:[],prod:[],inv:[],pay:[],seq:1000},d);save();render();toast('بازیابی شد')}catch(e){toast('فایل پشتیبان معتبر نیست')}};r.readAsText(f)};i.click()},
-tpl:id=>{db.tpl=id;save();render()},col:id=>{db.col=id;save();render()},
-prev:()=>ov(paper(db.inv[db.inv.length-1]||{id:'x',no:1001,dt:today(),cid:'',items:[{n:'کالای نمونه',q:2,p:150000,b:0},{n:'خدمات نمونه',q:1,p:480000,b:0}],ds:0,tx:9})),
 out:()=>{lock=true;lk='in';render()}
 };
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
