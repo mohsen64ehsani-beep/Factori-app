@@ -34,10 +34,16 @@ jobs:
           cp node_modules/html2canvas/dist/html2canvas.min.js www/lib/
           cp node_modules/jspdf/dist/jspdf.umd.min.js www/lib/
 
-      - name: Add Android platform
+            - name: Add Android platform
         run: |
           rm -rf android
           npx cap add android
+          sed -i 's/minSdkVersion 22/minSdkVersion 23/g' android/variables.gradle
+          sed -i 's/minSdk = 22/minSdk = 23/g' android/variables.gradle
+          cat android/variables.gradle
+        
+          
+          
 
       - name: Allow fingerprint permission
         run: |
