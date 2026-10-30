@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, license-integration]
   workflow_dispatch:
 
 jobs:
@@ -10,12 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Arrange project files
-        run: |
-          mkdir -p www/lib assets
-          mv -f index.html www/index.html
-          mv -f icon-only.png icon-foreground.png icon-background.png splash.png assets/
 
       - uses: actions/setup-node@v4
         with:
@@ -26,29 +20,36 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Arrange project files
+        run: |
+          mkdir -p www/lib assets
+          mv -f index.html www/index.html
+          mv -f icon-only.png icon-foreground.png icon-background.png splash.png assets/
+
       - name: Install dependencies
         run: npm install
 
-      - name: Copy offline libraries (PDF and image export)
+      - name: Copy offline libraries
         run: |
           cp node_modules/html2canvas/dist/html2canvas.min.js www/lib/
           cp node_modules/jspdf/dist/jspdf.umd.min.js www/lib/
 
       - name: Add Android platform
-        run: npx cap add android
+        run: |
+          rm -rf android
+          npx cap add android
 
       - name: Allow fingerprint permission
         run: |
           sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_BIOMETRIC" />\n</manifest>#' android/app/src/main/AndroidManifest.xml
-          grep -n BIOMETRIC android/app/src/main/AndroidManifest.xml
 
       - name: Generate app icons and splash
         run: npx capacitor-assets generate --android
 
-      - name: Sync web files
+      - name: Sync web files and plugins
         run: npx cap sync android
 
-      - name: Use fixed signing key (so updates install over old versions)
+      - name: Use fixed signing key
         run: |
           mkdir -p ~/.android
           cp debug.keystore ~/.android/debug.keystore
