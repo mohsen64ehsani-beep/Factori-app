@@ -1,4 +1,3 @@
-
 name: Build Android APK
 
 on:
@@ -30,6 +29,10 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Bundle license client
+        run: |
+          npx esbuild license-client.js --bundle --format=esm --outfile=www/license-client.js
 
       - name: Copy offline libraries
         run: |
@@ -69,4 +72,3 @@ jobs:
         with:
           name: factori-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          
