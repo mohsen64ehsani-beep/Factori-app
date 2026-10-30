@@ -1,0 +1,15 @@
+apply plugin: 'com.android.library'
+
+android {
+    namespace "com.factori.licensemanager"
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 23
+        targetSdk 35
+    }
+}
+
+dependencies {
+    implementation project(':capacitor-android')
+}
