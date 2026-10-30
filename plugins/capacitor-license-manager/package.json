@@ -1,6 +1,7 @@
 {
   "name": "capacitor-license-manager",
   "version": "1.0.0",
+  "type": "module",
   "description": "Factori permanent device license manager",
   "main": "index.js",
   "types": "index.d.ts",
