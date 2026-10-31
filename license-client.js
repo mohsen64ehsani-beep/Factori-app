@@ -82,51 +82,122 @@ async function isLicensed() {
 }
 
 async function activate(licenseKey) {
-  const plugin = await native();
+  let stage = 'آماده‌سازی افزونه اندروید';
 
-  const call = async body => {
-    const res = await fetch(
-      SUPABASE_URL + '/functions/v1/activate-license',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_KEY
-        },
-        body: JSON.stringify(body)
+  const timed = (promise, label, ms = 15000) => Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('TIMEOUT: ' + label)), ms)
+    )
+  ]);
+
+  try {
+    const plugin = await timed(native(), stage);
+
+    const call = async body => {
+      stage = body.action === 'issue_nonce'
+        ? 'ارتباط با سرور و دریافت کد امنیتی'
+        : 'ارسال درخواست فعال‌سازی به سرور';
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+
+      try {
+        const res = await fetch(
+          SUPABASE_URL + '/functions/v1/activate-license',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_KEY,
+              'Authorization': 'Bearer ' + SUPABASE_KEY
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal
+          }
+        );
+
+        const raw = await res.text();
+        let data = {};
+
+        try {
+          data = raw ? JSON.parse(raw) : {};
+        } catch {}
+
+        if (!res.ok || !data.ok) {
+          throw new Error(
+            data.reason || data.error ||
+            ('خطای سرور: HTTP ' + res.status)
+          );
+        }
+
+        return data;
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          throw new Error('پاسخ سرور در ۱۵ ثانیه دریافت نشد.');
+        }
+        throw error;
+      } finally {
+        clearTimeout(timer);
       }
+    };
+
+    const n = await timed(
+      call({ action: 'issue_nonce' }),
+      stage,
+      18000
     );
 
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok || !data.ok) {
-      throw new Error(data.reason || data.error || 'کد لایسنس معتبر نیست.');
+    if (!n.nonce) {
+      throw new Error('دریافت کد امنیتی ناموفق بود.');
     }
 
-    return data;
-  };
+    stage = 'خواندن کلید امن دستگاه';
+    const device = await timed(plugin.getPublicKey(), stage);
 
-  const n = await call({ action: 'issue_nonce' });
-  if (!n.nonce) throw new Error('دریافت کد امنیتی ناموفق بود.');
+    stage = 'امضای کد امنیتی در دستگاه';
+    const signed = await timed(
+      plugin.signNonce({ nonce: n.nonce }),
+      stage
+    );
 
-  const device = await plugin.getPublicKey();
-  const signed = await plugin.signNonce({ nonce: n.nonce });
+    const result = await timed(
+      call({
+        action: 'activate',
+        licenseKey,
+        nonce: n.nonce,
+        signature: signed.signature,
+        deviceJwk: device.jwk
+      }),
+      'ارسال درخواست فعال‌سازی',
+      18000
+    );
 
-  const result = await call({
-    action: 'activate',
-    licenseKey,
-    nonce: n.nonce,
-    signature: signed.signature,
-    deviceJwk: device.jwk
-  });
+    stage = 'بررسی مجوز دریافتی';
 
-  if (!await verifyToken(result.token, device.thumbprint)) {
-    throw new Error('اعتبار مجوز صادرشده تأیید نشد.');
+    if (!await timed(
+      verifyToken(result.token, device.thumbprint),
+      stage
+    )) {
+      throw new Error('اعتبار مجوز صادرشده تأیید نشد.');
+    }
+
+    stage = 'ذخیره مجوز روی دستگاه';
+
+    await timed(
+      plugin.saveToken({ token: result.token }),
+      stage
+    );
+
+    return { ok: true };
+
+  } catch (error) {
+    console.error('[Factori License]', stage, error);
+
+    throw new Error(
+      stage + ': ' + (error?.message || String(error))
+    );
   }
-
-  await plugin.saveToken({ token: result.token });
-  return { ok: true };
 }
 
 window.FactoriLicenseApi = { isLicensed, activate };
