@@ -85,7 +85,19 @@ Deno.serve(async req => {
       crv: "P-256", kty: "EC", x: jwk.x, y: jwk.y
     });
 
-    const thumbprint = await hash(canonical);
+    const thumbprint = btoa(
+  String.fromCharCode(
+    ...new Uint8Array(
+      await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(canonical)
+      )
+    )
+  )
+)
+.replace(/\+/g, "-")
+.replace(/\//g, "_")
+.replace(/=+$/g, "");
 
     const { data, error } = await admin.rpc("factori_consume_license", {
       p_key_hash: await hash(licenseKey),
