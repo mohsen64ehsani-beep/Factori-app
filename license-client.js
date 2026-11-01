@@ -96,8 +96,10 @@ async function isLicensed() {
   }
 }
 
-async function activate(licenseKey) {
+async function activate(licenseKey, onProgress) {
   let stage = 'آماده‌سازی افزونه اندروید';
+  const progress = value => { stage = value; try { onProgress?.(value); } catch {} };
+  progress(stage);
 
   const timed = (promise, label, ms = 15000) => Promise.race([
     promise,
@@ -110,9 +112,9 @@ async function activate(licenseKey) {
     const plugin = await native();
 
     const call = async body => {
-      stage = body.action === 'issue_nonce'
+      progress(body.action === 'issue_nonce'
         ? 'ارتباط با سرور و دریافت کد امنیتی'
-        : 'ارسال درخواست فعال‌سازی به سرور';
+        : 'ارسال درخواست فعال‌سازی به سرور');
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15000);
@@ -167,11 +169,11 @@ async function activate(licenseKey) {
       throw new Error('دریافت کد امنیتی ناموفق بود.');
     }
 
-    stage = 'خواندن کلید امن دستگاه';
+    progress('خواندن کلید امن دستگاه');
     // اولین ساخت کلید در Android Keystore ممکن است روی بعضی گوشی‌ها بیشتر طول بکشد.
     const device = await timed(plugin.getPublicKey(), stage, 45000);
 
-    stage = 'امضای کد امنیتی در دستگاه';
+    progress('امضای کد امنیتی در دستگاه');
     const signed = await timed(
       plugin.signNonce({ nonce: n.nonce }),
       stage
@@ -189,7 +191,7 @@ async function activate(licenseKey) {
       18000
     );
 
-    stage = 'بررسی مجوز دریافتی';
+    progress('بررسی مجوز دریافتی');
 
     if (!await timed(
       verifyToken(result.token, device.thumbprint),
@@ -198,7 +200,7 @@ async function activate(licenseKey) {
       throw new Error('اعتبار مجوز صادرشده تأیید نشد.');
     }
 
-    stage = 'ذخیره مجوز روی دستگاه';
+    progress('ذخیره مجوز روی دستگاه');
 
     await timed(
       plugin.saveToken({ token: result.token }),
