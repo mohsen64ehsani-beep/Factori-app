@@ -7,8 +7,8 @@ const SUPABASE_KEY = 'sb_publishable_yQrRq-3DoEWXlf0DOgXExA_sLWKKWrF';
 const PUBLIC_JWK = {
   kty: 'EC',
   crv: 'P-256',
-  x: 'r5HwE6vyPGziWtca6IP1eDmj2kkQDziu81MvZq5cXaE',
-  y: 'gAzNBUJUWhODplpa7mBdAMxyTuIJCF-u9k2UPkNKEus',
+  x: '_r1Nk5fzHPiAWAIVp5U9i9eg-3NY0WetWIctLudfAfw',
+  y: '3PV_mnmE9xxwwB44ooFJxteuEmfE2POLhwiBQQah8uQ',
   ext: true
 };
 
