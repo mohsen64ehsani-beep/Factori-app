@@ -227,3 +227,4 @@ async function activate(licenseKey, onProgress) {
 }
 
 window.FactoriLicenseApi = { isLicensed, activate };
+window.dispatchEvent(new Event('factori-license-ready'));
