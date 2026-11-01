@@ -68,6 +68,11 @@ async function native() {
     throw new Error('پلتفرم اندروید شناسایی نشد: ' + String(platform || 'unknown'));
   }
 
+  if (typeof Capacitor.isPluginAvailable === 'function' &&
+      !Capacitor.isPluginAvailable('LicenseManager')) {
+    throw new Error('افزونه LicenseManager داخل APK ثبت نشده است؛ APK باید دوباره با افزونه همگام‌سازی شود.');
+  }
+
   const methods = ['getPublicKey', 'signNonce', 'saveToken', 'getToken'];
   for (const method of methods) {
     if (typeof LicenseManager?.[method] !== 'function') {
@@ -163,7 +168,8 @@ async function activate(licenseKey) {
     }
 
     stage = 'خواندن کلید امن دستگاه';
-    const device = await timed(plugin.getPublicKey(), stage);
+    // اولین ساخت کلید در Android Keystore ممکن است روی بعضی گوشی‌ها بیشتر طول بکشد.
+    const device = await timed(plugin.getPublicKey(), stage, 45000);
 
     stage = 'امضای کد امنیتی در دستگاه';
     const signed = await timed(
