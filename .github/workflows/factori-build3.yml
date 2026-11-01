@@ -77,13 +77,43 @@ jobs:
           echo "Signing keystore fingerprint:"
           keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android | grep -E 'Alias name:|SHA256:'
 
-      - name: Build debug APK
+      - name: Force Gradle debug signing key
         run: |
+          cat >> android/app/build.gradle <<'EOF'
+
+          // Force the same checked-in key for every debug APK.
+          android {
+            signingConfigs {
+              debug {
+                storeFile file(System.getenv("HOME") + "/.android/debug.keystore")
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+              }
+            }
+            buildTypes {
+              debug {
+                signingConfig signingConfigs.debug
+              }
+            }
+          }
+          EOF
+          echo "Gradle debug signing configuration:"
+          grep -n -A8 -B2 'Force the same checked-in key' android/app/build.gradle
+
+      - name: Build and verify APK signature
+        run: |
+          set -euo pipefail
           cd android
           chmod +x gradlew
           ./gradlew --no-daemon clean assembleDebug
-          echo "Built APK certificate fingerprint:"
-          keytool -printcert -jarfile app/build/outputs/apk/debug/app-debug.apk | grep -E 'SHA256:|Owner:|Issuer:'
+          KEY_FP=$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | awk '/SHA256:/{print $2; exit}')
+          APK_FP=$(keytool -printcert -jarfile app/build/outputs/apk/debug/app-debug.apk | awk '/SHA256:/{print $2; exit}')
+          echo "Expected keystore SHA256: $KEY_FP"
+          echo "Actual APK SHA256:        $APK_FP"
+          test -n "$KEY_FP"
+          test "$KEY_FP" = "$APK_FP" || { echo "::error::APK was not signed with the fixed keystore."; exit 1; }
+          echo "APK signature matches the fixed keystore."
 
       - uses: actions/upload-artifact@v4
         with:
