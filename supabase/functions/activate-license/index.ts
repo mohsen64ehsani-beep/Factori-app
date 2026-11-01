@@ -61,7 +61,13 @@ Deno.serve(async req => {
     const privateText = Deno.env.get("FACTORY_LICENSE_SIGNING_PRIVATE_JWK");
     if (!privateText) throw new Error("Signing key missing");
 
-    const signingKey = await importJWK(JSON.parse(privateText), "ES256");
+    let privateJwk: Record<string, unknown>;
+    try {
+      privateJwk = JSON.parse(privateText);
+    } catch {
+      throw new Error("Signing key configuration is not valid JSON");
+    }
+    const signingKey = await importJWK(privateJwk, "ES256");
 
     const publicKey = await crypto.subtle.importKey(
       "jwk",
