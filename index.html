@@ -100,7 +100,7 @@ bal=id=>sum(db.inv.filter(i=>i.cid===id).map(tot))-sum(db.pay.filter(p=>p.cid===
 stk=(it,sg)=>it.forEach(r=>{const p=db.prod.find(x=>x.id===r.pid);if(p)p.qty=num(p.qty)+sg*num(r.q)}),
 H=async s=>{try{return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('inv'+s)))].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent('x'+s)))}};
 let lock=true,lk='sp',v={t:'home'},D={},IV=null,tt;
-let realDb=db,demoMode=false;
+let realDb=db,demoMode=false,licenseActive=false;
 const makeDemoDb=()=>({
  cust:[
   {id:'demo-c1',n:'فروشگاه نمونه',ph:'09120000000',ad:'تهران، خیابان نمونه',code:'0012345678'},
@@ -121,7 +121,7 @@ const makeDemoDb=()=>({
  seq:1003,cu:'تومان',sn:'فروشگاه نمونه',sp:'09120000000',ad:'تهران، خیابان نمونه'
 });
 const denyDemo=()=>{if(!demoMode)return false;toast('این امکان در نسخه آزمایشی غیرفعال است؛ برای فعال‌سازی لایسنس اقدام کنید');return true};
-const buyHtml=()=>`<div class="buy-panel"><b>برای استفاده کامل، لایسنس فاکتوری را تهیه کنید</b><button class="b s w100" data-a="licenseui">🔑 وارد کردن کد لایسنس</button><a class="b w100" href="https://wa.me/989397050966" target="_blank" rel="noopener">🛒 خرید لایسنس از واتساپ</a><a class="lnk" href="tel:+989397050966">تماس: 09397050966</a></div>`;
+const buyHtml=()=>licenseActive?'':`<div class="buy-panel"><b>برای استفاده کامل، لایسنس فاکتوری را تهیه کنید</b><button class="b s w100" data-a="licenseui">🔑 وارد کردن کد لایسنس</button><a class="b w100" href="https://wa.me/989397050966" target="_blank" rel="noopener">🛒 خرید لایسنس از واتساپ</a><a class="lnk" href="tel:+989397050966">تماس: 09397050966</a></div>`;
 function licenseUi(){ $('ov').innerHTML=`<div class="bar"><button class="b s" data-a="cls">بستن</button></div><div class="c" style="max-width:520px;margin:18px auto"><h2>فعال‌سازی لایسنس فاکتوری</h2><label for="licenseCode">کد لایسنس</label><input id="licenseCode" dir="ltr" autocomplete="off" placeholder="کد لایسنس را وارد کن"><button id="licenseCheckBtn" class="b w100" data-a="licensecheck">بررسی و فعال‌سازی</button><p id="licenseStatus" role="status" aria-live="polite" style="font-size:13px;margin-top:12px;padding:10px;border-radius:10px;background:var(--bg);color:var(--mu)">برای استفاده از نسخه کامل، کد لایسنس معتبر را وارد کنید. فعال‌سازی فقط در نسخه اندروید امکان‌پذیر است.</p><a class="b s w100" href="https://wa.me/989397050966" target="_blank" rel="noopener">دریافت لایسنس از پشتیبانی</a></div>`;$('ov').className='on'}
 function enterDemo(){demoMode=true;db=makeDemoDb();D={};IV=null;lock=false;go('home')}
 function exitDemo(){demoMode=false;db=realDb;D={};IV=null;lock=true;lk=db.pw?'in':'sp';v={t:'home'};render()}
@@ -222,6 +222,8 @@ licensecheck:async()=>{
   // activate() verifies the signed token and confirms it was saved. Do not
   // perform a second native Keystore round-trip here: it can hang indefinitely.
   if(!result?.ok)throw new Error('فعال‌سازی لایسنس موفق نبود.');
+  licenseActive=true;
+  if(demoMode){demoMode=false;db=realDb;D={};IV=null;}
   $('ov').className='';
   lk=db.pw?'in':'set';lock=true;render();
   toast('لایسنس با موفقیت فعال شد.');
@@ -236,6 +238,8 @@ licensecheck:async()=>{
 start:async()=>{
  if(!window.FactoriLicenseApi)return toast('سرویس لایسنس بارگذاری نشده است.');
  if(!await window.FactoriLicenseApi.isLicensed()){licenseUi();return}
+ licenseActive=true;
+ if(demoMode){demoMode=false;db=realDb;D={};IV=null;}
  lk=db.pw?'in':'set';render()
 },
 setpw:async()=>{
@@ -244,11 +248,11 @@ setpw:async()=>{
 },
 login:async()=>{
  if(!window.FactoriLicenseApi || !await window.FactoriLicenseApi.isLicensed()){licenseUi();return}
- if(await H($('p1').value)===db.pw){lock=false;go('home')}else toast('رمز اشتباه است')
+ if(await H($('p1').value)===db.pw){licenseActive=true;if(demoMode){demoMode=false;db=realDb;D={};IV=null;}lock=false;go('home')}else toast('رمز اشتباه است')
 },
 biolog:async()=>{
  if(!window.FactoriLicenseApi || !await window.FactoriLicenseApi.isLicensed()){licenseUi();return}
- if(await bioLogin()){lock=false;go('home')}else toast('تأیید اثر انگشت ناموفق بود')
+ if(await bioLogin()){licenseActive=true;if(demoMode){demoMode=false;db=realDb;D={};IV=null;}lock=false;go('home')}else toast('تأیید اثر انگشت ناموفق بود')
 },
 newinv:()=>{D=nd();go('invf',{tab:'inv'})},newinvc:id=>{D=nd({cid:id});go('invf',{tab:'inv'})},
 einv:id=>{D=JSON.parse(JSON.stringify(db.inv.find(i=>i.id==id)));go('invf',{tab:'inv'})},
