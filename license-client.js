@@ -89,7 +89,7 @@ async function native(progress = () => {}) {
 
 async function isLicensed() {
   try {
-    const plugin = await native(progress);
+    const plugin = await native();
     const device = await plugin.getPublicKey();
     const stored = await plugin.getToken();
 
@@ -113,7 +113,7 @@ async function activate(licenseKey, onProgress) {
   ]);
 
   try {
-    const plugin = await native();
+    const plugin = await native(progress);
 
     const call = async body => {
       progress(body.action === 'issue_nonce'
