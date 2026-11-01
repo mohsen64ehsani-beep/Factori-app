@@ -57,6 +57,18 @@ jobs:
       - name: Sync web files and plugins
         run: npx cap sync android
 
+      - name: Verify native license plugin registration
+        run: |
+          echo "Checking Capacitor native plugin registry..."
+          find android/app/src/main -type f -name 'capacitor.plugins.json' -print
+          if ! grep -R -q 'LicenseManagerPlugin' android/app/src/main/assets; then
+            echo "::error::LicenseManagerPlugin is missing from the generated Android plugin registry."
+            echo "Plugin package files:"
+            find plugins/capacitor-license-manager -type f -maxdepth 8 -print
+            exit 1
+          fi
+          echo "LicenseManagerPlugin is registered."
+
       - name: Use fixed signing key
         run: |
           mkdir -p ~/.android
