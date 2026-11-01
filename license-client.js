@@ -113,7 +113,9 @@ async function activate(licenseKey, onProgress) {
   ]);
 
   try {
+    progress('افزونه آماده شد؛ ورود به مرحله ارتباط با سرور');
     const plugin = await native(progress);
+    progress('افزونه آماده است؛ آماده‌سازی درخواست امنیتی');
 
     const call = async body => {
       progress(body.action === 'issue_nonce'
