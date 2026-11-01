@@ -62,12 +62,14 @@ async function verifyToken(token, thumbprint) {
   }
 }
 
-async function native() {
+async function native(progress = () => {}) {
+  progress('بررسی پلتفرم اجرای برنامه');
   const platform = Capacitor.getPlatform?.();
   if (platform !== 'android') {
     throw new Error('پلتفرم اندروید شناسایی نشد: ' + String(platform || 'unknown'));
   }
 
+  progress('بررسی ثبت افزونه LicenseManager در اندروید');
   if (typeof Capacitor.isPluginAvailable === 'function' &&
       !Capacitor.isPluginAvailable('LicenseManager')) {
     throw new Error('افزونه LicenseManager داخل APK ثبت نشده است؛ APK باید دوباره با افزونه همگام‌سازی شود.');
@@ -75,17 +77,19 @@ async function native() {
 
   const methods = ['getPublicKey', 'signNonce', 'saveToken', 'getToken'];
   for (const method of methods) {
+    progress('بررسی متد افزونه: ' + method);
     if (typeof LicenseManager?.[method] !== 'function') {
       throw new Error('متد ' + method + ' در افزونه LicenseManager ثبت نشده است.');
     }
   }
 
+  progress('افزونه اندروید شناسایی شد');
   return LicenseManager;
 }
 
 async function isLicensed() {
   try {
-    const plugin = await native();
+    const plugin = await native(progress);
     const device = await plugin.getPublicKey();
     const stored = await plugin.getToken();
 
