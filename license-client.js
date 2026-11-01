@@ -149,7 +149,9 @@ async function activate(licenseKey, onProgress) {
 
         if (!res.ok || !data.ok) {
           throw new Error(
-            data.reason || data.error ||
+            data.reason || (data.error === 'server_error' && data.detail
+              ? 'خطای داخلی سرور: ' + data.detail
+              : data.error) ||
             ('خطای سرور: HTTP ' + res.status)
           );
         }
