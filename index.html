@@ -163,7 +163,7 @@ set:()=>{const im=(k,l)=>`<div><label>${l}</label><input type="file" accept="ima
  return `<h1>تنظیمات</h1><div class="c"><h2>مشخصات فروشنده</h2><div class="g"><div><label>نام فروشگاه</label><input data-d="sn" value="${esc(db.sn)}"></div><div><label>تلفن</label><input data-d="sp" value="${esc(db.sp)}"></div></div><div><label>آدرس</label><input data-d="ad" value="${esc(db.ad)}"></div><div><label>واحد پول</label><select data-d="cu"><option ${db.cu=='ریال'?'selected':''}>ریال</option><option ${db.cu=='تومان'?'selected':''}>تومان</option></select></div><div class="g">${im('lg','انتخاب لوگو')}${im('sm','انتخاب مهر / امضا')}</div></div>
 <div class="c"><h2>سبک فاکتور</h2><div class="r" style="margin:0">${[['1','رسمی'],['2','مدرن'],['3','مینیمال']].map(([k,l])=>`<button class="b ${(db.tpl||'1')==k?'':'s'}" data-a="tpl" data-id="${k}">${l}</button>`).join('')}</div><label style="margin-top:12px">رنگ فاکتور</label><div class="sw">${COLS.map(c=>`<button data-a="col" data-id="${c}" class="${(db.col||COLS[0])==c?'on':''}" style="background:${c}"></button>`).join('')}</div><button class="b s w100" data-a="prev">پیش‌نمایش نمونه</button></div>
 <div class="c"><h2>امنیت</h2><button class="b s w100" style="margin:0" data-a="bio">${db.bio?'غیرفعال‌سازی اثر انگشت':'فعال‌سازی اثر انگشت'}</button><div><label>رمز جدید</label><input id="np" type="password"></div><button class="b s w100" data-a="chpw">تغییر رمز</button></div>
-<div class="c"><h2>پشتیبان‌گیری</h2><div class="r" style="margin:0"><button class="b s" data-a="bkf">ذخیره فایل پشتیبان</button><button class="b s" data-a="rsf">بازیابی از فایل</button></div><textarea id="bx" hidden rows="3" placeholder="برای بازیابی، متن پشتیبان را بچسبان (جایگزین اطلاعات فعلی می‌شود)" style="margin-top:8px"></textarea></div><button class="b dg w100" data-a="out">خروج</button>`}
+<div class="c"><h2>پشتیبان‌گیری</h2><div class="r" style="margin:0"><button class="b s" data-a="bkf">ذخیره فایل پشتیبان</button><button class="b s" data-a="rsf">بازیابی از فایل</button></div><textarea id="bx" hidden rows="3" placeholder="برای بازیابی، متن پشتیبان را بچسبان (جایگزین اطلاعات فعلی می‌شود)" style="margin-top:8px"></textarea></div><div class="c"><h2>درباره فاکتوری</h2><p style="margin:0 0 10px;line-height:2">فاکتوری یک برنامه ساده و کاربردی برای صدور و مدیریت فاکتورهای فروش است. با آن می‌توانید مشتری‌ها و کالاها را مدیریت کنید، پرداخت‌های نقدی و چکی را ثبت کنید، موجودی انبار و سود و زیان را ببینید و فاکتورهای خود را با قالب‌های متنوع به‌صورت PDF یا تصویر خروجی بگیرید.</p><p style="margin:0 0 8px"><b>پشتیبانی واتساپ:</b> <a href="https://wa.me/989397050966" target="_blank" rel="noopener" style="color:var(--pr);text-decoration:none">09397050966</a></p><p style="margin:0"><b>طراح و برنامه‌نویس:</b> محسن احسانی پور</p></div><button class="b dg w100" data-a="out">خروج</button>`}
 };
 VIEWS.home=()=>{const s=sum(db.inv.map(tot)),r=sum(db.pay.map(p=>p.amt)),pf=sum(db.inv.map(profit)),h=new Date().getHours(),
  st=(i,a,b,c)=>`<div class="st ${c||''}"><i>${i}</i><div><small>${a}</small><b>${b}</b></div></div>`;
@@ -192,15 +192,39 @@ function stmt(id){const c=C(id);let r=0;
  const L=[...db.inv.filter(i=>i.cid==id).map(i=>({d:i.dt,t:'فاکتور '+fa(i.no),a:tot(i),b:0})),...db.pay.filter(p=>p.cid==id).map(p=>({d:p.dt,t:p.kind=='cheque'?'دریافت چک '+p.no:'دریافت نقدی',a:0,b:num(p.amt)}))].sort((x,y)=>x.d>y.d?1:-1);
  return `<div class="ph"><div>${db.lg?`<img src="${db.lg}">`:''}</div><h3>صورتحساب کلی</h3><div class="rt">تاریخ: ${dstr(today())}</div></div><div class="pb2"><div><b>فروشنده</b><br>${esc(db.sn||'—')}<br>${ln('تلفن: ',db.sp)}</div><div><b>مشتری</b><br>${esc(c.n)}<br>${ln('تلفن: ',c.ph)}</div></div><table><tr><th>تاریخ</th><th>شرح</th><th>بدهکار</th><th>بستانکار</th><th>مانده</th></tr>${L.map(x=>{r+=x.a-x.b;return `<tr><td>${dstr(x.d)}</td><td class="l">${x.t}</td><td>${x.a?fa(x.a):'—'}</td><td>${x.b?fa(x.b):'—'}</td><td>${fa(r)}</td></tr>`}).join('')}</table><div class="tt2"><div class="gt"><span>مانده نهایی</span><span>${money(r)}</span></div></div><div class="sg"><div>مهر و امضای فروشنده${db.sm?`<img src="${db.sm}">`:''}</div><div>امضای مشتری</div></div>`}
 function ov(h){$('ov').innerHTML=`<div class="bar"><button class="b s" style="background:var(--card)" data-a="cls">بستن</button><button class="b" data-a="pdf">PDF</button><button class="b" data-a="png">تصویر</button></div><div class="pp" id="paper">${h}</div>`;$('ov').className='on';$('ov').scrollTop=0}
-async function exp(k){if(denyDemo())return;$('ov').scrollTop=0;toast('در حال ساخت…');
- try{const c=await html2canvas($('paper'),{scale:2,backgroundColor:'#fff'});let bl,nm='invoice';
-  if(k=='png'){bl=await new Promise(r=>c.toBlob(r,'image/png'));nm+='.png'}
-  else{const w=210,h=c.height*w/c.width,p=new jspdf.jsPDF({unit:'mm',format:h>297?[w,h]:'a4'});p.addImage(c.toDataURL('image/jpeg',.95),'JPEG',0,0,w,h);bl=p.output('blob');nm+='.pdf'}
-  const cp=window.Capacitor;if(cp&&cp.isNativePlatform&&cp.isNativePlatform()){const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(bl)});const P=cp.Plugins,w=await P.Filesystem.writeFile({path:nm,data:b64,directory:'CACHE'});await P.Share.share({title:nm,url:w.uri});return}
+async function exp(k){
+ if(denyDemo())return;
+ const paperEl=$('paper');if(!paperEl)return toast('فاکتور برای خروجی پیدا نشد');
+ $('ov').scrollTop=0;toast('در حال آماده‌سازی خروجی…');
+ try{
+  if(typeof window.html2canvas!=='function')throw new Error('کتابخانه ساخت تصویر بارگذاری نشده است');
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  const c=await window.html2canvas(paperEl,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false,windowWidth:Math.max(document.documentElement.clientWidth,paperEl.scrollWidth),onclone:doc=>{const el=doc.getElementById('paper');if(el){el.style.width=paperEl.scrollWidth+'px';el.style.maxWidth='none';el.style.overflow='visible';}}});
+  let bl,nm='factori-invoice';
+  if(k==='png'){
+   bl=await new Promise((resolve,reject)=>c.toBlob(x=>x?resolve(x):reject(new Error('تبدیل تصویر ناموفق بود')),'image/png'));
+   nm+='.png';
+  }else{
+   const JsPDF=window.jspdf&&window.jspdf.jsPDF;if(!JsPDF)throw new Error('کتابخانه PDF بارگذاری نشده است');
+   const w=210,h=c.height*w/c.width,p=new JsPDF({unit:'mm',format:h>297?[w,h]:'a4',orientation:'portrait',compress:true});
+   p.addImage(c.toDataURL('image/jpeg',.95),'JPEG',0,0,w,h);bl=p.output('blob');nm+='.pdf';
+  }
+  if(!bl||!bl.size)throw new Error('فایل خروجی خالی ساخته شد');
+  const cp=window.Capacitor;
+  if(cp&&cp.isNativePlatform&&cp.isNativePlatform()){
+   const P=cp.Plugins||{},FS=P.Filesystem,SH=P.Share;
+   if(!FS||!SH)throw new Error('دسترسی ذخیره‌سازی یا اشتراک‌گذاری اندروید در دسترس نیست');
+   const b64=await new Promise((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(String(fr.result).split(',')[1]);fr.onerror=()=>reject(new Error('خواندن فایل خروجی ناموفق بود'));fr.readAsDataURL(bl)});
+   const saved=await FS.writeFile({path:nm,data:b64,directory:'CACHE'});
+   if(!saved||!saved.uri)throw new Error('ذخیره فایل در گوشی ناموفق بود');
+   await SH.share({title:nm,text:'خروجی فاکتور فاکتوری',url:saved.uri,dialogTitle:'ذخیره یا ارسال فاکتور'});
+   toast('فاکتور آماده شد');return;
+  }
   const fl=new File([bl],nm,{type:bl.type});
-  try{if(navigator.canShare&&navigator.canShare({files:[fl]})){await navigator.share({files:[fl]});return}}catch(e){if(e.name=='AbortError')return}
-  const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=nm;document.body.appendChild(a);a.click();a.remove();toast('اگر ذخیره نشد، صفحه را در Chrome باز کن')
- }catch(e){toast('ساخت خروجی ناموفق بود (اینترنت؟)')}}
+  if(navigator.canShare&&navigator.canShare({files:[fl]})){try{await navigator.share({files:[fl]});return}catch(e){if(e.name==='AbortError')return}}
+  const url=URL.createObjectURL(bl),a=document.createElement('a');a.href=url;a.download=nm;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);toast('فایل خروجی آماده شد');
+ }catch(e){console.error('[Factori export]',e);toast('خطای خروجی: '+(e&&e.message?e.message:'نامشخص'))}
+}
 
 /* ---- Native Android biometric ---- */
 const BA=()=>{const c=window.Capacitor;return c&&c.isNativePlatform&&c.isNativePlatform()&&c.Plugins.NativeBiometric};
