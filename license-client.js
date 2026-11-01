@@ -107,7 +107,7 @@ async function activate(licenseKey) {
   ]);
 
   try {
-    const plugin = await timed(native(), stage);
+    const plugin = await native();
 
     const call = async body => {
       stage = body.action === 'issue_nonce'
