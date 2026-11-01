@@ -159,7 +159,7 @@ async function activate(licenseKey) {
 
     const n = await timed(
       call({ action: 'issue_nonce' }),
-      stage,
+      'ارتباط با سرور و دریافت کد امنیتی',
       18000
     );
 
