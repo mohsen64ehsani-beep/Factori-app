@@ -217,7 +217,9 @@ licensecheck:async()=>{
  if(status){status.style.color='var(--mu)';status.textContent='در حال اتصال به سرور و بررسی کد؛ لطفاً تا پایان بررسی از صفحه خارج نشوید.'}
  try{
   const result=await window.FactoriLicenseApi.activate(code);
-  if(!result?.ok || !await window.FactoriLicenseApi.isLicensed())throw new Error('اعتبار لایسنس روی این دستگاه تأیید نشد.');
+  // activate() verifies the signed token and confirms it was saved. Do not
+  // perform a second native Keystore round-trip here: it can hang indefinitely.
+  if(!result?.ok)throw new Error('فعال‌سازی لایسنس موفق نبود.');
   $('ov').className='';
   lk=db.pw?'in':'set';lock=true;render();
   toast('لایسنس با موفقیت فعال شد.');
