@@ -84,14 +84,13 @@ async function native(progress = () => {}) {
   }
 
   progress('افزونه اندروید شناسایی شد');
-  return LicenseManager;
 }
 
 async function isLicensed() {
   try {
-    const plugin = await native();
-    const device = await plugin.getPublicKey();
-    const stored = await plugin.getToken();
+    await native();
+    const device = await LicenseManager.getPublicKey();
+    const stored = await LicenseManager.getToken();
 
     return !!stored.token &&
       await verifyToken(stored.token, device.thumbprint);
@@ -114,8 +113,9 @@ async function activate(licenseKey, onProgress) {
 
   try {
     progress('افزونه آماده شد؛ ورود به مرحله ارتباط با سرور');
-    const plugin = await native(progress);
+    await native(progress);
     progress('افزونه آماده است؛ آماده‌سازی درخواست امنیتی');
+    const plugin = LicenseManager;
 
     const call = async body => {
       progress(body.action === 'issue_nonce'
