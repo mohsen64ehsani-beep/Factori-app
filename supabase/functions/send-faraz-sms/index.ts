@@ -14,6 +14,15 @@ const PUBLIC_JWK = {
   y: "3PV_mnmE9xxwwB44ooFJxteuEmfE2POLhwiBQQah8uQ", ext: true
 };
 
+function toIranE164(value: string): string {
+  const raw = String(value || '').trim().replace(/[\\s()-]/g, '');
+  if (raw.startsWith('+')) return raw;
+  if (raw.startsWith('0098')) return '+' + raw.slice(2);
+  if (raw.startsWith('98')) return '+' + raw;
+  if (raw.startsWith('0')) return '+98' + raw.slice(1);
+  return '+98' + raw;
+}
+
 Deno.serve(async req => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return reply({ ok: false, error: "method_not_allowed" }, 405);
@@ -30,13 +39,14 @@ Deno.serve(async req => {
 
     const body = await req.json();
     const apiKey = String(body.apiKey || "").trim();
-    const fromNumber = String(body.fromNumber || "").trim();
-    const patternCode = String(body.patternCode || "").trim();
-    const recipient = String(body.recipient || "").replace(/[\s-]/g, "");
+    const fromNumber = toIranE164(body.fromNumber);
+    const patternCode = String(body.patternCode || '').trim();
+    const recipient = toIranE164(body.recipient);
     const params = body.params;
-    if (!apiKey || !fromNumber || !patternCode || !/^09\d{9}$/.test(recipient) ||
-        !params || typeof params !== "object" || Array.isArray(params))
-      return reply({ ok: false, error: "invalid_sms_request" }, 400);
+    if (!apiKey || !/^\+[1-9]\d{7,14}$/.test(fromNumber) || !patternCode ||
+        !/^\+989\d{9}$/.test(recipient) ||
+        !params || typeof params !== 'object' || Array.isArray(params))
+      return reply({ ok: false, error: 'invalid_sms_request' }, 400);
     if (apiKey.length > 512 || fromNumber.length > 40 || patternCode.length > 120)
       return reply({ ok: false, error: "invalid_sms_config" }, 400);
 
