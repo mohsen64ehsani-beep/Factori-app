@@ -270,7 +270,7 @@ async function sendFarazPattern({ settings, recipient, patternCode, params }) {
   const raw = await res.text();
   let data = {};
   try { data = raw ? JSON.parse(raw) : {}; } catch {}
-  if (!res.ok || !data.ok) throw new Error(data.error || ('خطای ارسال پیامک: HTTP ' + res.status));
+  if (!res.ok || !data.ok) { const detail = data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : ''; throw new Error((data.error || 'خطای ارسال پیامک') + ' (HTTP ' + res.status + ')' + (detail ? ': ' + detail.slice(0, 260) : '') + (data.status ? ' [کد پنل: ' + data.status + ']' : '')); }
   return data;
 }
 
