@@ -86,7 +86,8 @@ esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 sum=a=>a.reduce((x,y)=>x+num(y),0);
 const K='db:v2';
 let db={cust:[],prod:[],inv:[],pay:[],debt:[],expenses:[],services:[],serviceInv:[],categories:[],stockMoves:[],serviceSeq:2000,seq:1000,cu:'ریال',sn:'',sp:'',ad:''};
-try{Object.assign(db,JSON.parse(localStorage.getItem(K))||{})}catch(e){}\ndb.debt=Array.isArray(db.debt)?db.debt:[];db.expenses=Array.isArray(db.expenses)?db.expenses:[];db.services=Array.isArray(db.services)?db.services:[];db.serviceInv=Array.isArray(db.serviceInv)?db.serviceInv:[];db.categories=Array.isArray(db.categories)?db.categories:[];db.stockMoves=Array.isArray(db.stockMoves)?db.stockMoves:[];db.smsHistory=Array.isArray(db.smsHistory)?db.smsHistory:[];db.serviceSeq=Number(db.serviceSeq)||2000;
+try{Object.assign(db,JSON.parse(localStorage.getItem(K))||{})}catch(e){}
+db.debt=Array.isArray(db.debt)?db.debt:[];db.expenses=Array.isArray(db.expenses)?db.expenses:[];db.services=Array.isArray(db.services)?db.services:[];db.serviceInv=Array.isArray(db.serviceInv)?db.serviceInv:[];db.categories=Array.isArray(db.categories)?db.categories:[];db.stockMoves=Array.isArray(db.stockMoves)?db.stockMoves:[];db.smsHistory=Array.isArray(db.smsHistory)?db.smsHistory:[];db.serviceSeq=Number(db.serviceSeq)||2000;
 const save=()=>{if(demoMode)return;try{localStorage.setItem(K,JSON.stringify(db))}catch(e){toast('حافظه پر است')}},
 uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6),
 money=n=>fa(n)+' '+db.cu,
@@ -97,12 +98,17 @@ subt=i=>sum(i.items.map(r=>num(r.q)*num(r.p))),
 disc=i=>Math.min(num(i.ds),subt(i)),
 taxv=i=>(subt(i)-disc(i))*num(i.tx)/100,
 tot=i=>subt(i)-disc(i)+taxv(i),
-profit=i=>sum(i.items.map(r=>(num(r.p)-num(r.b))*num(r.q)))-disc(i),\nserviceTotal=i=>Math.max(0,sum((i.items||[]).map(r=>num(r.qty)*num(r.price)))-num(i.discount)),\nserviceCost=i=>i.costMode==='total'?num(i.costTotal):sum((i.items||[]).map(r=>num(r.qty)*num(r.cost))),\nserviceProfit=i=>serviceTotal(i)-serviceCost(i),
+profit=i=>sum(i.items.map(r=>(num(r.p)-num(r.b))*num(r.q)))-disc(i),
+serviceTotal=i=>Math.max(0,sum((i.items||[]).map(r=>num(r.qty)*num(r.price)))-num(i.discount)),
+serviceCost=i=>i.costMode==='total'?num(i.costTotal):sum((i.items||[]).map(r=>num(r.qty)*num(r.cost))),
+serviceProfit=i=>serviceTotal(i)-serviceCost(i),
 bal=id=>sum(db.inv.filter(i=>i.cid===id).map(tot))+sum(db.serviceInv.filter(i=>i.cid===id).map(serviceTotal))+sum(db.debt.filter(d=>d.cid===id).map(d=>num(d.amt)))-sum(db.pay.filter(p=>p.cid===id&&p.status!=='returned').map(p=>p.amt)),
 stk=(it,sg)=>it.forEach(r=>{const p=db.prod.find(x=>x.id===r.pid);if(p){const before=num(p.qty),delta=sg*num(r.q);p.qty=before+delta;db.stockMoves.push({id:uid(),pid:p.id,dt:today(),delta,before,after:p.qty,reason:'تغییر ناشی از فاکتور'})}}),
 H=async s=>{try{return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('inv'+s)))].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent('x'+s)))}};
 let lock=true,lk='sp',v={t:'home'},D={},IV=null,IVType='invf',tt,lastSmsInvoiceId=null,lastSmsServiceId=null;
-let reportPeriod='month';\nlet smsHistory=[];\nlet smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:'',autoInvoice:false,autoPayment:false};
+let reportPeriod='month';
+let smsHistory=[];
+let smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:'',autoInvoice:false,autoPayment:false};
 let realDb=db,demoMode=false,licenseActive=false;
 const makeDemoDb=()=>({
  cust:[
@@ -267,7 +273,8 @@ const settings={apiKey:$('smsApiKey')?.value.trim()||'',fromNumber:$('smsFrom')?
 if(!settings.apiKey||!settings.fromNumber||!settings.invoicePattern||!settings.paymentPattern)throw new Error('توکن، شماره خط و هر دو کد پترن را کامل کن');
 await window.FactoriLicenseApi.saveSmsSettings(settings);smsSettings=settings;return settings;
 }
-const smsJDate=dt=>{const a=String(dt||today()).split('-').map(Number),j=g2j(a[0],a[1],a[2]);return String(j[0])+'/'+String(j[1]).padStart(2,'0')+'/'+String(j[2]).padStart(2,'0')};\nasync function sendCustomerPattern(kind,customer,data){
+const smsJDate=dt=>{const a=String(dt||today()).split('-').map(Number),j=g2j(a[0],a[1],a[2]);return String(j[0])+'/'+String(j[1]).padStart(2,'0')+'/'+String(j[2]).padStart(2,'0')};
+async function sendCustomerPattern(kind,customer,data){
 if(!customer?.ph)throw new Error('شماره موبایل مشتری ثبت نشده است');
 if(!smsSettings.apiKey||!smsSettings.fromNumber)throw new Error('ابتدا پنل پیامکی را در تنظیمات متصل کن');
 const patternCode=kind==='invoice'?smsSettings.invoicePattern:smsSettings.paymentPattern;
