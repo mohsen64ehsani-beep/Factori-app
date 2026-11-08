@@ -19,7 +19,7 @@ Deno.serve(async req => {
   if (req.method !== "POST") return reply({ ok: false, error: "method_not_allowed" }, 405);
   try {
     const auth = req.headers.get("Authorization") || "";
-    const token = auth.replace(/^Bearer\\s+/i, "").trim();
+    const token = auth.replace(/^Bearer\s+/i, "").trim();
     if (!token) return reply({ ok: false, error: "license_required" }, 401);
     const publicKey = await importJWK(PUBLIC_JWK, "ES256");
     const verified = await jwtVerify(token, publicKey, {
@@ -32,9 +32,9 @@ Deno.serve(async req => {
     const apiKey = String(body.apiKey || "").trim();
     const fromNumber = String(body.fromNumber || "").trim();
     const patternCode = String(body.patternCode || "").trim();
-    const recipient = String(body.recipient || "").replace(/[\\s-]/g, "");
+    const recipient = String(body.recipient || "").replace(/[\s-]/g, "");
     const params = body.params;
-    if (!apiKey || !fromNumber || !patternCode || !/^09\\d{9}$/.test(recipient) ||
+    if (!apiKey || !fromNumber || !patternCode || !/^09\d{9}$/.test(recipient) ||
         !params || typeof params !== "object" || Array.isArray(params))
       return reply({ ok: false, error: "invalid_sms_request" }, 400);
     if (apiKey.length > 512 || fromNumber.length > 40 || patternCode.length > 120)
