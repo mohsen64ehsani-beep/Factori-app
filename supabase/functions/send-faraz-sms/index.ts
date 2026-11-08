@@ -1,4 +1,5 @@
 import { importJWK, jwtVerify } from "https://esm.sh/jose@5";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -37,6 +38,21 @@ Deno.serve(async req => {
     if (verified.payload.permanent !== true || typeof verified.payload.device !== "string" || !verified.payload.sub)
       return reply({ ok: false, error: "invalid_license" }, 401);
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceKey) throw new Error("Supabase configuration missing");
+    const admin = createClient(supabaseUrl, serviceKey);
+    const activationId = String(verified.payload.sub);
+    const { data: activation, error: activationError } = await admin
+      .from("factori_license_activations")
+      .select("id, license_id, device_thumbprint")
+      .eq("id", activationId).maybeSingle();
+    if (activationError || !activation || activation.device_thumbprint !== verified.payload.device)
+      return reply({ ok: false, error: "license_not_active" }, 401);
+    const { data: license, error: licenseError } = await admin
+      .from("factori_license_keys").select("status").eq("id", activation.license_id).maybeSingle();
+    if (licenseError || license?.status !== "active")
+      return reply({ ok: false, error: "license_not_active" }, 401);
     const body = await req.json();
     const apiKey = String(body.apiKey || "").trim();
     const fromNumber = toIranE164(body.fromNumber);
