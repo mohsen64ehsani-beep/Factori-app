@@ -270,7 +270,7 @@ async function sendFarazPattern({ settings, recipient, patternCode, params }) {
   const raw = await res.text();
   let data = {};
   try { data = raw ? JSON.parse(raw) : {}; } catch {}
-  if (!res.ok || !data.ok) { const detail = data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : ''; throw new Error((data.error || 'خطای ارسال پیامک') + ' (HTTP ' + res.status + ')' + (detail ? ': ' + detail.slice(0, 260) : '') + (data.status ? ' [کد پنل: ' + data.status + ']' : '')); }
+  if (!res.ok || !data.ok) { const detail = data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : ''; const html = /<!doctype html|<html/i.test(detail); const msg = html ? 'درگاه فراز به‌جای پاسخ API صفحه خطای HTML برگرداند (HTTP ' + (data.status || res.status) + '). این خطا از سمت سرویس فراز/مسیر شبکه است؛ شماره خط و دسترسی API باید توسط پشتیبانی فراز بررسی شود.' : (data.message || detail || data.error || 'خطای ارسال پیامک'); throw new Error(msg + (data.requestId ? ' · شناسه پیگیری: ' + data.requestId : '')); }
   return data;
 }
 
