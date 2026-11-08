@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main, license-integration]
+    branches: [main, license-integration, feature/finance-dashboard-sms]
   workflow_dispatch:
 
 jobs:
