@@ -226,5 +226,15 @@ async function activate(licenseKey, onProgress) {
   }
 }
 
-window.FactoriLicenseApi = { isLicensed, activate };
+async function getLicenseAuthToken() {
+  await native();
+  const device = await LicenseManager.getPublicKey();
+  const stored = await LicenseManager.getToken();
+  if (!stored?.token || !await verifyToken(stored.token, device.thumbprint)) {
+    throw new Error('لایسنس معتبر برای احراز هویت پیامک پیدا نشد.');
+  }
+  return stored.token;
+}
+
+window.FactoriLicenseApi = { isLicensed, activate, getLicenseAuthToken };
 window.dispatchEvent(new Event('factori-license-ready'));
