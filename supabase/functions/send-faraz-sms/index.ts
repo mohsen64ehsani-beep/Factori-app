@@ -15,7 +15,7 @@ const PUBLIC_JWK = {
 };
 
 function toIranE164(value: string): string {
-  const raw = String(value || '').trim().replace(/[\\s()-]/g, '');
+  const raw = String(value || '').trim().replace(/[\s()-]/g, '');
   if (raw.startsWith('+')) return raw;
   if (raw.startsWith('0098')) return '+' + raw.slice(2);
   if (raw.startsWith('98')) return '+' + raw;
@@ -61,7 +61,7 @@ Deno.serve(async req => {
     const raw = await upstream.text();
     let result: unknown = raw;
     try { result = raw ? JSON.parse(raw) : {}; } catch { /* retain provider text */ }
-    if (!upstream.ok) return reply({ ok: false, error: "provider_error", status: upstream.status, detail: result }, 502);
+    if (!upstream.ok || (result && typeof result === "object" && (result as any).meta?.status === false)) return reply({ ok: false, error: "provider_error", status: upstream.status, detail: result }, 502);
     return reply({ ok: true, provider: result });
   } catch (error) {
     const message = String((error as Error)?.message || error);
