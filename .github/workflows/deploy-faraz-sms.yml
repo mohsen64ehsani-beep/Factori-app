@@ -1,12 +1,6 @@
 name: Deploy Faraz SMS gateway
 
 on:
-  push:
-    branches: [feature/finance-dashboard-sms]
-    paths:
-      - "supabase/functions/send-faraz-sms/**"
-      - "supabase/config.toml"
-      - ".github/workflows/deploy-faraz-sms.yml"
   workflow_dispatch:
 
 jobs:
