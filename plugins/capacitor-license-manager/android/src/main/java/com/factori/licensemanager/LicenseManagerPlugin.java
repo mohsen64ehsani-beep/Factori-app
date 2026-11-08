@@ -286,6 +286,65 @@ public class LicenseManagerPlugin extends Plugin {
         }
     }
 
+    private static final String SMS_SETTINGS_KEY = "sms_settings";
+
+    @PluginMethod
+    public void saveSmsSettings(PluginCall call) {
+        try {
+            String value = call.getString("value");
+            if (value == null || value.isEmpty()) {
+                call.reject("تنظیمات پیامک نامعتبر است");
+                return;
+            }
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, getStorageKey());
+            byte[] encrypted = cipher.doFinal(value.getBytes(StandardCharsets.UTF_8));
+            byte[] iv = cipher.getIV();
+            byte[] packed = new byte[iv.length + encrypted.length];
+            System.arraycopy(iv, 0, packed, 0, iv.length);
+            System.arraycopy(encrypted, 0, packed, iv.length, encrypted.length);
+            getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().putString(SMS_SETTINGS_KEY, b64(packed)).apply();
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("خطا در ذخیره امن تنظیمات پیامک", e);
+        }
+    }
+
+    @PluginMethod
+    public void getSmsSettings(PluginCall call) {
+        try {
+            String stored = getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(SMS_SETTINGS_KEY, null);
+            JSObject result = new JSObject();
+            if (stored == null) {
+                result.put("value", JSObject.NULL);
+                call.resolve(result);
+                return;
+            }
+            byte[] packed = Base64.decode(stored, Base64.URL_SAFE | Base64.NO_WRAP);
+            if (packed.length <= 12) throw new Exception("Invalid encrypted settings");
+            byte[] iv = new byte[12];
+            byte[] encrypted = new byte[packed.length - 12];
+            System.arraycopy(packed, 0, iv, 0, 12);
+            System.arraycopy(packed, 12, encrypted, 0, encrypted.length);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, getStorageKey(), new GCMParameterSpec(128, iv));
+            String value = new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
+            result.put("value", value);
+            call.resolve(result);
+        } catch (Exception e) {
+            call.reject("خطا در خواندن امن تنظیمات پیامک", e);
+        }
+    }
+
+    @PluginMethod
+    public void clearSmsSettings(PluginCall call) {
+        getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().remove(SMS_SETTINGS_KEY).apply();
+        call.resolve();
+    }
+
     @PluginMethod
     public void clearToken(PluginCall call) {
         getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)

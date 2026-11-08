@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main, license-integration]
+    branches: [main, license-integration, feature/finance-dashboard-sms]
   workflow_dispatch:
 
 jobs:
@@ -27,6 +27,17 @@ jobs:
           mv -f index.html www/index.html
           mv -f icon-only.png icon-foreground.png icon-background.png splash.png assets/
 
+      - name: Validate application JavaScript syntax
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('www/index.html', 'utf8');
+          const match = html.match(/<script>([\s\S]*?)<\/script>/);
+          if (!match) throw new Error('Inline application script was not found');
+          new Function(match[1]);
+          console.log('Inline application JavaScript syntax is valid.');
+          NODE
+
       - name: Install dependencies
         run: npm install
 
@@ -46,6 +57,12 @@ jobs:
           sed -i 's/minSdkVersion = 22/minSdkVersion = 23/g' android/variables.gradle
           sed -i 's/minSdkVersion 22/minSdkVersion 23/g' android/variables.gradle
           grep -n 'minSdk' android/variables.gradle
+
+      - name: Set Android update version
+        run: |
+          sed -i -E 's/versionCode [0-9]+/versionCode 2/' android/app/build.gradle
+          sed -i -E 's/versionName "[^"]+"/versionName "1.2.0"/' android/app/build.gradle
+          grep -n -E 'versionCode|versionName' android/app/build.gradle
 
       - name: Allow fingerprint permission
         run: |
@@ -114,8 +131,9 @@ jobs:
           test -n "$KEY_FP"
           test "$KEY_FP" = "$APK_FP" || { echo "::error::APK was not signed with the fixed keystore."; exit 1; }
           echo "APK signature matches the fixed keystore."
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/Factori-v1.2.0.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factori-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: factori-android-v1.2.0
+          path: android/app/build/outputs/apk/debug/Factori-v1.2.0.apk

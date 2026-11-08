@@ -226,5 +226,53 @@ async function activate(licenseKey, onProgress) {
   }
 }
 
-window.FactoriLicenseApi = { isLicensed, activate };
+async function getLicenseAuthToken() {
+  await native();
+  const device = await LicenseManager.getPublicKey();
+  const stored = await LicenseManager.getToken();
+  if (!stored?.token || !await verifyToken(stored.token, device.thumbprint)) {
+    throw new Error('لایسنس معتبر برای احراز هویت پیامک پیدا نشد.');
+  }
+  return stored.token;
+}
+
+async function getSmsSettings() {
+  await native();
+  const stored = await LicenseManager.getSmsSettings();
+  if (!stored?.value) return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '' };
+  try { return JSON.parse(stored.value); } catch { return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '' }; }
+}
+
+async function saveSmsSettings(settings) {
+  await native();
+  await LicenseManager.saveSmsSettings({ value: JSON.stringify(settings) });
+}
+
+async function clearSmsSettings() {
+  await native();
+  await LicenseManager.clearSmsSettings();
+}
+
+async function sendFarazPattern({ settings, recipient, patternCode, params }) {
+  const licenseToken = await getLicenseAuthToken();
+  const res = await fetch(SUPABASE_URL + '/functions/v1/send-faraz-sms', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + licenseToken
+    },
+    body: JSON.stringify({
+      apiKey: settings.apiKey, fromNumber: settings.fromNumber,
+      patternCode, recipient, params
+    })
+  });
+  const raw = await res.text();
+  let data = {};
+  try { data = raw ? JSON.parse(raw) : {}; } catch {}
+  if (!res.ok || !data.ok) throw new Error(data.error || ('خطای ارسال پیامک: HTTP ' + res.status));
+  return data;
+}
+
+window.FactoriLicenseApi = { isLicensed, activate, getLicenseAuthToken, getSmsSettings, saveSmsSettings, clearSmsSettings, sendFarazPattern };
 window.dispatchEvent(new Event('factori-license-ready'));
