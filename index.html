@@ -276,13 +276,19 @@ await window.FactoriLicenseApi.sendFarazPattern({settings:smsSettings,recipient:
 }
 async function sendSmsWithFeedback(kind,customer,data,eventId){try{if(eventId&&db.smsHistory.some(x=>x.eventId===eventId))return toast('برای این عملیات قبلاً پیامک ارسال شده است');toast('در حال ارسال پیامک…');await sendCustomerPattern(kind,customer,data);if(eventId){db.smsHistory.push({eventId,dt:new Date().toISOString(),phone:customer.ph,kind});save()}toast('درخواست ارسال پیامک به فراز ارسال شد')}catch(e){toast('ارسال پیامک ناموفق بود: '+(e.message||e))}}
 
+let pickerType='customer',pickerIndex=0;
+function openPicker(type,index=0){
+pickerType=type;pickerIndex=Number(index)||0;const list=type==='customer'?db.cust:db.prod;
+const rows=list.map(x=>{const title=type==='customer'?x.n:x.n;const sub=type==='customer'?((x.ph||'بدون شماره')+' · مانده '+money(bal(x.id))):((x.category||'بدون دسته')+' · قیمت '+money(x.sell)+' · موجودی '+fq(x.qty));const action=type==='customer'?'choosecustomer':'chooseproduct';return `<div class="picker-item" data-s="${esc(title+' '+sub)}"><div><b>${esc(title)}</b><small>${esc(sub)}</small></div><button class="b" data-a="${action}" data-id="${x.id}">انتخاب</button></div>`}).join('');
+$('ov').innerHTML=`<div class="picker-shell"><div class="picker-top"><div class="r" style="margin:0 0 8px"><b style="flex:2">${type==='customer'?'انتخاب مشتری':'انتخاب کالا'}</b><button class="b s" data-a="cls">بستن</button></div><input id="pickerSearch" placeholder="جستجوی نام، موبایل یا دسته‌بندی…"></div><div class="c" id="pickerList">${rows||'<p class="em">موردی برای انتخاب وجود ندارد.</p>'}</div></div>`;$('ov').className='on';$('ov').scrollTop=0;setTimeout(()=>$('pickerSearch')?.focus(),50);
+}
 /* ---- actions ---- */
 const A={
 tpl:id=>{db.tpl=String(id||'1');save();render()},
 col:id=>{db.col=id||COLS[0];save();render()},
 prev:()=>{const sample={no:1001,dt:today(),cid:'preview-customer',items:[{n:'نمونه کالا',q:2,p:250000}],ds:0,tx:0};const oldC=db.cust;db.cust=[...(oldC||[]),{id:'preview-customer',n:'مشتری نمونه',ph:'09120000000',ad:'—',code:''}];$('ov').innerHTML='<div class="bar"><button class="b s" data-a="cls">بستن پیش‌نمایش</button></div><div class="c" style="max-width:720px;margin:12px auto;background:#fff;color:#14212b;border-color:'+(db.col||COLS[0])+'"><div style="border-top:7px solid '+(db.col||COLS[0])+';padding-top:10px">'+paper(sample)+'</div></div>';$('ov').className='on';db.cust=oldC},
 
-tab:id=>go(id),report:()=>go('report',{tab:'home'}),reportperiod:(id,b)=>{reportPeriod=b.value||id||'month';render()},
+tab:id=>go(id),pickcustomer:()=>openPicker('customer'),pickproduct:id=>openPicker('product',id),choosecustomer:id=>{D.cid=id;$('ov').className='';render()},chooseproduct:id=>{const p=db.prod.find(x=>x.id===id),r=D.items[pickerIndex];if(!p||!r)return;r.pid=p.id;r.n=p.n;r.b=p.buy;r.p=p.sell;$('ov').className='';render()},report:()=>go('report',{tab:'home'}),reportperiod:(id,b)=>{reportPeriod=b.value||id||'month';render()},
 savesms:async()=>{try{await readSmsForm();toast('تنظیمات پیامک با رمزنگاری Android Keystore ذخیره شد');render()}catch(e){toast(e.message||'ذخیره ناموفق بود')}},
 clearsms:async()=>{if(!confirm('اطلاعات اتصال پیامک پاک شود؟'))return;try{await window.FactoriLicenseApi.clearSmsSettings();smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:''};render();toast('اطلاعات پیامک پاک شد')}catch(e){toast('پاک‌کردن اطلاعات ناموفق بود')}},
 sendtest:async()=>{try{const cfg=await readSmsForm();if(!/^09\\d{9}$/.test(cfg.testPhone))throw new Error('شماره موبایل آزمایشی را با 09 وارد کن');await sendCustomerPattern('invoice',{n:'آزمایش فاکتوری',ph:cfg.testPhone},{no:'1000',total:1000,paid:500,remain:500});toast('پیامک آزمایشی به فراز ارسال شد')}catch(e){toast('آزمایش ناموفق: '+(e.message||e))}},
@@ -394,7 +400,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b
 document.addEventListener('input',e=>{const t=e.target,d=t.dataset;
  if(d.d){if(demoMode){denyDemo();return}db[d.d]=t.value;save()}else if(d.f){if(demoMode){denyDemo();return}D[d.f]=t.value;if(v.t=='invf')upd()}
  else if(d.r!=null){if(demoMode){denyDemo();return}D.items[d.r][d.k]=t.value;upd()}else if(d.sr!=null){if(demoMode){denyDemo();return}D.sitems[d.sr][d.sk]=t.value}
- else if(t.id=='q')document.querySelectorAll('[data-s]').forEach(r=>r.hidden=!r.dataset.s.includes(t.value))});
+ else if(t.id=='q'||t.id=='pickerSearch')document.querySelectorAll('#'+(t.id==='q'?'app':'ov')+' [data-s]').forEach(r=>r.hidden=!r.dataset.s.toLowerCase().includes(t.value.toLowerCase()))});
 document.addEventListener('change',e=>{const t=e.target,d=t.dataset;
  if(d.img&&demoMode){denyDemo();t.value='';return}
  if(d.d&&demoMode){denyDemo();return}
