@@ -404,7 +404,7 @@ clr:()=>{const c=$('cv');c.getContext('2d').clearRect(0,0,c.width,c.height)},
 ok:k=>{db[k]=$('cv').toDataURL('image/png');save();$('ov').className='';render();toast('ثبت شد')},
 out:()=>{lock=true;lk='in';render()}
 };
-const DEMO_BLOCKED=new Set(['creditorhistory','editcreditorpayment','togglehomeinvoices','promobanner',
+const DEMO_BLOCKED=new Set(['creditorhistory','editcreditorpayment',
  'start','setpw','newinv','newinvc','einv','dinv','arow','rrow','sinv',
  'newc','ecust','scust','dcust','newp','ep','sp','dp','newpay','payc','spay','dpay',
  'rm','bio','chpw','bk','rs','tlogo','mklogo','sketch','clr','ok','out','newservice','eservice','dservice','saveservice','addservicerow','remservicerow','newdebt','sdebt','newcreditor','newcreditorpayment','savecreditor','savecreditorpayment','newexpense','sexpense','stockadj','sstock','addcategory','chequestatus','savesms','clearsms','sendtest','smsinvoice','smsservice'
