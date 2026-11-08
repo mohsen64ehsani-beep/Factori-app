@@ -251,6 +251,20 @@ async function bioLogin(){if(!BA())return false;try{await bioAsk();return true}c
 function img(t,k){if(denyDemo())return;const fl=t.files[0];if(!fl)return;const r=new FileReader();r.onerror=()=>toast('خواندن فایل ممکن نشد');r.onload=()=>{const im=new Image();im.onerror=()=>toast('تصویر معتبر نیست');im.onload=()=>{const m=k=='lg'?240:320,s=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);db[k]=c.toDataURL('image/png');save();render();toast('ثبت شد')};im.src=r.result};r.readAsDataURL(fl)}
 const nd=x=>({no:String(db.seq+1),dt:today(),cid:'',items:[{pid:'',q:'1',p:''}],ds:'',tx:'',...x});
 
+async function readSmsForm(){
+const settings={apiKey:$('smsApiKey')?.value.trim()||'',fromNumber:$('smsFrom')?.value.trim()||'',invoicePattern:$('smsInvoicePattern')?.value.trim()||'',paymentPattern:$('smsPaymentPattern')?.value.trim()||'',testPhone:$('smsTestPhone')?.value.trim()||''};
+if(!settings.apiKey||!settings.fromNumber||!settings.invoicePattern||!settings.paymentPattern)throw new Error('توکن، شماره خط و هر دو کد پترن را کامل کن');
+await window.FactoriLicenseApi.saveSmsSettings(settings);smsSettings=settings;return settings;
+}
+async function sendCustomerPattern(kind,customer,data){
+if(!customer?.ph)throw new Error('شماره موبایل مشتری ثبت نشده است');
+if(!smsSettings.apiKey||!smsSettings.fromNumber)throw new Error('ابتدا پنل پیامکی را در تنظیمات متصل کن');
+const patternCode=kind==='invoice'?smsSettings.invoicePattern:smsSettings.paymentPattern;
+const params=kind==='invoice'?{name:String(customer.n||'مشتری').slice(0,40),factor:String(data.no),total:String(Math.round(data.total)),paid:String(Math.round(data.paid)),remain:String(Math.round(data.remain))}:{name:String(customer.n||'مشتری').slice(0,40),amount:String(Math.round(data.amount)),date:String(data.date).slice(0,10),method:String(data.method).slice(0,20),remain:String(Math.round(data.remain))};
+await window.FactoriLicenseApi.sendFarazPattern({settings:smsSettings,recipient:customer.ph,patternCode,params});
+}
+async function sendSmsWithFeedback(kind,customer,data){try{toast('در حال ارسال پیامک…');await sendCustomerPattern(kind,customer,data);toast('درخواست ارسال پیامک به فراز ارسال شد')}catch(e){toast('ارسال پیامک ناموفق بود: '+(e.message||e))}}
+
 /* ---- actions ---- */
 const A={
 tpl:id=>{db.tpl=String(id||'1');save();render()},
@@ -258,6 +272,9 @@ col:id=>{db.col=id||COLS[0];save();render()},
 prev:()=>{const sample={no:1001,dt:today(),cid:'preview-customer',items:[{n:'نمونه کالا',q:2,p:250000}],ds:0,tx:0};const oldC=db.cust;db.cust=[...(oldC||[]),{id:'preview-customer',n:'مشتری نمونه',ph:'09120000000',ad:'—',code:''}];$('ov').innerHTML='<div class="bar"><button class="b s" data-a="cls">بستن پیش‌نمایش</button></div><div class="c" style="max-width:720px;margin:12px auto;background:#fff;color:#14212b;border-color:'+(db.col||COLS[0])+'"><div style="border-top:7px solid '+(db.col||COLS[0])+';padding-top:10px">'+paper(sample)+'</div></div>';$('ov').className='on';db.cust=oldC},
 
 tab:id=>go(id),
+savesms:async()=>{try{await readSmsForm();toast('تنظیمات پیامک با رمزنگاری Android Keystore ذخیره شد');render()}catch(e){toast(e.message||'ذخیره ناموفق بود')}},
+clearsms:async()=>{if(!confirm('اطلاعات اتصال پیامک پاک شود؟'))return;try{await window.FactoriLicenseApi.clearSmsSettings();smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:''};render();toast('اطلاعات پیامک پاک شد')}catch(e){toast('پاک‌کردن اطلاعات ناموفق بود')}},
+sendtest:async()=>{try{const cfg=await readSmsForm();if(!/^09\\d{9}$/.test(cfg.testPhone))throw new Error('شماره موبایل آزمایشی را با 09 وارد کن');await sendCustomerPattern('invoice',{n:'آزمایش فاکتوری',ph:cfg.testPhone},{no:'1000',total:1000,paid:500,remain:500});toast('پیامک آزمایشی به فراز ارسال شد')}catch(e){toast('آزمایش ناموفق: '+(e.message||e))}},
 demo:()=>enterDemo(),exitdemo:()=>exitDemo(),licenseui:()=>licenseUi(),
 licensecheck:async()=>{
  const code=$('licenseCode')?.value?.trim();
@@ -314,7 +331,8 @@ arow:()=>{D.items.push({pid:'',q:'1',p:''});render()},rrow:id=>{D.items.splice(i
 sinv:()=>{const it=D.items.filter(r=>r.pid&&num(r.q)>0);if(!D.cid)return toast('مشتری را انتخاب کن');if(!it.length)return toast('حداقل یک کالا انتخاب کن');
  const o=db.inv.find(i=>i.id==D.id);if(o)stk(o.items,1);
  const n={id:D.id||uid(),no:num(D.no)||db.seq+1,dt:D.dt||today(),cid:D.cid,items:it.map(r=>({pid:r.pid,n:r.n,q:num(r.q),p:num(r.p),b:num(r.b)})),ds:num(D.ds),tx:num(D.tx)};
- stk(n.items,-1);db.seq=Math.max(db.seq,n.no);o?db.inv[db.inv.indexOf(o)]=n:db.inv.push(n);save();go('inv');ov(paper(n))},
+ stk(n.items,-1);db.seq=Math.max(db.seq,n.no);o?db.inv[db.inv.indexOf(o)]=n:db.inv.push(n);save();lastSmsInvoiceId=n.id;go('inv');ov(paper(n));$('ov .bar')?.insertAdjacentHTML('beforeend','<button class="b s" data-a="smsinvoice">ارسال پیامک به مشتری</button>')},
+smsinvoice:async()=>{const i=db.inv.find(x=>x.id===lastSmsInvoiceId);if(!i)return toast('فاکتور پیدا نشد');const c=C(i.cid),paid=sum(db.pay.filter(p=>p.cid===c.id).map(p=>p.amt));await sendSmsWithFeedback('invoice',c,{no:i.no,total:tot(i),paid,remain:bal(c.id)})},
 newc:()=>{const b=v.t=='invf';if(b)IV=D;D={};go('cf',{tab:'cust',back:b})},ecust:id=>{D={...C(id)};go('cf',{tab:'cust'})},ocust:id=>go('cd',{id,tab:'cust'}),
 scust:()=>{if(!(D.n||'').trim())return toast('نام مشتری را وارد کن');const c={id:D.id||uid(),n:D.n.trim(),ph:D.ph||'',ad:D.ad||'',code:D.code||''},i=db.cust.findIndex(x=>x.id==c.id);i<0?db.cust.push(c):db.cust[i]=c;save();
  if(v.back){D=IV;D.cid=c.id;go('invf',{tab:'inv'})}else go('cd',{id:c.id,tab:'cust'})},
@@ -324,7 +342,7 @@ sp:()=>{if(!(D.n||'').trim())return toast('نام کالا را وارد کن');
 dp:id=>{db.prod=db.prod.filter(p=>p.id!=id);save();render()},
 newpay:()=>{D={kind:'cash',dt:today()};go('payf',{tab:'pay'})},payc:id=>{D={kind:'cash',dt:today(),cid:id};go('payf',{tab:'pay'})},
 spay:()=>{if(!D.cid)return toast('مشتری را انتخاب کن');if(num(D.amt)<=0)return toast('مبلغ را وارد کن');if(D.kind=='cheque'&&!D.no)return toast('شماره چک را وارد کن');
- db.pay.push({id:uid(),cid:D.cid,kind:D.kind,amt:num(D.amt),dt:D.dt||today(),no:D.no||'',sayad:D.sayad||'',cdt:D.cdt||'',bank:D.bank||''});save();go('cd',{id:D.cid,tab:'cust'})},
+ const payment={id:uid(),cid:D.cid,kind:D.kind,amt:num(D.amt),dt:D.dt||today(),no:D.no||'',sayad:D.sayad||'',cdt:D.cdt||'',bank:D.bank||''};db.pay.push(payment);save();const cid=D.cid;go('cd',{id:cid,tab:'cust'});if(confirm('دریافت وجه ثبت شد. پیامک تأیید دریافت برای مشتری ارسال شود؟'))sendSmsWithFeedback('payment',C(cid),{amount:payment.amt,date:dstr(payment.dt),method:payment.kind==='cheque'?'چک':'نقدی',remain:bal(cid)})},
 dpay:id=>{db.pay=db.pay.filter(p=>p.id!=id);save();render()},
 stmt:id=>ov(stmt(id)),cls:()=>{$('ov').className=''},pdf:()=>exp('pdf'),png:()=>exp('png'),
 back:()=>{if(v.back){D=IV;go('invf',{tab:'inv'})}else go(v.tab||'home')},
