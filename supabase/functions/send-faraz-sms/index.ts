@@ -1,0 +1,61 @@
+import { importJWK, jwtVerify } from "https://esm.sh/jose@5";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json",
+};
+const reply = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), { status, headers: cors });
+const PUBLIC_JWK = {
+  kty: "EC", crv: "P-256",
+  x: "_r1Nk5fzHPiAWAIVp5U9i9eg-3NY0WetWIctLudfAfw",
+  y: "3PV_mnmE9xxwwB44ooFJxteuEmfE2POLhwiBQQah8uQ", ext: true
+};
+
+Deno.serve(async req => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "POST") return reply({ ok: false, error: "method_not_allowed" }, 405);
+  try {
+    const auth = req.headers.get("Authorization") || "";
+    const token = auth.replace(/^Bearer\\s+/i, "").trim();
+    if (!token) return reply({ ok: false, error: "license_required" }, 401);
+    const publicKey = await importJWK(PUBLIC_JWK, "ES256");
+    const verified = await jwtVerify(token, publicKey, {
+      issuer: "factori-license", audience: "com.factori.app"
+    });
+    if (verified.payload.permanent !== true || typeof verified.payload.device !== "string" || !verified.payload.sub)
+      return reply({ ok: false, error: "invalid_license" }, 401);
+
+    const body = await req.json();
+    const apiKey = String(body.apiKey || "").trim();
+    const fromNumber = String(body.fromNumber || "").trim();
+    const patternCode = String(body.patternCode || "").trim();
+    const recipient = String(body.recipient || "").replace(/[\\s-]/g, "");
+    const params = body.params;
+    if (!apiKey || !fromNumber || !patternCode || !/^09\\d{9}$/.test(recipient) ||
+        !params || typeof params !== "object" || Array.isArray(params))
+      return reply({ ok: false, error: "invalid_sms_request" }, 400);
+    if (apiKey.length > 512 || fromNumber.length > 40 || patternCode.length > 120)
+      return reply({ ok: false, error: "invalid_sms_config" }, 400);
+
+    const upstream = await fetch("https://edge.ippanel.com/v1/api/send", {
+      method: "POST",
+      headers: { "Authorization": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sending_type: "pattern", from_number: fromNumber,
+        code: patternCode, recipients: [recipient], params
+      })
+    });
+    const raw = await upstream.text();
+    let result: unknown = raw;
+    try { result = raw ? JSON.parse(raw) : {}; } catch { /* retain provider text */ }
+    if (!upstream.ok) return reply({ ok: false, error: "provider_error", status: upstream.status, detail: result }, 502);
+    return reply({ ok: true, provider: result });
+  } catch (error) {
+    const message = String((error as Error)?.message || error);
+    const authFailure = /JWT|signature|issuer|audience|claim/i.test(message);
+    return reply({ ok: false, error: authFailure ? "invalid_license" : "sms_gateway_error" }, authFailure ? 401 : 500);
+  }
+});
