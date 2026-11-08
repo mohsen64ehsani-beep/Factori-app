@@ -101,7 +101,7 @@ profit=i=>sum(i.items.map(r=>(num(r.p)-num(r.b))*num(r.q)))-disc(i),\nserviceTot
 bal=id=>sum(db.inv.filter(i=>i.cid===id).map(tot))+sum(db.serviceInv.filter(i=>i.cid===id).map(serviceTotal))+sum(db.debt.filter(d=>d.cid===id).map(d=>num(d.amt)))-sum(db.pay.filter(p=>p.cid===id&&p.status!=='returned').map(p=>p.amt)),
 stk=(it,sg)=>it.forEach(r=>{const p=db.prod.find(x=>x.id===r.pid);if(p){const before=num(p.qty),delta=sg*num(r.q);p.qty=before+delta;db.stockMoves.push({id:uid(),pid:p.id,dt:today(),delta,before,after:p.qty,reason:'تغییر ناشی از فاکتور'})}}),
 H=async s=>{try{return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('inv'+s)))].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent('x'+s)))}};
-let lock=true,lk='sp',v={t:'home'},D={},IV=null,tt,lastSmsInvoiceId=null,lastSmsServiceId=null;
+let lock=true,lk='sp',v={t:'home'},D={},IV=null,IVType='invf',tt,lastSmsInvoiceId=null,lastSmsServiceId=null;
 let reportPeriod='month';\nlet smsHistory=[];\nlet smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:''};
 let realDb=db,demoMode=false,licenseActive=false;
 const makeDemoDb=()=>({
@@ -355,9 +355,9 @@ sinv:()=>{const it=D.items.filter(r=>r.pid&&num(r.q)>0);if(!D.cid)return toast('
  const n={id:D.id||uid(),no:num(D.no)||db.seq+1,dt:D.dt||today(),cid:D.cid,items:it.map(r=>({pid:r.pid,n:r.n,q:num(r.q),p:num(r.p),b:num(r.b)})),ds:num(D.ds),tx:num(D.tx)};
  stk(n.items,-1);db.seq=Math.max(db.seq,n.no);o?db.inv[db.inv.indexOf(o)]=n:db.inv.push(n);save();lastSmsInvoiceId=n.id;go('inv');ov(paper(n));$('ov .bar')?.insertAdjacentHTML('beforeend','<button class="b s" data-a="smsinvoice">ارسال پیامک به مشتری</button>')},
 smsinvoice:async()=>{const i=db.inv.find(x=>x.id===lastSmsInvoiceId);if(!i)return toast('فاکتور پیدا نشد');const c=C(i.cid),paid=sum(db.pay.filter(p=>p.cid===c.id).map(p=>p.amt));await sendSmsWithFeedback('invoice',c,{no:i.no,total:tot(i),paid,remain:bal(c.id)},'invoice:'+i.id)},
-newc:()=>{const b=v.t=='invf';if(b)IV=D;D={};go('cf',{tab:'cust',back:b})},ecust:id=>{D={...C(id)};go('cf',{tab:'cust'})},ocust:id=>go('cd',{id,tab:'cust'}),
+newc:()=>{const b=v.t=='invf'||v.t=='servicef';if(b){IV=D;IVType=v.t}D={};go('cf',{tab:'cust',back:b})},ecust:id=>{D={...C(id)};go('cf',{tab:'cust'})},ocust:id=>go('cd',{id,tab:'cust'}),
 scust:()=>{if(!(D.n||'').trim())return toast('نام مشتری را وارد کن');const c={id:D.id||uid(),n:D.n.trim(),ph:D.ph||'',ad:D.ad||'',code:D.code||''},i=db.cust.findIndex(x=>x.id==c.id);i<0?db.cust.push(c):db.cust[i]=c;save();
- if(v.back){D=IV;D.cid=c.id;go('invf',{tab:'inv'})}else go('cd',{id:c.id,tab:'cust'})},
+ if(v.back){D=IV;D.cid=c.id;go(IVType,{tab:'inv'})}else go('cd',{id:c.id,tab:'cust'})},
 dcust:id=>{if(db.inv.some(i=>i.cid===id)||db.serviceInv.some(i=>i.cid===id)||db.pay.some(p=>p.cid===id)||db.debt.some(d=>d.cid===id))return toast('این مشتری سابقه مالی دارد؛ برای حفظ سوابق امکان حذف مستقیم وجود ندارد');db.cust=db.cust.filter(c=>c.id!=id);save();go('cust')},
 newp:()=>{D={category:''};go('pf',{tab:'prod'})},ep:id=>{D={...db.prod.find(p=>p.id==id)};go('pf',{tab:'prod'})},
 sp:()=>{if(!(D.n||'').trim())return toast('نام کالا را وارد کن');const p={id:D.id||uid(),n:D.n.trim(),category:D.category||'',buy:num(D.buy),sell:num(D.sell),qty:num(D.qty)},i=db.prod.findIndex(x=>x.id==p.id);i<0?db.prod.push(p):db.prod[i]=p;save();go('prod')},
@@ -371,7 +371,7 @@ spay:()=>{if(!D.cid)return toast('مشتری را انتخاب کن');if(num(D.a
  const payment={id:uid(),cid:D.cid,kind:D.kind,amt:num(D.amt),dt:D.dt||today(),no:D.no||'',sayad:D.sayad||'',cdt:D.cdt||'',bank:D.bank||'',status:D.kind==='cheque'?(D.status||'pending'):'received'};db.pay.push(payment);save();const cid=D.cid;go('cd',{id:cid,tab:'cust'});if(confirm('دریافت وجه ثبت شد. پیامک تأیید دریافت برای مشتری ارسال شود؟'))sendSmsWithFeedback('payment',C(cid),{amount:payment.amt,date:smsJDate(payment.dt),method:payment.kind==='cheque'?'چک':'نقدی',remain:bal(cid)},'payment:'+payment.id)},
 dpay:id=>{db.pay=db.pay.filter(p=>p.id!=id);save();render()},chequestatus:(id,b)=>{const p=db.pay.find(x=>x.id==id);if(!p)return;p.status=b.dataset.status;save();render();toast(p.status==='returned'?'چک برگشتی ثبت شد':'وصول چک ثبت شد')},
 stmt:id=>ov(stmt(id)),cls:()=>{$('ov').className=''},pdf:()=>exp('pdf'),png:()=>exp('png'),
-back:()=>{if(v.back){D=IV;go('invf',{tab:'inv'})}else go(v.tab||'home')},
+back:()=>{if(v.back){D=IV;go(IVType,{tab:'inv'})}else go(v.tab||'home')},
 rm:k=>{delete db[k];save();render()},
 bio:async()=>{if(db.bio){delete db.bio;save();render()}else{const ok=await bioOn();toast(ok?'اثر انگشت فعال شد':'این مرورگر پشتیبانی نمی‌کند؛ در نسخه اندروید فعال می‌شود');render()}},
 chpw:async()=>{const p=$('np').value;if(p.length<4)return toast('حداقل ۴ کاراکتر');db.pw=await H(p);save();$('np').value='';toast('رمز تغییر کرد')},
