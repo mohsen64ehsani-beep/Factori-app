@@ -97,11 +97,11 @@ subt=i=>sum(i.items.map(r=>num(r.q)*num(r.p))),
 disc=i=>Math.min(num(i.ds),subt(i)),
 taxv=i=>(subt(i)-disc(i))*num(i.tx)/100,
 tot=i=>subt(i)-disc(i)+taxv(i),
-profit=i=>sum(i.items.map(r=>(num(r.p)-num(r.b))*num(r.q)))-disc(i),
-bal=id=>sum(db.inv.filter(i=>i.cid===id).map(tot))+sum(db.debt.filter(d=>d.cid===id).map(d=>num(d.amt)))-sum(db.pay.filter(p=>p.cid===id&&p.status!=='returned').map(p=>p.amt)),
+profit=i=>sum(i.items.map(r=>(num(r.p)-num(r.b))*num(r.q)))-disc(i),\nserviceTotal=i=>Math.max(0,sum((i.items||[]).map(r=>num(r.qty)*num(r.price)))-num(i.discount)),\nserviceCost=i=>i.costMode==='total'?num(i.costTotal):sum((i.items||[]).map(r=>num(r.qty)*num(r.cost))),\nserviceProfit=i=>serviceTotal(i)-serviceCost(i),
+bal=id=>sum(db.inv.filter(i=>i.cid===id).map(tot))+sum(db.serviceInv.filter(i=>i.cid===id).map(serviceTotal))+sum(db.debt.filter(d=>d.cid===id).map(d=>num(d.amt)))-sum(db.pay.filter(p=>p.cid===id&&p.status!=='returned').map(p=>p.amt)),
 stk=(it,sg)=>it.forEach(r=>{const p=db.prod.find(x=>x.id===r.pid);if(p)p.qty=num(p.qty)+sg*num(r.q)}),
 H=async s=>{try{return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('inv'+s)))].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent('x'+s)))}};
-let lock=true,lk='sp',v={t:'home'},D={},IV=null,tt,lastSmsInvoiceId=null;
+let lock=true,lk='sp',v={t:'home'},D={},IV=null,tt,lastSmsInvoiceId=null,lastSmsServiceId=null;
 let smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:''};
 let realDb=db,demoMode=false,licenseActive=false;
 const makeDemoDb=()=>({
