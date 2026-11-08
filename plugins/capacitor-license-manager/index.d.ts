@@ -13,6 +13,9 @@ export interface LicenseManagerPlugin {
   saveToken(options: { token: string }): Promise<void>;
   getToken(): Promise<{ token: string | null }>;
   clearToken(): Promise<void>;
+  saveSmsSettings(options: { value: string }): Promise<void>;
+  getSmsSettings(): Promise<{ value: string | null }>;
+  clearSmsSettings(): Promise<void>;
 }
 
 declare const LicenseManager: LicenseManagerPlugin;
