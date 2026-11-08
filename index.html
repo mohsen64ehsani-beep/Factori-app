@@ -102,7 +102,7 @@ bal=id=>sum(db.inv.filter(i=>i.cid===id).map(tot))+sum(db.serviceInv.filter(i=>i
 stk=(it,sg)=>it.forEach(r=>{const p=db.prod.find(x=>x.id===r.pid);if(p){const before=num(p.qty),delta=sg*num(r.q);p.qty=before+delta;db.stockMoves.push({id:uid(),pid:p.id,dt:today(),delta,before,after:p.qty,reason:'تغییر ناشی از فاکتور'})}}),
 H=async s=>{try{return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('inv'+s)))].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent('x'+s)))}};
 let lock=true,lk='sp',v={t:'home'},D={},IV=null,IVType='invf',tt,lastSmsInvoiceId=null,lastSmsServiceId=null;
-let reportPeriod='month';\nlet smsHistory=[];\nlet smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:''};
+let reportPeriod='month';\nlet smsHistory=[];\nlet smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:'',autoInvoice:false,autoPayment:false};
 let realDb=db,demoMode=false,licenseActive=false;
 const makeDemoDb=()=>({
  cust:[
@@ -150,7 +150,7 @@ function smsSettingsCard(){
 <label>توکن API فراز</label><input id="smsApiKey" type="password" dir="ltr" autocomplete="off" placeholder="API Token" value="${esc(smsSettings.apiKey)}">
 <label>شماره خط ارسال‌کننده</label><input id="smsFrom" dir="ltr" placeholder="شماره خط فراز" value="${esc(smsSettings.fromNumber)}">
 <div class="g"><div><label>کد پترن صدور فاکتور</label><input id="smsInvoicePattern" dir="ltr" value="${esc(smsSettings.invoicePattern)}"></div><div><label>کد پترن ثبت دریافتی</label><input id="smsPaymentPattern" dir="ltr" value="${esc(smsSettings.paymentPattern)}"></div></div>
-<label>شماره موبایل خودتان برای آزمایش</label><input id="smsTestPhone" dir="ltr" inputmode="tel" placeholder="09xxxxxxxxx" value="${esc(smsSettings.testPhone)}">
+<label style="display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--tx)"><input id="smsAutoInvoice" type="checkbox" style="width:auto" ${smsSettings.autoInvoice?'checked':''}> ارسال خودکار پیامک پس از صدور فاکتور</label><label style="display:flex;align-items:center;gap:8px;color:var(--tx)"><input id="smsAutoPayment" type="checkbox" style="width:auto" ${smsSettings.autoPayment?'checked':''}> ارسال خودکار پیامک پس از ثبت دریافت</label><label>شماره موبایل خودتان برای آزمایش</label><input id="smsTestPhone" dir="ltr" inputmode="tel" placeholder="09xxxxxxxxx" value="${esc(smsSettings.testPhone)}">
 <button class="b w100" data-a="savesms">ذخیره امن تنظیمات پیامک</button><button class="b s w100" data-a="sendtest">ارسال پیامک آزمایشی</button><button class="lnk w100" data-a="clearsms">پاک کردن اطلاعات اتصال</button><small style="display:block;color:var(--mu);margin-top:8px">ارسال آزمایشی هزینه دارد و فقط با لمس دکمه انجام می‌شود. پترن‌ها باید تأیید شده باشند.</small></div>`;
 }
 
@@ -263,7 +263,7 @@ function img(t,k){if(denyDemo())return;const fl=t.files[0];if(!fl)return;const r
 const nd=x=>({no:String(db.seq+1),dt:today(),cid:'',items:[{pid:'',q:'1',p:''}],ds:'',tx:'',...x});
 
 async function readSmsForm(){
-const settings={apiKey:$('smsApiKey')?.value.trim()||'',fromNumber:$('smsFrom')?.value.trim()||'',invoicePattern:$('smsInvoicePattern')?.value.trim()||'',paymentPattern:$('smsPaymentPattern')?.value.trim()||'',testPhone:$('smsTestPhone')?.value.trim()||''};
+const settings={apiKey:$('smsApiKey')?.value.trim()||'',fromNumber:$('smsFrom')?.value.trim()||'',invoicePattern:$('smsInvoicePattern')?.value.trim()||'',paymentPattern:$('smsPaymentPattern')?.value.trim()||'',testPhone:$('smsTestPhone')?.value.trim()||'',autoInvoice:!!$('smsAutoInvoice')?.checked,autoPayment:!!$('smsAutoPayment')?.checked};
 if(!settings.apiKey||!settings.fromNumber||!settings.invoicePattern||!settings.paymentPattern)throw new Error('توکن، شماره خط و هر دو کد پترن را کامل کن');
 await window.FactoriLicenseApi.saveSmsSettings(settings);smsSettings=settings;return settings;
 }
