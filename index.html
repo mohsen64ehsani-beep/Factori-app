@@ -120,7 +120,7 @@ const makeDemoDb=()=>({
   {id:'demo-i2',no:1002,dt:today(),cid:'demo-c2',items:[{pid:'demo-p2',n:'کالای نمونه B',q:1,p:320000,b:250000}],ds:20000,tx:0},
   {id:'demo-i3',no:1003,dt:today(),cid:'demo-c3',items:[{pid:'demo-p1',n:'کالای نمونه A',q:3,p:180000,b:120000}],ds:10000,tx:0}
  ],
- pay:[{id:'demo-pay1',cid:'demo-c1',kind:'cash',amt:200000,dt:today(),no:'',sayad:'',cdt:'',bank:''}],debt:[],expenses:[],services:[],serviceInv:[],categories:[],stockMoves:[],
+ pay:[{id:'demo-pay1',cid:'demo-c1',kind:'cash',amt:200000,dt:today(),no:'',sayad:'',cdt:'',bank:''}],debt:[],expenses:[],services:[],serviceInv:[],categories:[],stockMoves:[],smsHistory:[],serviceSeq:2000,
  seq:1003,cu:'تومان',sn:'فروشگاه نمونه',sp:'09120000000',ad:'تهران، خیابان نمونه'
 });
 const denyDemo=()=>{if(!demoMode)return false;toast('این امکان در نسخه آزمایشی غیرفعال است؛ برای فعال‌سازی لایسنس اقدام کنید');return true};
