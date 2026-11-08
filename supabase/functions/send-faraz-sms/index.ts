@@ -82,6 +82,6 @@ Deno.serve(async req => {
   } catch (error) {
     const message = String((error as Error)?.message || error);
     const authFailure = /JWT|signature|issuer|audience|claim/i.test(message);
-    return reply({ ok: false, error: authFailure ? "invalid_license" : "sms_gateway_error" }, authFailure ? 401 : 500);
+    return reply({ ok: false, error: authFailure ? "invalid_license" : "sms_gateway_error", detail: authFailure ? "اعتبارسنجی لایسنس ناموفق بود" : message.slice(0, 300) }, authFailure ? 401 : 500);
   }
 });
