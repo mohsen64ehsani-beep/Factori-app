@@ -85,8 +85,8 @@ fq=n=>num(n).toLocaleString('fa-IR'),
 esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),
 sum=a=>a.reduce((x,y)=>x+num(y),0);
 const K='db:v2';
-let db={cust:[],prod:[],inv:[],pay:[],seq:1000,cu:'ریال',sn:'',sp:'',ad:''};
-try{Object.assign(db,JSON.parse(localStorage.getItem(K))||{})}catch(e){}
+let db={cust:[],prod:[],inv:[],pay:[],debt:[],expenses:[],services:[],serviceInv:[],categories:[],stockMoves:[],seq:1000,cu:'ریال',sn:'',sp:'',ad:''};
+try{Object.assign(db,JSON.parse(localStorage.getItem(K))||{})}catch(e){}\ndb.debt=Array.isArray(db.debt)?db.debt:[];db.expenses=Array.isArray(db.expenses)?db.expenses:[];db.services=Array.isArray(db.services)?db.services:[];db.serviceInv=Array.isArray(db.serviceInv)?db.serviceInv:[];db.categories=Array.isArray(db.categories)?db.categories:[];db.stockMoves=Array.isArray(db.stockMoves)?db.stockMoves:[];
 const save=()=>{if(demoMode)return;try{localStorage.setItem(K,JSON.stringify(db))}catch(e){toast('حافظه پر است')}},
 uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6),
 money=n=>fa(n)+' '+db.cu,
@@ -98,7 +98,7 @@ disc=i=>Math.min(num(i.ds),subt(i)),
 taxv=i=>(subt(i)-disc(i))*num(i.tx)/100,
 tot=i=>subt(i)-disc(i)+taxv(i),
 profit=i=>sum(i.items.map(r=>(num(r.p)-num(r.b))*num(r.q)))-disc(i),
-bal=id=>sum(db.inv.filter(i=>i.cid===id).map(tot))-sum(db.pay.filter(p=>p.cid===id).map(p=>p.amt)),
+bal=id=>sum(db.inv.filter(i=>i.cid===id).map(tot))+sum(db.debt.filter(d=>d.cid===id).map(d=>num(d.amt)))-sum(db.pay.filter(p=>p.cid===id&&p.status!=='returned').map(p=>p.amt)),
 stk=(it,sg)=>it.forEach(r=>{const p=db.prod.find(x=>x.id===r.pid);if(p)p.qty=num(p.qty)+sg*num(r.q)}),
 H=async s=>{try{return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('inv'+s)))].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent('x'+s)))}};
 let lock=true,lk='sp',v={t:'home'},D={},IV=null,tt,lastSmsInvoiceId=null;
