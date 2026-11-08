@@ -385,7 +385,7 @@ out:()=>{lock=true;lk='in';render()}
 const DEMO_BLOCKED=new Set([
  'start','setpw','newinv','newinvc','einv','dinv','arow','rrow','sinv',
  'newc','ecust','scust','dcust','newp','ep','sp','dp','newpay','payc','spay','dpay',
- 'rm','bio','chpw','bk','rs','tlogo','mklogo','sketch','clr','ok','out'
+ 'rm','bio','chpw','bk','rs','tlogo','mklogo','sketch','clr','ok','out','newservice','saveservice','addservicerow','remservicerow','newdebt','sdebt','newexpense','sexpense','stockadj','sstock','addcategory','chequestatus','savesms','clearsms','sendtest','smsinvoice','smsservice'
 ]);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
  if(demoMode&&DEMO_BLOCKED.has(a)){denyDemo();return}
