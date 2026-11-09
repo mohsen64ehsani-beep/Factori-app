@@ -137,4 +137,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: factori-android-v1.2.12
-          path: android/app/build/outputs/apk/debug/Factori-v1.2.11.apk
+          path: android/app/build/outputs/apk/debug/Factori-v1.2.12.apk
