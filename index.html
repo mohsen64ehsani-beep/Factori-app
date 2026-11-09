@@ -545,7 +545,7 @@ save();D={};if(navigationStack.length)navigationStack.pop();v={t:'advanced',tab:
 advexport:()=>{const rows=[['بخش','نام / شرح','تاریخ','مبلغ','تعداد'],...ADV_ARRAYS.flatMap(id=>advArray(id).map(x=>[advLabel(id),x.name||db.prod.find(p=>p.id===x.pid)?.n||x.title||'',x.dt||'',advAmount(x),x.qty||'']))];const csv='\uFEFF'+rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='factori-advanced-'+today()+'.csv';a.click();toast('فایل گزارش آماده شد')},
 out:()=>{lock=true;lk='in';render()}
 };
-const DEMO_BLOCKED=new Set(['advnew','advsave','advdelete','advbarcode','creditorhistory','editcreditorpayment','editcreditor','deletecreditor',
+const DEMO_BLOCKED=new Set(['advnew','advsave','advdelete','advbarcode','advbarcodeSave','advscan','creditorhistory','editcreditorpayment','editcreditor','deletecreditor',
  'start','setpw','newinv','newinvc','einv','dinv','arow','rrow','sinv',
  'newc','ecust','scust','dcust','newp','ep','sp','dp','newpay','payc','spay','dpay',
  'rm','bio','chpw','bk','rs','tlogo','mklogo','sketch','clr','ok','out','newservice','eservice','dservice','saveservice','addservicerow','remservicerow','newdebt','sdebt','newcreditor','newcreditorpayment','savecreditor','savecreditorpayment','newexpense','editexpense','deleteexpense','deletecreditorpayment','sexpense','stockadj','sstock','addcategory','chequestatus','savesms','clearsms','sendtest','smsinvoice','smsservice'
