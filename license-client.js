@@ -253,6 +253,27 @@ async function clearSmsSettings() {
   await LicenseManager.clearSmsSettings();
 }
 
+async function getFarazPatternDetails({ settings, patternCode }) {
+  const licenseToken = await getLicenseAuthToken();
+  const res = await fetch(SUPABASE_URL + '/functions/v1/send-faraz-sms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + licenseToken },
+    body: JSON.stringify({ action: 'pattern_details', apiKey: settings.apiKey, patternCode })
+  });
+  const raw = await res.text();
+  let data = {};
+  try { data = raw ? JSON.parse(raw) : {}; } catch {}
+  if (!res.ok || !data.ok) {
+    const messages = {
+      pattern_lookup_failed: 'خواندن الگو ناموفق بود؛ کلید API و شناسه الگو را بررسی کن.',
+      license_not_active: 'لایسنس فعال نیست.',
+      invalid_sms_config: 'اطلاعات اتصال پیامک ناقص یا نامعتبر است.'
+    };
+    throw new Error(messages[data.error] || 'بررسی الگوی پیامک ناموفق بود.');
+  }
+  return data.pattern;
+}
+
 async function sendFarazPattern({ settings, recipient, patternCode, params }) {
   const licenseToken = await getLicenseAuthToken();
   const res = await fetch(SUPABASE_URL + '/functions/v1/send-faraz-sms', {
@@ -274,5 +295,5 @@ async function sendFarazPattern({ settings, recipient, patternCode, params }) {
   return data;
 }
 
-window.FactoriLicenseApi = { isLicensed, activate, getLicenseAuthToken, getSmsSettings, saveSmsSettings, clearSmsSettings, sendFarazPattern };
+window.FactoriLicenseApi = { isLicensed, activate, getLicenseAuthToken, getSmsSettings, saveSmsSettings, clearSmsSettings, getFarazPatternDetails, sendFarazPattern };
 window.dispatchEvent(new Event('factori-license-ready'));
