@@ -108,6 +108,7 @@ stk=(it,sg)=>it.forEach(r=>{const p=db.prod.find(x=>x.id===r.pid);if(p){const be
 H=async s=>{try{return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('inv'+s)))].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent('x'+s)))}};
 let lock=true,lk='sp',v={t:'home'},D={},IV=null,IVType='invf',tt,lastSmsInvoiceId=null,lastSmsServiceId=null;
 let reportPeriod='month';
+/* Factori 1.2.6 release verification: dashboard and creditor actions */
 let homeOpen={invoices:false,activities:false};
 let smsHistory=[];
 let smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:'',autoInvoice:false,autoPayment:false};
