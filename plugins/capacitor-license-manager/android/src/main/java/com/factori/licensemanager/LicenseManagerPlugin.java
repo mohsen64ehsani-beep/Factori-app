@@ -351,4 +351,16 @@ public class LicenseManagerPlugin extends Plugin {
             .edit().remove(TOKEN_KEY).apply();
         call.resolve();
     }
-          }
+
+    @PluginMethod
+    public void exitApp(PluginCall call) {
+        if (getActivity() == null) {
+            call.reject("بستن برنامه امکان‌پذیر نیست");
+            return;
+        }
+        getActivity().runOnUiThread(() -> {
+            call.resolve();
+            getActivity().finishAndRemoveTask();
+        });
+    }
+}
