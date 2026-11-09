@@ -1,9 +1,9 @@
 name: Build Android APK
-# Release build: Factori 1.2.13
+# Release build: Factori 1.2.14
 
 on:
   push:
-    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services]
+    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings]
   workflow_dispatch:
 
 jobs:
@@ -45,6 +45,7 @@ jobs:
       - name: Bundle license client
         run: |
           npx esbuild license-client.js --bundle --format=esm --outfile=www/license-client.js
+          npx esbuild back-handler.js --bundle --format=iife --outfile=www/back-handler.js
 
       - name: Copy offline libraries
         run: |
@@ -61,8 +62,8 @@ jobs:
 
       - name: Set Android update version
         run: |
-          sed -i -E 's/versionCode [0-9]+/versionCode 15/' android/app/build.gradle
-          sed -i -E 's/versionName "[^"]+"/versionName "1.2.13"/' android/app/build.gradle
+          sed -i -E 's/versionCode [0-9]+/versionCode 16/' android/app/build.gradle
+          sed -i -E 's/versionName "[^"]+"/versionName "1.2.14"/' android/app/build.gradle
           grep -n -E 'versionCode|versionName' android/app/build.gradle
 
       - name: Allow fingerprint permission
@@ -132,9 +133,9 @@ jobs:
           test -n "$KEY_FP"
           test "$KEY_FP" = "$APK_FP" || { echo "::error::APK was not signed with the fixed keystore."; exit 1; }
           echo "APK signature matches the fixed keystore."
-          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/Factori-v1.2.13.apk
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/Factori-v1.2.14.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factori-android-v1.2.13
+          name: factori-android-v1.2.14
           path: android/app/build/outputs/apk/debug/Factori-v1.2.13.apk
