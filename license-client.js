@@ -239,8 +239,8 @@ async function getLicenseAuthToken() {
 async function getSmsSettings() {
   await native();
   const stored = await LicenseManager.getSmsSettings();
-  if (!stored?.value) return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '' };
-  try { return JSON.parse(stored.value); } catch { return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '' }; }
+  if (!stored?.value) return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '', brandName: '' };
+  try { return JSON.parse(stored.value); } catch { return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '', brandName: '' }; }
 }
 
 async function saveSmsSettings(settings) {
