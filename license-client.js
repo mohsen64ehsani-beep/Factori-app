@@ -75,7 +75,7 @@ async function native(progress = () => {}) {
     throw new Error('افزونه LicenseManager داخل APK ثبت نشده است؛ APK باید دوباره با افزونه همگام‌سازی شود.');
   }
 
-  const methods = ['getPublicKey', 'signNonce', 'saveToken', 'getToken'];
+  const methods = ['getPublicKey', 'signNonce', 'saveToken', 'getToken', 'exitApp'];
   for (const method of methods) {
     progress('بررسی متد افزونه: ' + method);
     if (typeof LicenseManager?.[method] !== 'function') {
@@ -295,5 +295,5 @@ async function sendFarazPattern({ settings, recipient, patternCode, params }) {
   return data;
 }
 
-window.FactoriLicenseApi = { isLicensed, activate, getLicenseAuthToken, getSmsSettings, saveSmsSettings, clearSmsSettings, getFarazPatternDetails, sendFarazPattern };
+window.FactoriLicenseApi = { isLicensed, activate, getLicenseAuthToken, getSmsSettings, saveSmsSettings, clearSmsSettings, getFarazPatternDetails, sendFarazPattern, exitApp: () => LicenseManager.exitApp() };
 window.dispatchEvent(new Event('factori-license-ready'));
