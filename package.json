@@ -10,7 +10,8 @@
     "@capgo/capacitor-native-biometric": "^6.0.0",
     "capacitor-license-manager": "file:plugins/capacitor-license-manager",
     "html2canvas": "1.4.1",
-    "jspdf": "2.5.1"
+    "jspdf": "2.5.1",
+    "@capacitor/app": "^6.0.2"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
