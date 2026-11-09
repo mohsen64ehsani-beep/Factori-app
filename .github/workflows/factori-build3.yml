@@ -68,7 +68,7 @@ jobs:
 
       - name: Allow fingerprint permission
         run: |
-          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_BIOMETRIC" />\\n</manifest>#' android/app/src/main/AndroidManifest.xml
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_BIOMETRIC" />\\n    <uses-permission android:name="android.permission.CAMERA" />\\n</manifest>#' android/app/src/main/AndroidManifest.xml
 
       - name: Generate app icons and splash
         run: npx capacitor-assets generate --android
