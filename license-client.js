@@ -239,8 +239,8 @@ async function getLicenseAuthToken() {
 async function getSmsSettings() {
   await native();
   const stored = await LicenseManager.getSmsSettings();
-  if (!stored?.value) return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '' };
-  try { return JSON.parse(stored.value); } catch { return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '' }; }
+  if (!stored?.value) return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '', brandName: '' };
+  try { return JSON.parse(stored.value); } catch { return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '', brandName: '' }; }
 }
 
 async function saveSmsSettings(settings) {
@@ -251,6 +251,27 @@ async function saveSmsSettings(settings) {
 async function clearSmsSettings() {
   await native();
   await LicenseManager.clearSmsSettings();
+}
+
+async function getFarazPatternDetails({ settings, patternCode }) {
+  const licenseToken = await getLicenseAuthToken();
+  const res = await fetch(SUPABASE_URL + '/functions/v1/send-faraz-sms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + licenseToken },
+    body: JSON.stringify({ action: 'pattern_details', apiKey: settings.apiKey, patternCode })
+  });
+  const raw = await res.text();
+  let data = {};
+  try { data = raw ? JSON.parse(raw) : {}; } catch {}
+  if (!res.ok || !data.ok) {
+    const messages = {
+      pattern_lookup_failed: 'خواندن الگو ناموفق بود؛ کلید API و شناسه الگو را بررسی کن.',
+      license_not_active: 'لایسنس فعال نیست.',
+      invalid_sms_config: 'اطلاعات اتصال پیامک ناقص یا نامعتبر است.'
+    };
+    throw new Error(messages[data.error] || 'بررسی الگوی پیامک ناموفق بود.');
+  }
+  return data.pattern;
 }
 
 async function sendFarazPattern({ settings, recipient, patternCode, params }) {
@@ -270,9 +291,9 @@ async function sendFarazPattern({ settings, recipient, patternCode, params }) {
   const raw = await res.text();
   let data = {};
   try { data = raw ? JSON.parse(raw) : {}; } catch {}
-  if (!res.ok || !data.ok) { const detail = data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : ''; throw new Error((data.error || 'خطای ارسال پیامک') + ' (HTTP ' + res.status + ')' + (detail ? ': ' + detail.slice(0, 260) : '') + (data.status ? ' [کد پنل: ' + data.status + ']' : '')); }
+  if (!res.ok || !data.ok) { const detail = data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : ''; const html = /<!doctype html|<html/i.test(detail); const msg = html ? 'درگاه فراز به‌جای پاسخ API صفحه خطای HTML برگرداند (HTTP ' + (data.status || res.status) + '). این خطا از سمت سرویس فراز/مسیر شبکه است؛ شماره خط و دسترسی API باید توسط پشتیبانی فراز بررسی شود.' : (data.message || detail || data.error || 'خطای ارسال پیامک'); throw new Error(msg + (data.requestId ? ' · شناسه پیگیری: ' + data.requestId : '')); }
   return data;
 }
 
-window.FactoriLicenseApi = { isLicensed, activate, getLicenseAuthToken, getSmsSettings, saveSmsSettings, clearSmsSettings, sendFarazPattern };
+window.FactoriLicenseApi = { isLicensed, activate, getLicenseAuthToken, getSmsSettings, saveSmsSettings, clearSmsSettings, getFarazPatternDetails, sendFarazPattern };
 window.dispatchEvent(new Event('factori-license-ready'));
