@@ -16,17 +16,17 @@ const PUBLIC_JWK = {
 };
 
 function normalizeIranMobile(value: string): string {
-  let raw = String(value || "").trim().replace(/[\\s()-]/g, "");
+  let raw = String(value || "").trim().replace(/[\s()-]/g, "");
   if (raw.startsWith("+98")) raw = "0" + raw.slice(3);
   else if (raw.startsWith("0098")) raw = "0" + raw.slice(4);
   else if (raw.startsWith("98")) raw = "0" + raw.slice(2);
-  if (!/^09\\d{9}$/.test(raw)) throw new Error("invalid_recipient");
+  if (!/^09\d{9}$/.test(raw)) throw new Error("invalid_recipient");
   return raw;
 }
 
 function normalizeLineNumber(value: string): string {
-  const raw = String(value || "").trim().replace(/[\\s()-]/g, "");
-  if (!/^\\d{5,20}$/.test(raw)) throw new Error("invalid_line_number");
+  const raw = String(value || "").trim().replace(/[\s()-]/g, "");
+  if (!/^\d{5,20}$/.test(raw)) throw new Error("invalid_line_number");
   return raw;
 }
 
@@ -46,7 +46,7 @@ Deno.serve(async req => {
   if (req.method !== "POST") return reply({ ok: false, error: "method_not_allowed" }, 405);
   try {
     const auth = req.headers.get("Authorization") || "";
-    const token = auth.replace(/^Bearer\\s+/i, "").trim();
+    const token = auth.replace(/^Bearer\s+/i, "").trim();
     if (!token) return reply({ ok: false, error: "license_required" }, 401);
     const publicKey = await importJWK(PUBLIC_JWK, "ES256");
     const verified = await jwtVerify(token, publicKey, { issuer: "factori-license", audience: "com.factori.app" });
