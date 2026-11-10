@@ -460,8 +460,10 @@ licensecheck:async()=>{
  }
 },
 start:async()=>{
- if(!window.FactoriLicenseApi)return toast('سرویس لایسنس بارگذاری نشده است.');
- if(!await window.FactoriLicenseApi.isLicensed()){licenseUi();return}
+ if(!window.FactoriLicenseApi){licenseUi();toast('سرویس بررسی لایسنس هنوز آماده نیست؛ دوباره تلاش کنید.');return}
+ let licensed=false;
+ try{licensed=await window.FactoriLicenseApi.isLicensed()}catch(error){console.error('[Factori start license check]',error);licenseUi();toast('بررسی لایسنس انجام نشد؛ اتصال را بررسی و دوباره تلاش کنید.');return}
+ if(!licensed){licenseActive=false;licenseUi();return}
  licenseActive=true;
  if(demoMode){demoMode=false;db=realDb;D={};IV=null;}
  lk=db.pw?'in':'set';render()
