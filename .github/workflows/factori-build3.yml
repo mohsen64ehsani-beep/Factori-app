@@ -4,7 +4,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings, feature/factori-v1.2.15-sms-guide-customers-advanced-dialogs, fix/factori-1.2.16-advanced-settings-selectors, feature/factori-v1.2.17-home-promo-copy]
+    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings, feature/factori-v1.2.15-sms-guide-customers-advanced-dialogs, fix/factori-1.2.16-advanced-settings-selectors, feature/factori-v1.2.17-home-promo-copy, release/myket-first-release]
   workflow_dispatch:
 
 jobs:
@@ -78,8 +78,8 @@ jobs:
           sed -i -E 's/versionCode [0-9]+/versionCode 21/' android/app/build.gradle
           sed -i -E 's/versionName "[^"]+"/versionName "1.2.19"/' android/app/build.gradle
           grep -n -E 'versionCode|versionName' android/app/build.gradle
-          grep -q 'versionCode 20' android/app/build.gradle
-          grep -q 'versionName "1.2.18"' android/app/build.gradle
+          grep -q 'versionCode 21' android/app/build.gradle
+          grep -q 'versionName "1.2.19"' android/app/build.gradle
           echo "Android update version verified: 1.2.19 (21)"
 
       - name: Allow fingerprint permission
