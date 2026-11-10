@@ -333,7 +333,7 @@ function lockV(){const lg='<div class="logo">🧾</div>';
 const LG='<svg viewBox="240 170 640 700"><path d="M312 190H612L762 340V760a50 50 0 0 1-50 50H312a50 50 0 0 1-50-50V240a50 50 0 0 1 50-50Z" fill="#fff"/><path d="M612 190L762 340H612Z" fill="#cbd5e1"/><rect x="322" y="400" width="300" height="36" rx="18" fill="#0f766e"/><rect x="322" y="480" width="340" height="36" rx="18" fill="#cbd5e1"/><rect x="322" y="560" width="260" height="36" rx="18" fill="#cbd5e1"/><rect x="322" y="650" width="180" height="44" rx="20" fill="#4338ca"/><circle cx="700" cy="740" r="142" fill="#fff"/><circle cx="700" cy="740" r="120" fill="#10b981"/><path d="M640 745L683 790L765 690" fill="none" stroke="#fff" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function lockV2(){
 const ft=(i,a,b)=>`<div class="ft"><i>${i}</i><div><b>${a}</b><small>${b}</small></div></div>`;
- if(lk=='sp')return `<div class="au"><div class="logo">${LG}</div><h1>فاکتوری</h1><p>مدیریت فروش، مشتری و انبار؛ ساده و حرفه‌ای</p>${ft('🧾','فاکتور رسمی','خروجی PDF و تصویر با مهر و امضا')}${ft('👥','حساب مشتری‌ها','پرداخت نقدی و چک، صورتحساب کلی')}${ft('📊','انبار و سود و زیان','گزارش لحظه‌ای فروش و دریافتی')}<button class="b" data-a="start">شروع</button>${licenseActive?'':'<button class="b s" data-a="demo">ورود آزمایشی رایگان</button>'}${buyHtml()}<div class="v">نسخه ۱٫۲٫۱۱</div></div>`;
+ if(lk=='sp')return `<div class="au"><div class="logo">${LG}</div><h1>فاکتوری</h1><p>مدیریت فروش، مشتری و انبار؛ ساده و حرفه‌ای</p>${ft('🧾','فاکتور رسمی','خروجی PDF و تصویر با مهر و امضا')}${ft('👥','حساب مشتری‌ها','پرداخت نقدی و چک، صورتحساب کلی')}${ft('📊','انبار و سود و زیان','گزارش لحظه‌ای فروش و دریافتی')}<button class="b" data-a="start">شروع</button>${licenseActive?'':'<button class="b s" data-a="demo">ورود آزمایشی رایگان</button>'}${buyHtml()}<div class="v">نسخه __FACTOORI_VERSION__</div></div>`;
  if(lk=='set')return `<div class="au"><div class="logo">${LG}</div><h1>رمز ورود</h1><p>یک رمز برای محافظت از اطلاعاتت انتخاب کن</p><input id="p1" type="password" placeholder="رمز (حداقل ۴ کاراکتر)"><input id="p2" type="password" placeholder="تکرار رمز"><button class="b" data-a="setpw">ثبت رمز و ورود</button></div>`;
  return `<div class="au"><div class="logo">${LG}</div><h1>خوش آمدی</h1><p>${esc(db.sn||'برای ادامه رمز را وارد کن')}</p><input id="p1" type="password" placeholder="رمز"><button class="b" data-a="login">ورود</button>${db.bio?'<button class="b s" data-a="biolog">ورود با اثر انگشت</button>':''}</div>`}
 function render(){const a=$('app');if(lock){a.innerHTML=lockV2();return}
@@ -461,16 +461,30 @@ licensecheck:async()=>{
  }
 },
 start:async()=>{
+ // نمایش فوری پنجره لایسنس؛ نتیجه بررسی مجوز نباید مانع واکنش دکمه شروع شود.
+ licenseActive=false;
+ licenseUi();
  const api=window.FactoriLicenseApi;
- if(!api||typeof api.isLicensed!=='function'){licenseActive=false;licenseUi();toast('سرویس بررسی لایسنس آماده نیست؛ می‌توانید کد لایسنس را وارد کنید.');return}
+ if(!api||typeof api.isLicensed!=='function'){
+  toast('سرویس بررسی لایسنس آماده نیست؛ کد لایسنس را می‌توانید وارد کنید.');
+  return;
+ }
  let licensed=false;
  try{
-  licensed=await Promise.race([api.isLicensed(),new Promise(resolve=>setTimeout(()=>resolve(false),7000))]);
+  licensed=await Promise.race([
+   api.isLicensed(),
+   new Promise(resolve=>setTimeout(()=>resolve(false),7000))
+  ]);
  }catch(error){console.error('[Factori start license check]',error)}
- if(!licensed){licenseActive=false;licenseUi();toast('برای استفاده از نسخه کامل، ابتدا لایسنس تهیه و فعال کنید.');return}
+ if(!licensed){
+  toast('برای استفاده از نسخه کامل، ابتدا لایسنس تهیه و فعال کنید.');
+  return;
+ }
  licenseActive=true;
  if(demoMode){demoMode=false;db=realDb;D={};IV=null;}
- lk=db.pw?'in':'set';render()
+ $('ov').className='';
+ lk=db.pw?'in':'set';
+ render();
 },
 setpw:async()=>{
  if(!window.FactoriLicenseApi || !await window.FactoriLicenseApi.isLicensed()){licenseUi();return}
