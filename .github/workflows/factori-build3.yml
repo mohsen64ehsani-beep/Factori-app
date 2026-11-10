@@ -139,5 +139,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: factori-android-v1.2.17
-          path: android/app/build/outputs/apk/debug/Factori-v1.2.16.apk
+          path: android/app/build/outputs/apk/debug/Factori-v1.2.17.apk
           if-no-files-found: error
