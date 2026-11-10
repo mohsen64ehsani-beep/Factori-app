@@ -1,5 +1,5 @@
 name: Build Android APK
-# First official Myket release: Factori 1.2.19
+# First official Myket release: Factori 1.2.20
 # Rebuild with nested advanced-settings picker fix
 
 on:
@@ -75,12 +75,12 @@ jobs:
 
       - name: Set Android update version
         run: |
-          sed -i -E 's/versionCode [0-9]+/versionCode 21/' android/app/build.gradle
-          sed -i -E 's/versionName "[^"]+"/versionName "1.2.19"/' android/app/build.gradle
+          sed -i -E 's/versionCode [0-9]+/versionCode 22/' android/app/build.gradle
+          sed -i -E 's/versionName "[^"]+"/versionName "1.2.20"/' android/app/build.gradle
           grep -n -E 'versionCode|versionName' android/app/build.gradle
-          grep -q 'versionCode 21' android/app/build.gradle
-          grep -q 'versionName "1.2.19"' android/app/build.gradle
-          echo "Android update version verified: 1.2.19 (21)"
+          grep -q 'versionCode 22' android/app/build.gradle
+          grep -q 'versionName "1.2.20"' android/app/build.gradle
+          echo "Android update version verified: 1.2.20 (21)"
 
       - name: Allow fingerprint permission
         run: |
@@ -172,12 +172,12 @@ jobs:
           echo "Actual APK certificate SHA256:       $APK_FP"
           test -n "$KEY_FP"
           test "$KEY_FP" = "$APK_FP" || { echo "::error::Release APK certificate does not match the dedicated release keystore."; exit 1; }
-          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.19-release.apk"
-          sha256sum "app/build/outputs/apk/release/Factori-v1.2.19-release.apk"
+          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.20-release.apk"
+          sha256sum "app/build/outputs/apk/release/Factori-v1.2.20-release.apk"
           echo "Official release APK signature verified."
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factori-android-v1.2.19-release
-          path: android/app/build/outputs/apk/release/Factori-v1.2.19-release.apk
+          name: factori-android-v1.2.20-release
+          path: android/app/build/outputs/apk/release/Factori-v1.2.20-release.apk
           if-no-files-found: error
