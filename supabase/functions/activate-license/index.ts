@@ -1,15 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { importJWK, SignJWT } from "https://esm.sh/jose@5";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+const corsHeaders = (req: Request) => ({
+  "Access-Control-Allow-Origin": req.headers.get("origin") ?? "*",
+  "Access-Control-Allow-Headers": req.headers.get("access-control-request-headers") ??
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
+  "Vary": "Origin, Access-Control-Request-Headers",
   "Content-Type": "application/json",
-};
+});
 
-const reply = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: cors });
+const reply = (req: Request, data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), { status, headers: corsHeaders(req) });
 
 const hex = (b: Uint8Array) =>
   Array.from(b, x => x.toString(16).padStart(2, "0")).join("");
@@ -26,8 +29,8 @@ const decode = (s: string) => {
 };
 
 Deno.serve(async req => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST") return reply({ ok: false }, 405);
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(req) });
+  if (req.method !== "POST") return reply(req, { ok: false }, 405);
 
   try {
     const url = Deno.env.get("SUPABASE_URL");
@@ -40,11 +43,11 @@ Deno.serve(async req => {
     if (body.action === "issue_nonce") {
       const { data, error } = await admin.rpc("factori_issue_nonce");
       if (error) throw error;
-      return reply({ ok: true, nonce: data });
+      return reply(req, { ok: true, nonce: data });
     }
 
     if (body.action !== "activate")
-      return reply({ ok: false, error: "invalid_action" }, 400);
+      return reply(req, { ok: false, error: "invalid_action" }, 400);
 
     const licenseKey = String(body.licenseKey ?? "").trim();
     const nonce = String(body.nonce ?? "");
@@ -55,7 +58,7 @@ Deno.serve(async req => {
         jwk?.kty !== "EC" || jwk?.crv !== "P-256" ||
         typeof jwk.x !== "string" || typeof jwk.y !== "string" ||
         "d" in jwk) {
-      return reply({ ok: false, error: "invalid_request" }, 400);
+      return reply(req, { ok: false, error: "invalid_request" }, 400);
     }
 
     const privateText = Deno.env.get("FACTORY_LICENSE_SIGNING_PRIVATE_JWK");
@@ -85,7 +88,7 @@ Deno.serve(async req => {
     );
 
     if (!valid)
-      return reply({ ok: false, error: "invalid_device_signature" }, 401);
+      return reply(req, { ok: false, error: "invalid_device_signature" }, 401);
 
     const canonical = JSON.stringify({
       crv: "P-256", kty: "EC", x: jwk.x, y: jwk.y
@@ -116,7 +119,7 @@ Deno.serve(async req => {
 
     if (error) throw error;
     if (!data?.ok)
-      return reply({ ok: false, reason: data?.reason ?? "activation_failed" }, 403);
+      return reply(req, { ok: false, reason: data?.reason ?? "activation_failed" }, 403);
 
     const now = Math.floor(Date.now() / 1000);
 
@@ -131,14 +134,14 @@ Deno.serve(async req => {
       .setIssuedAt(now)
       .sign(signingKey);
 
-    return reply({
+    return reply(req, {
       ok: true,
       token,
       activation_id: data.activation_id
     });
 
   } catch (e) {
-    return reply({
+    return reply(req, {
       ok: false,
       error: "server_error",
       detail: String(e?.message ?? e)
