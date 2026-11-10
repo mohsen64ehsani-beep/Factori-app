@@ -145,7 +145,8 @@ const makeDemoDb=()=>({
 const denyDemo=()=>{if(!demoMode)return false;toast('این امکان در نسخه آزمایشی غیرفعال است؛ برای فعال‌سازی لایسنس اقدام کنید');return true};
 const buyHtml=()=>licenseActive?'':`<div class="buy-panel"><b>برای استفاده کامل، لایسنس فاکتوری را تهیه کنید</b><button class="b s w100" data-a="licenseui">🔑 وارد کردن کد لایسنس</button><a class="b w100" href="https://wa.me/989397050966" target="_blank" rel="noopener">🛒 خرید لایسنس از واتساپ</a><button class="b s w100" data-a="onlinebuy">💳 خرید آنلاین لایسنس</button><a class="lnk" href="tel:+989397050966">تماس: 09397050966</a></div>`;
 function licenseUi(){ $('ov').innerHTML=`<div class="bar"><button class="b s" data-a="cls">بستن</button></div><div class="c" style="max-width:520px;margin:18px auto"><h2>فعال‌سازی لایسنس فاکتوری</h2><label for="licenseCode">کد لایسنس</label><input id="licenseCode" dir="ltr" autocomplete="off" placeholder="کد لایسنس را وارد کن"><button id="licenseCheckBtn" class="b w100" data-a="licensecheck">بررسی و فعال‌سازی</button><p id="licenseStatus" role="status" aria-live="polite" style="font-size:13px;margin-top:12px;padding:10px;border-radius:10px;background:var(--bg);color:var(--mu)">برای استفاده از نسخه کامل، کد لایسنس معتبر را وارد کنید. فعال‌سازی فقط در نسخه اندروید امکان‌پذیر است.</p><a class="b s w100" href="https://wa.me/989397050966" target="_blank" rel="noopener">دریافت لایسنس از پشتیبانی</a></div>`;$('ov').className='on'}
-function enterDemo(){try{demoMode=true;db=makeDemoDb();['suppliers','purchases','supplierPayments','returns','wastage','warehouses','transfers','accounts','moneytransfers','otherincome','opening','fiscal','duedates'].forEach(k=>{db[k]=Array.isArray(db[k])?db[k]:[]});db.advancedSettings={};db.warehouseStocks=[];db.smsHistory=Array.isArray(db.smsHistory)?db.smsHistory:[];D={};IV=null;lock=false;go('home')}catch(error){console.error('[Factori demo entry]',error);demoMode=false;db=realDb;D={};IV=null;lock=true;toast('ورود آزمایشی ناموفق بود: '+(error?.message||error));render()}}
+function normalizeDemoCollections(){['cust','prod','inv','pay','debt','creditors','creditorPayments','expenses','services','serviceInv','categories','stockMoves','suppliers','purchases','supplierPayments','returns','wastage','warehouses','transfers','accounts','moneytransfers','otherincome','opening','fiscal','duedates'].forEach(k=>{if(!Array.isArray(db[k]))db[k]=[]});db.advancedSettings=db.advancedSettings&&typeof db.advancedSettings==='object'?db.advancedSettings:{};db.warehouseStocks=Array.isArray(db.warehouseStocks)?db.warehouseStocks:[];db.smsHistory=Array.isArray(db.smsHistory)?db.smsHistory:[];db.serviceSeq=Number(db.serviceSeq)||2000;db.seq=Number(db.seq)||1000;}
+function enterDemo(){try{demoMode=true;db=makeDemoDb();normalizeDemoCollections();D={};IV=null;lock=false;go('home')}catch(error){console.error('[Factori demo entry]',error);demoMode=false;db=realDb;D={};IV=null;lock=true;toast('ورود آزمایشی ناموفق بود: '+(error?.message||error));render()}}
 window.factoriEnterDemo=enterDemo;
 function exitDemo(){demoMode=false;db=realDb;D={};IV=null;lock=true;lk=db.pw?'in':'sp';v={t:'home'};render()}
 function toast(m){const t=$('ts');t.textContent=m;t.className='on';clearTimeout(tt);tt=setTimeout(()=>t.className='',2400)}
@@ -460,10 +461,13 @@ licensecheck:async()=>{
  }
 },
 start:async()=>{
- if(!window.FactoriLicenseApi){licenseUi();toast('سرویس بررسی لایسنس هنوز آماده نیست؛ دوباره تلاش کنید.');return}
+ const api=window.FactoriLicenseApi;
+ if(!api||typeof api.isLicensed!=='function'){licenseActive=false;licenseUi();toast('سرویس بررسی لایسنس آماده نیست؛ می‌توانید کد لایسنس را وارد کنید.');return}
  let licensed=false;
- try{licensed=await window.FactoriLicenseApi.isLicensed()}catch(error){console.error('[Factori start license check]',error);licenseUi();toast('بررسی لایسنس انجام نشد؛ اتصال را بررسی و دوباره تلاش کنید.');return}
- if(!licensed){licenseActive=false;licenseUi();return}
+ try{
+  licensed=await Promise.race([api.isLicensed(),new Promise(resolve=>setTimeout(()=>resolve(false),7000))]);
+ }catch(error){console.error('[Factori start license check]',error)}
+ if(!licensed){licenseActive=false;licenseUi();toast('برای استفاده از نسخه کامل، ابتدا لایسنس تهیه و فعال کنید.');return}
  licenseActive=true;
  if(demoMode){demoMode=false;db=realDb;D={};IV=null;}
  lk=db.pw?'in':'set';render()
@@ -585,7 +589,7 @@ document.addEventListener('change',e=>{const t=e.target,d=t.dataset;
  else if(d.datePart){if(demoMode){denyDemo();return}setJalaliDatePart(d.dateKey,d.datePart,t.value)}
  else if(d.j){if(demoMode){denyDemo();return}const[y,m,dd]=[...t.parentNode.querySelectorAll('select')].map(s=>+s.value),mx=m<7?31:m<12?30:29,g=j2g(y,m,Math.min(dd,mx));D[d.j]=g[0]+'-'+String(g[1]).padStart(2,'0')+'-'+String(g[2]).padStart(2,'0');if(dd>mx)render()}
  else if(d.f){if(demoMode){denyDemo();return}D[d.f]=t.value;if(d.f=='kind'||d.f=='costMode'||d.f=='method'||d.f=='chequeSource'){if($('ov')?.classList.contains('on')&&v.advId)showAdvForm();else render()}}else if(d.img){img(t,d.img);t.value=''}else if(d.d=='cu')render()});
-;(async()=>{try{if(!window.FactoriLicenseApi)await new Promise(resolve=>{window.addEventListener('factori-license-ready',resolve,{once:true});setTimeout(resolve,10000)});licenseActive=!!(window.FactoriLicenseApi&&await window.FactoriLicenseApi.isLicensed());if(window.FactoriLicenseApi?.getSmsSettings){try{smsSettings=await window.FactoriLicenseApi.getSmsSettings()}catch(e){console.warn('SMS settings unavailable',e)}}}catch(e){licenseActive=false;}render();})();
+;(async()=>{try{if(!window.FactoriLicenseApi)await new Promise(resolve=>{window.addEventListener('factori-license-ready',resolve,{once:true});setTimeout(resolve,8000)});const api=window.FactoriLicenseApi;licenseActive=!!(api&&typeof api.isLicensed==='function'&&await Promise.race([api.isLicensed(),new Promise(resolve=>setTimeout(()=>resolve(false),7000))]));if(api?.getSmsSettings){try{smsSettings=await Promise.race([api.getSmsSettings(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000))])}catch(e){console.warn('SMS settings unavailable',e)}}}catch(e){licenseActive=false;}render();})();
 </script>
 <script src="back-handler.js"></script>
 </body>
