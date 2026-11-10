@@ -1,10 +1,10 @@
 name: Build Android APK
-# Release build: Factori 1.2.16
+# Release build: Factori 1.2.17
 # Rebuild with nested advanced-settings picker fix
 
 on:
   push:
-    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings, feature/factori-v1.2.15-sms-guide-customers-advanced-dialogs, fix/factori-1.2.16-advanced-settings-selectors]
+    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings, feature/factori-v1.2.15-sms-guide-customers-advanced-dialogs, fix/factori-1.2.16-advanced-settings-selectors, feature/factori-v1.2.17-home-promo-copy]
   workflow_dispatch:
 
 jobs:
@@ -63,8 +63,8 @@ jobs:
 
       - name: Set Android update version
         run: |
-          sed -i -E 's/versionCode [0-9]+/versionCode 18/' android/app/build.gradle
-          sed -i -E 's/versionName "[^"]+"/versionName "1.2.16"/' android/app/build.gradle
+          sed -i -E 's/versionCode [0-9]+/versionCode 19/' android/app/build.gradle
+          sed -i -E 's/versionName "[^"]+"/versionName "1.2.17"/' android/app/build.gradle
           grep -n -E 'versionCode|versionName' android/app/build.gradle
 
       - name: Allow fingerprint permission
@@ -134,10 +134,10 @@ jobs:
           test -n "$KEY_FP"
           test "$KEY_FP" = "$APK_FP" || { echo "::error::APK was not signed with the fixed keystore."; exit 1; }
           echo "APK signature matches the fixed keystore."
-          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/Factori-v1.2.16.apk
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/Factori-v1.2.17.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factori-android-v1.2.16
+          name: factori-android-v1.2.17
           path: android/app/build/outputs/apk/debug/Factori-v1.2.16.apk
           if-no-files-found: error
