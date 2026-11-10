@@ -1,5 +1,5 @@
 name: Build Android APK
-# Factori 1.2.23: demo data and start-license prompt fixes
+# Factori 1.2.24: reliable start license prompt and dynamic splash version
 
 on:
   push:
@@ -27,6 +27,17 @@ jobs:
           mkdir -p www/lib assets
           mv -f index.html www/index.html
           mv -f icon-only.png icon-foreground.png icon-background.png splash.png assets/
+
+      - name: Set visible app version
+        run: |
+          set -euo pipefail
+          sed -i 's/__FACTOORI_VERSION__/1.2.24/g' www/index.html
+          if grep -Fq '__FACTOORI_VERSION__' www/index.html; then
+            echo "::error::Visible app version placeholder was not replaced."
+            exit 1
+          fi
+          grep -Fq 'نسخه 1.2.24' www/index.html
+          echo "Splash version label verified: 1.2.24"
 
       - name: Verify requested homepage promo is in the active app entry
         run: |
@@ -74,12 +85,12 @@ jobs:
 
       - name: Set Android update version
         run: |
-          sed -i -E 's/versionCode [0-9]+/versionCode 25/' android/app/build.gradle
-          sed -i -E 's/versionName "[^"]+"/versionName "1.2.23"/' android/app/build.gradle
+          sed -i -E 's/versionCode [0-9]+/versionCode 26/' android/app/build.gradle
+          sed -i -E 's/versionName "[^"]+"/versionName "1.2.24"/' android/app/build.gradle
           grep -n -E 'versionCode|versionName' android/app/build.gradle
           grep -q 'versionCode 25' android/app/build.gradle
           grep -q 'versionName "1.2.23"' android/app/build.gradle
-          echo "Android update version verified: 1.2.23 (25)"
+          echo "Android update version verified: 1.2.24 (26)"
 
       - name: Allow fingerprint permission
         run: |
@@ -171,7 +182,7 @@ jobs:
           echo "Actual APK certificate SHA256:       $APK_FP"
           test -n "$KEY_FP"
           test "$KEY_FP" = "$APK_FP" || { echo "::error::Release APK certificate does not match the dedicated release keystore."; exit 1; }
-          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.23-release.apk"
+          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.24-release.apk"
           sha256sum "app/build/outputs/apk/release/Factori-v1.2.23-release.apk"
           echo "Official release APK signature verified."
 
