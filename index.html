@@ -557,7 +557,7 @@ window.addEventListener('popstate',()=>{backStep();try{history.pushState({factor
 try{history.replaceState({factori:true},'','#home');history.pushState({factori:true},'','#home')}catch(e){}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
  if(demoMode&&DEMO_BLOCKED.has(a)){denyDemo();return}
- if(a[0]=='d'&&!b.dataset.s){b.dataset.s=1;const o=b.textContent;b.textContent='تأیید؟';setTimeout(()=>{b.textContent=o;delete b.dataset.s},2500);return}
+ if(a[0]=='d'&&a!=='demo'&&!b.dataset.s){b.dataset.s=1;const o=b.textContent;b.textContent='تأیید؟';setTimeout(()=>{b.textContent=o;delete b.dataset.s},2500);return}
  A[a]&&A[a](b.dataset.id,b)});
 document.addEventListener('input',e=>{const t=e.target,d=t.dataset;
  if(d.d){if(demoMode){denyDemo();return}db[d.d]=t.value;save()}else if(d.f){if(demoMode){denyDemo();return}D[d.f]=t.value;if(v.t=='invf')upd()}
