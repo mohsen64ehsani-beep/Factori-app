@@ -1,5 +1,5 @@
 name: Build Android APK
-# Release build: Factori 1.2.18
+# First official Myket release: Factori 1.2.19
 # Rebuild with nested advanced-settings picker fix
 
 on:
@@ -75,12 +75,12 @@ jobs:
 
       - name: Set Android update version
         run: |
-          sed -i -E 's/versionCode [0-9]+/versionCode 20/' android/app/build.gradle
-          sed -i -E 's/versionName "[^"]+"/versionName "1.2.18"/' android/app/build.gradle
+          sed -i -E 's/versionCode [0-9]+/versionCode 21/' android/app/build.gradle
+          sed -i -E 's/versionName "[^"]+"/versionName "1.2.19"/' android/app/build.gradle
           grep -n -E 'versionCode|versionName' android/app/build.gradle
           grep -q 'versionCode 20' android/app/build.gradle
           grep -q 'versionName "1.2.18"' android/app/build.gradle
-          echo "Android update version verified: 1.2.18 (20)"
+          echo "Android update version verified: 1.2.19 (21)"
 
       - name: Allow fingerprint permission
         run: |
@@ -104,55 +104,79 @@ jobs:
           fi
           echo "LicenseManagerPlugin is registered."
 
-      - name: Use and verify fixed signing key
+      - name: Configure dedicated release signing
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.FACTOORI_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.FACTOORI_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.FACTOORI_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.FACTOORI_RELEASE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          mkdir -p "$HOME/.android"
-          install -m 600 "$GITHUB_WORKSPACE/debug.keystore" "$HOME/.android/debug.keystore"
-          echo "Signing keystore fingerprint:"
-          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android | grep -E 'Alias name:|SHA256:'
+          test -n "$RELEASE_KEYSTORE_BASE64" || { echo "::error::Missing FACTOORI_RELEASE_KEYSTORE_BASE64 repository secret."; exit 1; }
+          test -n "$RELEASE_STORE_PASSWORD" || { echo "::error::Missing FACTOORI_RELEASE_STORE_PASSWORD repository secret."; exit 1; }
+          test -n "$RELEASE_KEY_ALIAS" || { echo "::error::Missing FACTOORI_RELEASE_KEY_ALIAS repository secret."; exit 1; }
+          test -n "$RELEASE_KEY_PASSWORD" || { echo "::error::Missing FACTOORI_RELEASE_KEY_PASSWORD repository secret."; exit 1; }
+          mkdir -p "$RUNNER_TEMP/factori-signing"
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/factori-signing/factori-release.jks"
+          chmod 600 "$RUNNER_TEMP/factori-signing/factori-release.jks"
+          keytool -list -keystore "$RUNNER_TEMP/factori-signing/factori-release.jks" -storepass "$RELEASE_STORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" >/dev/null
+          echo "Dedicated release keystore is present and alias is valid."
+          echo "FACTOORI_RELEASE_STORE_FILE=$RUNNER_TEMP/factori-signing/factori-release.jks" >> "$GITHUB_ENV"
 
-      - name: Force Gradle debug signing key
+      - name: Configure Gradle release signing
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.FACTOORI_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.FACTOORI_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.FACTOORI_RELEASE_KEY_PASSWORD }}
         run: |
+          set -euo pipefail
           cat >> android/app/build.gradle <<'EOF'
 
-          // Force the same checked-in key for every debug APK.
+          // Dedicated, stable signing identity for all official Factori releases.
           android {
             signingConfigs {
-              debug {
-                storeFile file(System.getenv("HOME") + "/.android/debug.keystore")
-                storePassword "android"
-                keyAlias "androiddebugkey"
-                keyPassword "android"
+              release {
+                storeFile file(System.getenv("FACTOORI_RELEASE_STORE_FILE"))
+                storePassword System.getenv("RELEASE_STORE_PASSWORD")
+                keyAlias System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword System.getenv("RELEASE_KEY_PASSWORD")
               }
             }
             buildTypes {
-              debug {
-                signingConfig signingConfigs.debug
+              release {
+                signingConfig signingConfigs.release
+                minifyEnabled false
               }
             }
           }
           EOF
-          echo "Gradle debug signing configuration:"
-          grep -n -A8 -B2 'Force the same checked-in key' android/app/build.gradle
+          grep -q 'signingConfig signingConfigs.release' android/app/build.gradle
 
-      - name: Build and verify APK signature
+      - name: Build and verify official Release APK
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.FACTOORI_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.FACTOORI_RELEASE_KEY_ALIAS }}
         run: |
           set -euo pipefail
           cd android
           chmod +x gradlew
-          ./gradlew --no-daemon clean assembleDebug
-          KEY_FP=$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | awk '/SHA256:/{print $2; exit}')
-          APK_FP=$(keytool -printcert -jarfile app/build/outputs/apk/debug/app-debug.apk | awk '/SHA256:/{print $2; exit}')
-          echo "Expected keystore SHA256: $KEY_FP"
-          echo "Actual APK SHA256:        $APK_FP"
+          ./gradlew --no-daemon clean assembleRelease
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          keytool -list -v -keystore "$FACTOORI_RELEASE_STORE_FILE" -storepass "$RELEASE_STORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" > "$RUNNER_TEMP/keystore-info.txt"
+          keytool -printcert -jarfile "$APK" > "$RUNNER_TEMP/apk-cert.txt"
+          KEY_FP=$(awk '/SHA256:/{print $2; exit}' "$RUNNER_TEMP/keystore-info.txt")
+          APK_FP=$(awk '/SHA256:/{print $2; exit}' "$RUNNER_TEMP/apk-cert.txt")
+          echo "Expected release certificate SHA256: $KEY_FP"
+          echo "Actual APK certificate SHA256:       $APK_FP"
           test -n "$KEY_FP"
-          test "$KEY_FP" = "$APK_FP" || { echo "::error::APK was not signed with the fixed keystore."; exit 1; }
-          echo "APK signature matches the fixed keystore."
-          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/Factori-v1.2.18.apk
+          test "$KEY_FP" = "$APK_FP" || { echo "::error::Release APK certificate does not match the dedicated release keystore."; exit 1; }
+          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.19-release.apk"
+          sha256sum "app/build/outputs/apk/release/Factori-v1.2.19-release.apk"
+          echo "Official release APK signature verified."
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factori-android-v1.2.18
-          path: android/app/build/outputs/apk/debug/Factori-v1.2.18.apk
+          name: factori-android-v1.2.19-release
+          path: android/app/build/outputs/apk/release/Factori-v1.2.19-release.apk
           if-no-files-found: error
