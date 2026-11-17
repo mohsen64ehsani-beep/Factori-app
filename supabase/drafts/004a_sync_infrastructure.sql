@@ -19,6 +19,7 @@ create table if not exists public.sync_devices (
  check(device_public_key is null or jsonb_typeof(device_public_key)='object')
 );
 create index if not exists sync_devices_member_idx on public.sync_devices(business_id,user_id,status);
+alter table public.sync_devices add column if not exists permission_version bigint not null default 0 check(permission_version>=0);
 
 alter table public.business_members
  add column if not exists permission_version bigint not null default 1 check(permission_version>0);
@@ -236,5 +237,7 @@ $$;
 revoke all on function private.seed_business_feature_limits() from public,anon,authenticated;
 revoke all on function private.assert_feature_limit(uuid,text,integer) from public,anon,authenticated;
 revoke all on function private.consume_feature_quota(uuid,text,date,uuid) from public,anon,authenticated;
+revoke all on function private.bump_member_permission_version() from public,anon,authenticated;
+revoke all on function private.bump_override_permission_version() from public,anon,authenticated;
 
 commit;
