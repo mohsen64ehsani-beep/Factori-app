@@ -94,31 +94,10 @@ begin
   raise exception using errcode='42501',message='Only the owner can invite an administrator';
  end if;
  if p_token_hash is null or length(p_token_hash)<>64 or p_token_hash !~ '^[a-f0-9]{64}$' then
-  raise exception using errcode='22023',message='Invalid invitation token hash';
+  raise exception using errcode='22023',message='Invalid invitation token';
  end if;
- if p_expires_at is null or p_expires_at<=now() or p_expires_at>now()+interval '30 days' then
-  raise exception using errcode='22023',message='Invitation expiry must be within 30 days';
- end if;
- update public.business_invitations set status='expired'
- where business_id=p_business_id and email_normalized=v_email
-   and status='pending' and expires_at<=now();
- insert into public.business_invitations(business_id,email_normalized,role_code,token_hash,invited_by,expires_at)
- values(p_business_id,v_email,p_role_code,p_token_hash,v_user,p_expires_at)
- returning id into v_id;
- perform private.write_business_audit(p_business_id,v_user,'member.invitation.created','invitation',v_id::text,
-  jsonb_build_object('email',v_email,'role_code',p_role_code,'expires_at',p_expires_at));
- return v_id;
-end;
-$$;
-
-create or replace function public.accept_business_invitation(p_token_hash text)
-returns uuid language plpgsql security definer set search_path=''
-as $$
-declare
- v_user uuid:=auth.uid(); v_email text; v_inv public.business_invitations%rowtype; v_rows integer;
-begin
- if v_user is null then raise exception using errcode='28000',message='Authentication required'; end if;
- if p_token_hash is null or length(p_token_hash)<>64 or p_token_hash !~ '^[a-f0-9]{64}
+ select lower(email) into v_email from auth.users
+ where id=v_user and email_confirmed_at is not null;
  if v_email is null then raise exception using errcode='42501',message='Authenticated email is unavailable'; end if;
  select * into v_inv from public.business_invitations
  where token_hash=p_token_hash and status='pending'
