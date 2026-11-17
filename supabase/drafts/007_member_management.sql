@@ -172,6 +172,9 @@ begin
  if not found or v_target.status<>'active' or v_target.role_code='owner' or p_member_user_id=v_user then
   raise exception using errcode='42501',message='This member role cannot be changed';
  end if;
+ if v_target.role_code='admin' and not private.is_business_owner(p_business_id) then
+  raise exception using errcode='42501',message='Only the owner can change an administrator role';
+ end if;
  update public.business_members set role_code=p_role_code,updated_at=now()
  where business_id=p_business_id and user_id=p_member_user_id;
  perform private.write_business_audit(p_business_id,v_user,'member.role.updated','member',p_member_user_id::text,
