@@ -1,5 +1,5 @@
 name: Build Android APK
-# Factori 1.2.42: full free-tier limits, redesigned dashboard and no camera permission
+# Factori 1.2.42: reproducible npm ci builds with security-patched transitive tar
 
 on:
   push:
