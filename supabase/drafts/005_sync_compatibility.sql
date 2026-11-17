@@ -415,6 +415,10 @@ begin
       end if;
 
       if v_operation_type='delete' then
+        if v_collection in ('inv','serviceInv')
+           and not (select private.has_business_permission(p_business_id,'sales.edit_draft')) then
+          raise exception 'sales_edit_draft_forbidden' using errcode='42501';
+        end if;
         if v_collection in ('inv','serviceInv') and coalesce(v_existing.payload_public->>'status','') in ('posted','final','voided') then
           raise exception 'posted_document_cannot_be_deleted' using errcode='42501';
         end if;
