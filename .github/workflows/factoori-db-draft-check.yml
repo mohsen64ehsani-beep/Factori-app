@@ -1,0 +1,56 @@
+name: Factoori database draft validation
+
+on:
+  push:
+    branches:
+      - work/factoori-shared-db-schema
+    paths:
+      - "supabase/drafts/**"
+      - ".github/workflows/factoori-db-draft-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-17-draft-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: factoori_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d factoori_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Bootstrap isolated Auth compatibility shim
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d factoori_test -v ON_ERROR_STOP=1 -f supabase/drafts/tests/bootstrap.sql
+      - name: Apply draft migrations to disposable PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for file in             supabase/drafts/001_identity_permissions.sql             supabase/drafts/002_contacts_catalog_documents.sql             supabase/drafts/003_finance_inventory_accounting.sql             supabase/drafts/004_settings_sync_migration.sql             supabase/drafts/005_rls_grants_validation.sql
+          do
+            echo "Applying $file"
+            psql -h localhost -U postgres -d factoori_test -v ON_ERROR_STOP=1 -f "$file"
+          done
+      - name: Run synthetic identity, RLS, entitlement and quota smoke tests
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d factoori_test -v ON_ERROR_STOP=1 -f supabase/drafts/tests/smoke.sql
+      - name: Run read-only validation queries
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d factoori_test -v ON_ERROR_STOP=1 -f supabase/drafts/006_validation.sql

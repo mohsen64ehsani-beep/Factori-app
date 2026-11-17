@@ -152,6 +152,7 @@ create table public.documents (
   warehouse_id uuid,
   document_date date not null,
   due_date date,
+  currency_code text not null default 'IRR',
   status text not null default 'draft' check (status in ('draft','posted','voided')),
   subtotal bigint not null default 0 check (subtotal >= 0),
   discount_amount bigint not null default 0 check (discount_amount >= 0),

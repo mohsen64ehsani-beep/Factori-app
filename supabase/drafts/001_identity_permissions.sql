@@ -192,6 +192,8 @@ insert into public.permission_catalog(code,module,description,is_sensitive) valu
 ('purchases.create','purchases','Create purchase documents',false),
 ('payments.read','finance','Read financial transactions',false),
 ('payments.create','finance','Create financial transactions',false),
+('payments.receive.create','finance','Record customer receipts',false),
+('payments.pay.create','finance','Record outgoing payments',true),
 ('cheques.read','finance','Read cheque details',false),
 ('cheques.update_status','finance','Change cheque lifecycle status',false),
 ('inventory.read','inventory','Read inventory',false),

@@ -10,7 +10,7 @@ begin
     select n.nspname, c.relname
     from pg_class c join pg_namespace n on n.oid=c.relnamespace
     where n.nspname='public' and c.relkind='r'
-      and c.relname not in ('profiles','permission_catalog')
+      and c.relname not in ('profiles','permission_catalog','user_device_settings')
   loop
     execute format('alter table %I.%I enable row level security',r.nspname,r.relname);
   end loop;
@@ -19,6 +19,7 @@ end $$;
 alter table public.profiles enable row level security;
 alter table public.permission_catalog enable row level security;
 alter table private.document_item_costs enable row level security;
+alter table private.document_cost_summaries enable row level security;
 alter table private.product_costs enable row level security;
 alter table private.stock_movement_costs enable row level security;
 alter table private.warehouse_stock_cost_balances enable row level security;
@@ -26,6 +27,8 @@ alter table private.inventory_opening_costs enable row level security;
 alter table private.inventory_cost_layers enable row level security;
 alter table private.inventory_cost_allocations enable row level security;
 alter table private.business_invitations enable row level security;
+alter table private.feature_usage_counters enable row level security;
+alter table private.feature_usage_events enable row level security;
 create policy profiles_select_self on public.profiles
 for select to authenticated
 using (id=(select auth.uid()));
@@ -42,11 +45,95 @@ create policy businesses_read_member on public.businesses
 for select to authenticated
 using ((select private.is_business_member(id)));
 
+alter table public.user_device_settings enable row level security;
+create policy user_device_settings_select_own on public.user_device_settings
+for select to authenticated
+using (user_id=(select auth.uid()) and (select private.is_business_member(business_id)));
+create policy user_device_settings_insert_own on public.user_device_settings
+for insert to authenticated
+with check (user_id=(select auth.uid()) and (select private.is_business_member(business_id)));
+create policy user_device_settings_update_own on public.user_device_settings
+for update to authenticated
+using (user_id=(select auth.uid()) and (select private.is_business_member(business_id)))
+with check (user_id=(select auth.uid()) and (select private.is_business_member(business_id)));
+
+grant insert,update on public.user_device_settings to authenticated;
+
 create policy business_members_read_self_or_authorized on public.business_members
 for select to authenticated
 using (
   user_id=(select auth.uid())
   or (select private.has_business_permission(business_id,'members.read'))
+);
+
+-- Document access is type-aware so a sales role cannot read purchase/expense documents.
+
+create or replace function private.can_read_document(p_business_id uuid,p_document_id uuid)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare v_type text;
+begin
+  if auth.uid() is null or not (select private.is_business_member(p_business_id)) then
+    return false;
+  end if;
+  select document_type into v_type
+  from public.documents
+  where business_id=p_business_id and id=p_document_id;
+  if not found then return false; end if;
+  if v_type in ('sale','service_sale','sales_return') then
+    return (select private.has_business_permission(p_business_id,'sales.read'));
+  elsif v_type in ('purchase','purchase_return') then
+    return (select private.has_business_permission(p_business_id,'purchases.read'));
+  elsif v_type in ('expense','other_income','wastage') then
+    return (select private.has_business_permission(p_business_id,'expenses.read'));
+  elsif v_type in ('opening_balance','adjustment') then
+    return (select private.has_business_permission(p_business_id,'reports.basic.read'));
+  end if;
+  return false;
+end;
+$$;
+revoke all on function private.can_read_document(uuid,uuid) from public,anon;
+grant execute on function private.can_read_document(uuid,uuid) to authenticated;
+
+create policy documents_read_by_type on public.documents
+for select to authenticated
+using ((select private.can_read_document(business_id,id)));
+
+create policy document_items_read_by_parent on public.document_items
+for select to authenticated
+using ((select private.can_read_document(business_id,document_id)));
+
+create policy document_events_read_by_parent on public.document_events
+for select to authenticated
+using ((select private.can_read_document(business_id,document_id)));
+
+create policy invoice_sequences_read_by_type on public.invoice_number_sequences
+for select to authenticated
+using (
+  (document_type in ('sale','service_sale','sales_return')
+   and (select private.has_business_permission(business_id,'sales.read')))
+  or
+  (document_type in ('purchase','purchase_return')
+   and (select private.has_business_permission(business_id,'purchases.read')))
+);
+
+create policy file_attachments_read_by_entity on public.file_attachments
+for select to authenticated
+using (
+  case
+    when entity_type in ('sale','service_sale','sales_return','purchase','purchase_return')
+      then (select private.can_read_document(business_id,entity_id))
+    when entity_type='cheque'
+      then (select private.has_business_permission(business_id,'cheques.read'))
+       and exists (select 1 from public.cheques c where c.business_id=file_attachments.business_id and c.id=file_attachments.entity_id)
+    when entity_type in ('expense','other_income','wastage')
+      then (select private.has_business_permission(business_id,'expenses.read'))
+    else (select private.has_business_permission(business_id,'settings.manage'))
+  end
 );
 
 -- Per-table read permission map. All writes remain RPC-only.
@@ -66,18 +153,17 @@ begin
       ('services','catalog.read'),
       ('warehouses','inventory.read'),
       ('fiscal_periods','sales.read'),
-      ('invoice_number_sequences','sales.read'),
-      ('documents','sales.read'),
-      ('document_items','sales.read'),
-      ('document_events','sales.read'),
       ('financial_accounts','payments.read'),
+      ('account_transfers','payments.read'),
       ('financial_transactions','payments.read'),
       ('transaction_allocations','payments.read'),
       ('transaction_allocation_reversals','payments.read'),
       ('business_bank_details','invoice.settings.read'),
+      ('invoice_design_presets','invoice.settings.read'),
       ('cheques','cheques.read'),
       ('cheque_events','cheques.read'),
       ('cheque_assignments','cheques.read'),
+      ('cheque_assignment_events','cheques.read'),
       ('stock_movements','inventory.read'),
       ('warehouse_stock_balances','inventory.read'),
       ('stock_transfers','inventory.read'),
@@ -95,7 +181,6 @@ begin
       ('sms_templates','settings.manage'),
       ('sms_history','settings.manage'),
       ('due_date_reminders','contacts.read'),
-      ('file_attachments','sales.read'),
       ('subscription_plans','settings.manage'),
       ('plan_features','settings.manage'),
       ('business_subscriptions','settings.manage'),
@@ -163,18 +248,18 @@ begin
     ('admin','contacts.read'),('admin','contacts.write'),('admin','catalog.read'),('admin','catalog.write'),
     ('admin','catalog.cost.read'),('admin','sales.read'),('admin','sales.create'),('admin','sales.edit_draft'),
     ('admin','sales.post'),('admin','purchases.read'),('admin','purchases.create'),('admin','payments.read'),
-    ('admin','payments.create'),('admin','cheques.read'),('admin','cheques.update_status'),('admin','inventory.read'),
+    ('admin','payments.create'),('admin','payments.receive.create'),('admin','payments.pay.create'),('admin','cheques.read'),('admin','cheques.update_status'),('admin','inventory.read'),
     ('admin','inventory.adjust'),('admin','inventory.transfer'),('admin','expenses.read'),('admin','expenses.create'),
     ('admin','reports.basic.read'),('admin','reports.profit.read'),('admin','settings.manage'),('admin','members.read'),
     ('admin','members.manage'),('admin','audit.read'),('admin','accounting.ledger.read'),('admin','accounting.journal.post'),('admin','settings.read'),('admin','invoice.settings.read'),
     ('accountant','contacts.read'),('accountant','contacts.write'),('accountant','catalog.read'),('accountant','catalog.cost.read'),
     ('accountant','sales.read'),('accountant','sales.create'),('accountant','sales.edit_draft'),('accountant','sales.post'),
-    ('accountant','purchases.read'),('accountant','purchases.create'),('accountant','payments.read'),('accountant','payments.create'),
+    ('accountant','purchases.read'),('accountant','purchases.create'),('accountant','payments.read'),('accountant','payments.create'),('accountant','payments.receive.create'),('accountant','payments.pay.create'),
     ('accountant','cheques.read'),('accountant','cheques.update_status'),('accountant','inventory.read'),
     ('accountant','expenses.read'),('accountant','expenses.create'),('accountant','reports.basic.read'),
     ('accountant','reports.profit.read'),('accountant','audit.read'),('accountant','accounting.ledger.read'),('accountant','accounting.journal.post'),('accountant','settings.read'),('accountant','invoice.settings.read'),
     ('sales','contacts.read'),('sales','contacts.write'),('sales','catalog.read'),('sales','sales.read'),
-    ('sales','sales.create'),('sales','sales.edit_draft'),('sales','sales.post'),('sales','inventory.read'),
+    ('sales','sales.create'),('sales','sales.edit_draft'),('sales','sales.post'),('sales','inventory.read'),('sales','payments.receive.create'),
     ('sales','settings.read'),('sales','invoice.settings.read'),
     ('viewer','contacts.read'),('viewer','catalog.read'),('viewer','sales.read'),('viewer','inventory.read'),('viewer','reports.basic.read'),('viewer','settings.read'),('viewer','invoice.settings.read')
   ) as defaults(role_code,permission_code)
@@ -318,8 +403,7 @@ begin
   return coalesce(v_prefix,'') || lpad(v_next::text,v_padding,'0');
 end;
 $$;
-revoke all on function private.next_document_number(uuid,text,uuid) from public,anon;
-grant execute on function private.next_document_number(uuid,text,uuid) to authenticated;
+revoke all on function private.next_document_number(uuid,text,uuid) from public,anon,authenticated;
 
 -- Atomic allocation with row locks. This protects the invariant sum(allocations) <= transaction amount.
 create or replace function private.allocate_payment(
@@ -337,10 +421,10 @@ declare
   v_tx public.financial_transactions%rowtype;
   v_doc public.documents%rowtype;
   v_allocated bigint;
+  v_document_allocated bigint;
   v_id uuid;
 begin
-  if auth.uid() is null
-     or not (select private.has_business_permission(p_business_id,'payments.create')) then
+  if auth.uid() is null or not (select private.is_business_member(p_business_id)) then
     raise exception 'not_authorized' using errcode='42501';
   end if;
   if p_amount is null or p_amount <= 0 then
@@ -363,9 +447,26 @@ begin
     raise exception 'document_not_available' using errcode='P0002';
   end if;
 
+  if v_doc.document_type in ('sale','service_sale') then
+    if not (select private.has_business_permission(p_business_id,'payments.receive.create'))
+       or v_tx.transaction_type <> 'receipt' then
+      raise exception 'receipt_allocation_not_authorized' using errcode='42501';
+    end if;
+  elsif v_doc.document_type='purchase' then
+    if not (select private.has_business_permission(p_business_id,'payments.pay.create'))
+       or v_tx.transaction_type not in ('supplier_payment','payment') then
+      raise exception 'supplier_payment_allocation_not_authorized' using errcode='42501';
+    end if;
+  else
+    raise exception 'document_type_not_allocatable' using errcode='22023';
+  end if;
+
   if v_tx.contact_id is not null and v_doc.contact_id is not null
      and v_tx.contact_id <> v_doc.contact_id then
     raise exception 'contact_mismatch' using errcode='22023';
+  end if;
+  if v_tx.currency_code <> v_doc.currency_code then
+    raise exception 'currency_mismatch' using errcode='22023';
   end if;
 
   select coalesce(sum(a.allocated_amount),0)-coalesce((
@@ -381,6 +482,19 @@ begin
     raise exception 'allocation_exceeds_transaction' using errcode='23514';
   end if;
 
+  select coalesce(sum(a.allocated_amount),0)-coalesce((
+    select sum(r.reversed_amount)
+    from public.transaction_allocation_reversals r
+    join public.transaction_allocations ar on ar.business_id=r.business_id and ar.id=r.allocation_id
+    where ar.business_id=p_business_id and ar.document_id=p_document_id
+  ),0) into v_document_allocated
+  from public.transaction_allocations a
+  where a.business_id=p_business_id and a.document_id=p_document_id;
+
+  if v_document_allocated + p_amount > v_doc.total_amount then
+    raise exception 'allocation_exceeds_document_balance' using errcode='23514';
+  end if;
+
   insert into public.transaction_allocations(business_id,transaction_id,document_id,allocated_amount,created_by)
   values(p_business_id,p_transaction_id,p_document_id,p_amount,auth.uid())
   returning id into v_id;
@@ -389,6 +503,155 @@ end;
 $$;
 revoke all on function private.allocate_payment(uuid,uuid,uuid,bigint) from public,anon;
 grant execute on function private.allocate_payment(uuid,uuid,uuid,bigint) to authenticated;
+
+
+
+create or replace function private.get_business_entitlements(p_business_id uuid)
+returns table(feature_code text,enabled boolean,limit_value bigint)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select e.feature_code,e.enabled,e.limit_value
+  from (
+    select be.feature_code,be.enabled,be.limit_value,
+           row_number() over (
+             partition by be.feature_code
+             order by be.priority desc,be.valid_from desc,be.created_at desc
+           ) as rn
+    from public.business_entitlements be
+    where be.business_id=p_business_id
+      and be.valid_from <= now()
+      and (be.valid_until is null or be.valid_until > now())
+      and (select private.is_business_member(p_business_id))
+  ) e
+  where e.rn=1;
+$$;
+revoke all on function private.get_business_entitlements(uuid) from public,anon;
+grant execute on function private.get_business_entitlements(uuid) to authenticated;
+
+create or replace function public.get_business_entitlements(p_business_id uuid)
+returns table(feature_code text,enabled boolean,limit_value bigint)
+language sql
+stable
+security invoker
+set search_path = ''
+as $$ select * from private.get_business_entitlements(p_business_id); $$;
+revoke all on function public.get_business_entitlements(uuid) from public,anon;
+grant execute on function public.get_business_entitlements(uuid) to authenticated;
+
+create or replace function private.assert_feature_limit(
+  p_business_id uuid,
+  p_feature_code text,
+  p_requested_count bigint
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare v_enabled boolean; v_limit bigint;
+begin
+  if auth.uid() is null or not (select private.is_business_member(p_business_id)) then
+    raise exception 'not_authorized' using errcode='42501';
+  end if;
+  if p_requested_count is null or p_requested_count < 0 then
+    raise exception 'invalid_requested_count' using errcode='22023';
+  end if;
+  select enabled,limit_value into v_enabled,v_limit
+  from public.business_entitlements
+  where business_id=p_business_id
+    and feature_code=p_feature_code
+    and valid_from <= now()
+    and (valid_until is null or valid_until > now())
+  order by priority desc,valid_from desc,created_at desc
+  limit 1;
+  if not found or not v_enabled then
+    raise exception 'feature_not_enabled' using errcode='23514';
+  end if;
+  if v_limit is not null and p_requested_count > v_limit then
+    raise exception 'feature_limit_reached' using errcode='23514';
+  end if;
+end;
+$$;
+revoke all on function private.assert_feature_limit(uuid,text,bigint) from public,anon,authenticated;
+
+create or replace function private.consume_feature_quota(
+  p_business_id uuid,
+  p_feature_code text,
+  p_period_start date,
+  p_idempotency_key uuid,
+  p_source_id uuid default null
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_enabled boolean;
+  v_limit bigint;
+  v_usage bigint;
+  v_event_id uuid;
+begin
+  if auth.uid() is null
+     or not (select private.is_business_member(p_business_id))
+     or p_feature_code <> 'invoices.daily_limit'
+     or not (select private.has_business_permission(p_business_id,'sales.create')) then
+    raise exception 'feature_quota_not_authorized' using errcode='42501';
+  end if;
+  if p_period_start is null or p_idempotency_key is null then
+    raise exception 'feature_quota_parameters_required' using errcode='22023';
+  end if;
+
+  select enabled,limit_value
+    into v_enabled,v_limit
+  from public.business_entitlements
+  where business_id=p_business_id
+    and feature_code=p_feature_code
+    and valid_from <= now()
+    and (valid_until is null or valid_until > now())
+  order by priority desc,valid_from desc,created_at desc
+  limit 1;
+
+  if not found or not coalesce(v_enabled,false) then
+    raise exception 'feature_not_enabled' using errcode='23514';
+  end if;
+  if v_limit is null then
+    return null;
+  end if;
+
+  insert into private.feature_usage_events(
+    business_id,feature_code,period_start,idempotency_key,source_id
+  ) values (
+    p_business_id,p_feature_code,p_period_start,p_idempotency_key,p_source_id
+  )
+  on conflict (business_id,feature_code,idempotency_key) do nothing
+  returning id into v_event_id;
+
+  if v_event_id is null then
+    select usage_count into v_usage
+    from private.feature_usage_counters
+    where business_id=p_business_id and feature_code=p_feature_code and period_start=p_period_start;
+    return coalesce(v_usage,0);
+  end if;
+
+  insert into private.feature_usage_counters as counter(business_id,feature_code,period_start,usage_count)
+  values(p_business_id,p_feature_code,p_period_start,1)
+  on conflict (business_id,feature_code,period_start)
+  do update set usage_count=counter.usage_count+1,updated_at=now()
+  where counter.usage_count < v_limit
+  returning usage_count into v_usage;
+
+  if not found then
+    raise exception 'feature_daily_limit_reached' using errcode='23514';
+  end if;
+  return v_usage;
+end;
+$$;
+
+revoke all on function private.consume_feature_quota(uuid,text,date,uuid,uuid) from public,anon,authenticated;
 
 -- Post a balanced journal entry. Lines are locked and validated in the same transaction.
 create or replace function private.post_journal_entry(p_business_id uuid,p_entry_id uuid)
@@ -451,31 +714,31 @@ create or replace function private.reject_immutable_mutation()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $$
 begin
   raise exception 'immutable_record: create a reversal or corrective record'
     using errcode='55000';
 end;
-$;
+$$;
 
 create or replace function private.guard_posted_document()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $$
 begin
   if old.status='posted' then
     raise exception 'posted_document_immutable' using errcode='55000';
   end if;
   if tg_op='DELETE' then return old; else return new; end if;
 end;
-$;
+$$;
 
 create or replace function private.guard_document_item_parent()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $$
 declare v_business_id uuid; v_document_id uuid; v_status text;
 begin
   if tg_op='DELETE' then
@@ -488,28 +751,28 @@ begin
   if v_status='posted' then
     raise exception 'posted_document_items_immutable' using errcode='55000';
   end if;
-  return case when tg_op='DELETE' then old else new end;
+  if tg_op='DELETE' then return old; else return new; end if;
 end;
-$;
+$$;
 
 create or replace function private.guard_posted_journal_entry()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $$
 begin
   if old.status in ('posted','reversed') then
     raise exception 'posted_journal_entry_immutable' using errcode='55000';
   end if;
-  return case when tg_op='DELETE' then old else new end;
+  if tg_op='DELETE' then return old; else return new; end if;
 end;
-$;
+$$;
 
 create or replace function private.guard_journal_line_parent()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $$
 declare v_business_id uuid; v_entry_id uuid; v_status text;
 begin
   if tg_op='DELETE' then
@@ -522,9 +785,9 @@ begin
   if v_status in ('posted','reversed') then
     raise exception 'posted_journal_lines_immutable' using errcode='55000';
   end if;
-  return case when tg_op='DELETE' then old else new end;
+  if tg_op='DELETE' then return old; else return new; end if;
 end;
-$;
+$$;
 
 create trigger documents_posted_immutable
 before update or delete on public.documents
@@ -550,6 +813,10 @@ create trigger cheque_events_append_only
 before update or delete on public.cheque_events
 for each row execute function private.reject_immutable_mutation();
 
+create trigger cheque_assignment_events_append_only
+before update or delete on public.cheque_assignment_events
+for each row execute function private.reject_immutable_mutation();
+
 create trigger document_events_append_only
 before update or delete on public.document_events
 for each row execute function private.reject_immutable_mutation();
@@ -560,6 +827,10 @@ for each row execute function private.reject_immutable_mutation();
 
 create trigger record_revisions_append_only
 before update or delete on public.record_revisions
+for each row execute function private.reject_immutable_mutation();
+
+create trigger feature_usage_events_append_only
+before update or delete on private.feature_usage_events
 for each row execute function private.reject_immutable_mutation();
 
 create trigger transaction_allocations_append_only
@@ -578,35 +849,29 @@ create or replace function private.guard_posted_financial_transaction()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $$
 begin
   if old.status in ('posted','reversed') then
     raise exception 'posted_financial_transaction_immutable' using errcode='55000';
   end if;
   if tg_op='DELETE' then return old; else return new; end if;
 end;
-$;
+$$;
+
+
+revoke all on function private.reject_immutable_mutation() from public,anon,authenticated;
+revoke all on function private.guard_posted_document() from public,anon,authenticated;
+revoke all on function private.guard_document_item_parent() from public,anon,authenticated;
+revoke all on function private.guard_posted_journal_entry() from public,anon,authenticated;
+revoke all on function private.guard_journal_line_parent() from public,anon,authenticated;
+revoke all on function private.guard_posted_financial_transaction() from public,anon,authenticated;
+revoke all on function private.guard_posted_status_record() from public,anon,authenticated;
+revoke all on function private.guard_stock_transfer_item_parent() from public,anon,authenticated;
+revoke all on function private.consume_feature_quota(uuid,text,date,uuid,uuid) from public,anon,authenticated;
 
 create trigger financial_transactions_posted_immutable
 before update or delete on public.financial_transactions
 for each row execute function private.guard_posted_financial_transaction();
-
--- The function above is deliberately defined explicitly so draft transactions can be corrected,
--- while posted transactions are only reversed through a new transaction.
-create or replace function private.guard_posted_financial_transaction()
-returns trigger
-language plpgsql
-set search_path = ''
-as $
-begin
-  if old.status in ('posted','reversed') then
-    raise exception 'posted_financial_transaction_immutable' using errcode='55000';
-  end if;
-  return case when tg_op='DELETE' then old else new end;
-end;
-$;
-
-
 
 -- Public invoker wrappers are the only client-facing entry points for these private routines.
 create or replace function public.create_business(p_name text)
@@ -614,7 +879,7 @@ returns uuid
 language sql
 security invoker
 set search_path = ''
-as $ select private.create_business(p_name); $;
+as $$ select private.create_business(p_name); $$;
 
 create or replace function public.allocate_payment(
   p_business_id uuid,p_transaction_id uuid,p_document_id uuid,p_amount bigint
@@ -623,14 +888,14 @@ returns uuid
 language sql
 security invoker
 set search_path = ''
-as $ select private.allocate_payment(p_business_id,p_transaction_id,p_document_id,p_amount); $;
+as $$ select private.allocate_payment(p_business_id,p_transaction_id,p_document_id,p_amount); $$;
 
 create or replace function public.post_journal_entry(p_business_id uuid,p_entry_id uuid)
 returns void
 language sql
 security invoker
 set search_path = ''
-as $ select private.post_journal_entry(p_business_id,p_entry_id); $;
+as $$ select private.post_journal_entry(p_business_id,p_entry_id); $$;
 
 revoke all on function public.create_business(text) from public,anon;
 revoke all on function public.allocate_payment(uuid,uuid,uuid,bigint) from public,anon;
@@ -641,6 +906,59 @@ grant execute on function public.post_journal_entry(uuid,uuid) to authenticated;
 
 -- Profiles are self-editable only for non-authoritative presentation fields.
 grant update(display_name,phone,avatar_path) on public.profiles to authenticated;
+
+
+
+create or replace function private.guard_posted_status_record()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if coalesce(to_jsonb(old)->>'status','') in ('posted','reversed') then
+    raise exception 'posted_record_immutable: create a reversal'
+      using errcode='55000';
+  end if;
+  if tg_op='DELETE' then return old; else return new; end if;
+end;
+$$;
+
+create or replace function private.guard_stock_transfer_item_parent()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare v_business_id uuid; v_transfer_id uuid; v_status text;
+begin
+  if tg_op='DELETE' then
+    v_business_id:=old.business_id; v_transfer_id:=old.transfer_id;
+  else
+    v_business_id:=new.business_id; v_transfer_id:=new.transfer_id;
+  end if;
+  select status into v_status from public.stock_transfers
+  where business_id=v_business_id and id=v_transfer_id;
+  if v_status in ('posted','reversed') then
+    raise exception 'posted_stock_transfer_items_immutable' using errcode='55000';
+  end if;
+  if tg_op='DELETE' then return old; else return new; end if;
+end;
+$$;
+
+create trigger account_transfers_posted_immutable
+before update or delete on public.account_transfers
+for each row execute function private.guard_posted_status_record();
+
+create trigger stock_transfers_posted_immutable
+before update or delete on public.stock_transfers
+for each row execute function private.guard_posted_status_record();
+
+create trigger cheque_assignments_posted_immutable
+before update or delete on public.cheque_assignments
+for each row execute function private.guard_posted_status_record();
+
+create trigger stock_transfer_items_posted_immutable
+before insert or update or delete on public.stock_transfer_items
+for each row execute function private.guard_stock_transfer_item_parent();
 
 
 commit;

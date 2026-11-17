@@ -35,6 +35,21 @@ alter table public.financial_accounts
   foreign key (business_id,chart_account_id)
   references public.chart_of_accounts(business_id,id) on delete restrict;
 
+create table public.invoice_design_presets (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses(id) on delete restrict,
+  preset_name text not null,
+  template_code text not null,
+  accent_color text,
+  config_json jsonb not null default '{}'::jsonb,
+  is_default boolean not null default false,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  unique (business_id,id)
+);
+create unique index invoice_design_presets_one_default_uidx
+  on public.invoice_design_presets(business_id) where is_default;
+
 create table public.business_accounting_settings (
   business_id uuid primary key references public.businesses(id) on delete restrict,
   default_cash_account_id uuid,
@@ -209,12 +224,34 @@ create table public.business_entitlements (
   limit_value bigint,
   source_type text not null,
   source_id uuid,
+  priority smallint not null default 10,
   valid_from timestamptz not null default now(),
   valid_until timestamptz,
   created_at timestamptz not null default now(),
   check (valid_until is null or valid_until > valid_from)
 );
-create index business_entitlements_active_idx on public.business_entitlements(business_id,feature_code,valid_from,valid_until);
+create index business_entitlements_active_idx on public.business_entitlements(business_id,feature_code,priority desc,valid_from desc,valid_until);
+
+
+create table private.feature_usage_counters (
+  business_id uuid not null references public.businesses(id) on delete restrict,
+  feature_code text not null,
+  period_start date not null,
+  usage_count bigint not null default 0 check (usage_count >= 0),
+  updated_at timestamptz not null default now(),
+  primary key (business_id,feature_code,period_start)
+);
+
+create table private.feature_usage_events (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses(id) on delete restrict,
+  feature_code text not null,
+  period_start date not null,
+  idempotency_key uuid not null,
+  source_id uuid,
+  created_at timestamptz not null default now(),
+  unique (business_id,feature_code,idempotency_key)
+);
 
 create table public.business_license_links (
   id uuid primary key default gen_random_uuid(),
@@ -249,7 +286,21 @@ create table public.sync_devices (
   status text not null default 'active' check (status in ('active','revoked')),
   last_seen_at timestamptz,
   created_at timestamptz not null default now(),
-  unique (business_id,id)
+  unique (business_id,id),
+  unique (business_id,id,user_id)
+);
+
+create table public.user_device_settings (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  device_id uuid not null,
+  settings_json jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  unique (business_id,user_id,device_id),
+  foreign key (business_id,device_id,user_id) references public.sync_devices(business_id,id,user_id) on delete cascade,
+  check (not (settings_json ?| array['bio','biometric','fingerprint','biometric_enabled']))
+  -- Biometric enrollment secrets and private keys must remain in the OS secure keystore, not here.
 );
 
 create table public.sync_operations (

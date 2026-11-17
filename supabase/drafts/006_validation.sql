@@ -84,6 +84,29 @@ where
      on a.business_id=r.business_id and a.id=r.allocation_id
    where a.business_id=t.business_id and a.transaction_id=t.id) > t.amount;
 
+-- 9b) Find documents whose net allocated receipts exceed their total amount.
+select d.business_id,d.id,d.total_amount,
+  (select coalesce(sum(a.allocated_amount),0)
+   from public.transaction_allocations a
+   where a.business_id=d.business_id and a.document_id=d.id)
+  -
+  (select coalesce(sum(r.reversed_amount),0)
+   from public.transaction_allocation_reversals r
+   join public.transaction_allocations a
+     on a.business_id=r.business_id and a.id=r.allocation_id
+   where a.business_id=d.business_id and a.document_id=d.id) as net_allocated
+from public.documents d
+where
+  (select coalesce(sum(a.allocated_amount),0)
+   from public.transaction_allocations a
+   where a.business_id=d.business_id and a.document_id=d.id)
+  -
+  (select coalesce(sum(r.reversed_amount),0)
+   from public.transaction_allocation_reversals r
+   join public.transaction_allocations a
+     on a.business_id=r.business_id and a.id=r.allocation_id
+   where a.business_id=d.business_id and a.document_id=d.id) > d.total_amount;
+
 -- 10) Confirm invoice numbers are unique within business/type/period (including NULL periods).
 select business_id,document_type,fiscal_period_id,document_number,count(*)
 from public.documents

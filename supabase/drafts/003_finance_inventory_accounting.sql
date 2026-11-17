@@ -1,6 +1,17 @@
 -- DRAFT ONLY. Depends on 001 and 002. Do not apply to production.
 begin;
 
+create table private.document_cost_summaries (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null,
+  document_id uuid not null,
+  cost_mode text not null check (cost_mode in ('row','total')),
+  total_cost_snapshot bigint not null default 0 check (total_cost_snapshot >= 0),
+  created_at timestamptz not null default now(),
+  unique (business_id,document_id),
+  foreign key (business_id,document_id) references public.documents(business_id,id) on delete restrict
+);
+
 create table public.financial_accounts (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references public.businesses(id) on delete restrict,
@@ -30,6 +41,8 @@ create table public.financial_transactions (
   source_id uuid,
   idempotency_key uuid not null,
   created_by uuid references public.profiles(id),
+  legacy_collection text,
+  legacy_id text,
   created_at timestamptz not null default now(),
   unique (business_id,id),
   unique (business_id,idempotency_key),
@@ -39,6 +52,32 @@ create table public.financial_transactions (
 );
 create index financial_transactions_date_idx on public.financial_transactions(business_id,transaction_date desc);
 create index financial_transactions_contact_idx on public.financial_transactions(business_id,contact_id,transaction_date desc);
+
+create table public.account_transfers (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses(id) on delete restrict,
+  from_account_id uuid not null,
+  to_account_id uuid not null,
+  amount bigint not null check (amount > 0),
+  currency_code text not null default 'IRR',
+  transfer_date date not null,
+  status text not null default 'draft' check (status in ('draft','posted','reversed')),
+  source_transaction_id uuid,
+  destination_transaction_id uuid,
+  note text,
+  created_by uuid references public.profiles(id),
+  created_at timestamptz not null default now(),
+  unique (business_id,id),
+  foreign key (business_id,from_account_id) references public.financial_accounts(business_id,id) on delete restrict,
+  foreign key (business_id,to_account_id) references public.financial_accounts(business_id,id) on delete restrict,
+  foreign key (business_id,source_transaction_id) references public.financial_transactions(business_id,id) on delete restrict,
+  foreign key (business_id,destination_transaction_id) references public.financial_transactions(business_id,id) on delete restrict,
+  check (from_account_id <> to_account_id),
+  check (source_transaction_id is null or destination_transaction_id is null or source_transaction_id <> destination_transaction_id)
+);
+
+create unique index account_transfers_source_tx_uidx on public.account_transfers(business_id,source_transaction_id) where source_transaction_id is not null;
+create unique index account_transfers_destination_tx_uidx on public.account_transfers(business_id,destination_transaction_id) where destination_transaction_id is not null;
 
 create table public.transaction_allocations (
   id uuid primary key default gen_random_uuid(),
@@ -159,6 +198,17 @@ create table public.cheque_assignments (
   created_at timestamptz not null default now(),
   foreign key (business_id,source_cheque_id) references public.cheques(business_id,id) on delete restrict,
   foreign key (business_id,target_contact_id) references public.contacts(business_id,id) on delete restrict
+);
+
+create table public.cheque_assignment_events (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null,
+  assignment_id uuid not null,
+  event_type text not null,
+  event_payload jsonb not null default '{}'::jsonb,
+  performed_by uuid references public.profiles(id),
+  created_at timestamptz not null default now(),
+  foreign key (business_id,assignment_id) references public.cheque_assignments(business_id,id) on delete restrict
 );
 
 create table public.stock_movements (
