@@ -30,6 +30,17 @@ begin
   ) then raise exception 'anon unexpectedly can execute create_document_draft'; end if;
 
   if not exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='documents' and column_name='request_fingerprint'
+  ) then raise exception 'Document idempotency request fingerprint is missing'; end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='create_document_draft'
+      and pg_get_functiondef(p.oid) like '%different request%'
+  ) then raise exception 'Document idempotency payload mismatch guard is missing'; end if;
+
+  if not exists (
     select 1 from pg_constraint
     where conrelid='public.documents'::regclass and contype='f'
       and conname like '%contacts%'
