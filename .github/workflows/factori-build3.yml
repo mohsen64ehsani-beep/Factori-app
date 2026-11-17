@@ -1,6 +1,10 @@
 name: Build Android APK
 # Factori 1.2.43: Capacitor 8 migration, Node 22 / Java 21, Android API 24+
 
+concurrency:
+  group: factoori-android-build-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings, feature/factori-v1.2.15-sms-guide-customers-advanced-dialogs, fix/factori-1.2.16-advanced-settings-selectors, feature/factori-v1.2.17-home-promo-copy, release/myket-first-release, work/factoori-redesign-myket-iap, work/factoori-shared-db-integration]
