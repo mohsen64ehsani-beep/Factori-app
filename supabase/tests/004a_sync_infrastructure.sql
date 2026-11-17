@@ -10,6 +10,10 @@ begin
   if has_table_privilege('anon','public.'||t,'SELECT') then raise exception 'anon can read public.%',t; end if;
   if has_table_privilege('authenticated','public.'||t,'INSERT') then raise exception 'authenticated can insert public.% directly',t; end if;
  end loop;
+ if not exists(select 1 from information_schema.columns
+  where table_schema='public' and table_name='sync_operations' and column_name='request_fingerprint') then
+  raise exception 'Sync operation request fingerprint column is missing';
+ end if;
  if not exists(select 1 from pg_constraint where conrelid='public.sync_operations'::regclass and contype='u'
    and pg_get_constraintdef(oid) like '%business_id, device_id, operation_id%') then
   raise exception 'Sync operation idempotency unique constraint missing';
