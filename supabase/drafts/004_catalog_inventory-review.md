@@ -18,7 +18,7 @@ Introduces products, categories, services, separate protected product costs, pri
 3. Implement a balance projection or a safe aggregate query. Do not trust a client-maintained stock quantity.
 4. Implement weighted-average and FIFO costing explicitly and test historical cost snapshots against current app profit calculations.
 5. Add cost snapshot creation during sales posting and preserve legacy item \`b\` purchase-cost snapshots for historical profit.
-6. Validate that document item product/service IDs belong to the same business and match item/document types.
+6. Tenant-scoped composite FKs now bind document item product/service IDs to the same business; add cross-business rejection tests and validate item/document types.
 7. Ensure inventory quantity and cost allocations cannot go negative under concurrent sales.
 8. Decide handling for negative stock and per-warehouse vs business-wide costing.
 9. Add idempotency, version conflicts, fiscal period checks and reversal logic to every stock mutation RPC.
