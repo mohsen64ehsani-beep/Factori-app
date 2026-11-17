@@ -8,8 +8,9 @@ These files are **not production migrations**. They live under `supabase/drafts/
 2. `002_core_documents.sql` — tenant-scoped contacts, warehouses, fiscal periods, document headers/items, and draft-only document creation.
 3. `003_financial_ledger.sql` — accounts, receipts/payments, allocations, cheques, contact ledger and journal primitives.
 4. `004_catalog_inventory.sql` — products/services, protected cost snapshots, stock movements, transfers and costing layers.
-5. `005_sync_compatibility.sql` — legacy compatibility sync transport; **not production-ready** and depends on additional sync schema/functions not yet delivered.
-6. `006_journal_integrity.sql` — database guards for balanced, immutable posted journal entries.
+5. `004a_sync_infrastructure.sql` — sync device/cursor/operation tables and initial Free-tier quota enforcement.
+6. `005_sync_compatibility.sql` — legacy compatibility sync transport; **not production-ready** and depends on additional sync schema/functions not yet delivered.
+7. `006_journal_integrity.sql` — database guards for balanced, immutable posted journal entries.
 
 ## Test scripts
 
@@ -17,6 +18,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 - `supabase/tests/002_core_documents.sql`
 - `supabase/tests/003_financial_ledger.sql`
 - `supabase/tests/004_catalog_inventory.sql`
+- `supabase/tests/004a_sync_infrastructure.sql`
 - `supabase/tests/005_sync_compatibility.sql`
 - `supabase/tests/006_journal_integrity.sql`
 
