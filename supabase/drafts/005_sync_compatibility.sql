@@ -577,7 +577,7 @@ declare
   v_records jsonb;
   v_next_cursor bigint:=coalesce(p_since_revision,0);
   v_has_more boolean:=false;
-  v_count integer:=0;
+  v_candidate_count integer:=0;
 begin
   if v_user_id is null or not (select private.is_business_member(p_business_id)) then
     raise exception 'not_authorized' using errcode='42501';
@@ -609,20 +609,15 @@ begin
     where r.business_id=p_business_id and r.revision>coalesce(p_since_revision,0)
     order by r.record_id,r.revision desc
   ),
-  visible as (
-    select l.record_id,l.record_type,l.revision,l.change_type,
-      s.collection,s.legacy_id,s.version,s.payload_public,s.payload_private,s.deleted_at
-    from latest l
-    join private.business_state_records s
-      on s.business_id=p_business_id and s.id=l.record_id
-    where private.can_sync_collection(p_business_id,s.collection,'read')
-    order by l.revision
-    limit v_limit+1
+  candidates as (
+    select * from latest order by revision limit v_limit+1
   )
-  select count(*) into v_count from visible;
+  select count(*) into v_candidate_count from candidates;
 
-  v_has_more:=v_count>v_limit;
+  v_has_more:=v_candidate_count>v_limit;
 
+  -- Advance over every scanned revision, including collections this member cannot read.
+  -- Otherwise a user without permission to the oldest changed collection can stall forever.
   with latest as (
     select distinct on (r.record_id)
       r.record_id,r.record_type,r.revision,r.change_type
@@ -630,25 +625,27 @@ begin
     where r.business_id=p_business_id and r.revision>coalesce(p_since_revision,0)
     order by r.record_id,r.revision desc
   ),
+  scanned as (
+    select * from latest order by revision limit v_limit
+  ),
   visible as (
-    select l.record_id,l.record_type,l.revision,l.change_type,
+    select sc.record_id,sc.record_type,sc.revision,sc.change_type,
       s.collection,s.legacy_id,s.version,s.payload_public,s.payload_private,s.deleted_at
-    from latest l
+    from scanned sc
     join private.business_state_records s
-      on s.business_id=p_business_id and s.id=l.record_id
+      on s.business_id=p_business_id and s.id=sc.record_id
     where private.can_sync_collection(p_business_id,s.collection,'read')
-    order by l.revision
-    limit v_limit
   )
-  select coalesce(jsonb_agg(jsonb_build_object(
-    'record_id',v.record_id,'collection',v.collection,'legacy_id',v.legacy_id,
-    'version',v.version,'revision',v.revision,'change_type',v.change_type,
-    'deleted_at',v.deleted_at,
-    'payload',case when v_cost_allowed
-      then private.merge_sensitive_json(v.payload_public,v.payload_private)
-      else v.payload_public end
-  ) order by v.revision),'[]'::jsonb),
-  coalesce(max(v.revision),coalesce(p_since_revision,0))
+  select
+    coalesce(jsonb_agg(jsonb_build_object(
+      'record_id',v.record_id,'collection',v.collection,'legacy_id',v.legacy_id,
+      'version',v.version,'revision',v.revision,'change_type',v.change_type,
+      'deleted_at',v.deleted_at,
+      'payload',case when v_cost_allowed
+        then private.merge_sensitive_json(v.payload_public,v.payload_private)
+        else v.payload_public end
+    ) order by v.revision),'[]'::jsonb),
+    coalesce((select max(sc.revision) from scanned sc),coalesce(p_since_revision,0))
   into v_records,v_next_cursor
   from visible v;
 
