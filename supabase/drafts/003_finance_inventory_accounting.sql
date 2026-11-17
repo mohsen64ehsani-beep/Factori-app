@@ -196,6 +196,7 @@ create table public.cheque_assignments (
   note text,
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),
+  unique (business_id,id),
   foreign key (business_id,source_cheque_id) references public.cheques(business_id,id) on delete restrict,
   foreign key (business_id,target_contact_id) references public.contacts(business_id,id) on delete restrict
 );
@@ -266,6 +267,7 @@ create table public.stock_transfer_items (
   product_id uuid not null,
   quantity numeric(20,4) not null check (quantity > 0),
   created_at timestamptz not null default now(),
+  unique (business_id,id),
   foreign key (business_id,transfer_id) references public.stock_transfers(business_id,id) on delete restrict,
   foreign key (business_id,product_id) references public.products(business_id,id) on delete restrict
 );
