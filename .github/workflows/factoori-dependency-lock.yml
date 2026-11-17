@@ -6,37 +6,24 @@ on:
       - work/factoori-redesign-myket-iap
     paths:
       - package.json
+      - package-lock.json
       - .github/workflows/factoori-dependency-lock.yml
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   dependency-lock:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          persist-credentials: true
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Generate deterministic npm lockfile
-        run: npm install --package-lock-only --ignore-scripts --no-audit
-      - name: Commit lockfile for reproducible builds
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          if git diff --cached --quiet; then
-            echo "package-lock.json is already current."
-          else
-            git commit -m "build: track npm lockfile for reproducible installs"
-            git push
-          fi
-      - name: Audit resolved dependency tree
+      - name: Verify reproducible dependency lock
+        run: npm ci --ignore-scripts --no-audit
+      - name: Audit locked dependency tree
         run: |
           npm audit --json > npm-audit.json || true
           node -e "const a=require('./npm-audit.json'); console.log(JSON.stringify(a.metadata?.vulnerabilities ?? {}, null, 2))"
