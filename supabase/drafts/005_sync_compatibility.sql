@@ -1,6 +1,8 @@
 -- Offline-first compatibility sync for the existing db:v2 collections.
 -- Draft only: this migration is not applied to the production Supabase project.
 
+begin;
+
 create table private.business_state_records (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references public.businesses(id) on delete restrict,
@@ -728,3 +730,5 @@ revoke all on function public.sync_pull(uuid,uuid,bigint,integer) from public,an
 grant execute on function public.register_sync_device(uuid,text,text,jsonb) to authenticated;
 grant execute on function public.sync_push(uuid,uuid,jsonb) to authenticated;
 grant execute on function public.sync_pull(uuid,uuid,bigint,integer) to authenticated;
+
+commit;
