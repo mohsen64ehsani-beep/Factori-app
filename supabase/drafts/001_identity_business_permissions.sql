@@ -205,7 +205,7 @@ $$;
 
 create or replace function private.touch_updated_at()
 returns trigger language plpgsql set search_path=''
-as $ begin new.updated_at=now(); return new; end $;
+as $$ begin new.updated_at=now(); return new; end $$;
 
 drop trigger if exists profiles_touch_updated_at on public.profiles;
 create trigger profiles_touch_updated_at before update on public.profiles
