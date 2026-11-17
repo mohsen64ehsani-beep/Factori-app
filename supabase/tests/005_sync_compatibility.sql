@@ -5,6 +5,10 @@ do $$
 declare v_def text;
 begin
  select pg_get_functiondef('private.sync_push(uuid,uuid,jsonb)'::regprocedure) into v_def;
+ if position('request_fingerprint' in v_def)=0
+  or position('sync_operation_id_reused_with_different_payload' in v_def)=0 then
+  raise exception 'Sync operation payload fingerprint validation is missing';
+ end if;
  if position('pg_advisory_xact_lock' in v_def)=0 then
   raise exception 'Sync idempotency advisory lock is missing';
  end if;
