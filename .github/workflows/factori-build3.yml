@@ -86,9 +86,11 @@ jobs:
           npm install --package-lock-only --ignore-scripts --no-audit
           npm ci --no-audit
 
-      - name: Bundle license client
+      - name: Bundle license and shared cloud clients
         run: |
           npx esbuild license-client.js --bundle --format=esm --outfile=www/license-client.js
+          npx esbuild cloud-client.js --bundle --format=iife --outfile=www/cloud-client.js
+          npx esbuild cloud-client.js --bundle --format=iife --outfile=www/cloud-client.js
           npx esbuild back-handler.js --bundle --format=iife --outfile=www/back-handler.js
 
       - name: Copy offline libraries
