@@ -44,6 +44,17 @@ begin
     where role_code='sales' and permission_code in ('catalog.cost.read','reports.profit.read') and allowed
   ) then raise exception 'sales role must not read cost or profit'; end if;
 
+  if not exists (
+    select 1 from public.permission_catalog where code='invoice.settings.read'
+  ) or not exists (
+    select 1 from public.permission_catalog where code='settings.read'
+  ) then raise exception 'Required settings read permissions are missing'; end if;
+
+  if not exists (
+    select 1 from public.business_role_permissions
+    where role_code='sales' and permission_code='invoice.settings.read' and allowed
+  ) then raise exception 'Sales role must be able to read invoice bank details'; end if;
+
   if exists (
     select 1 from public.business_role_permissions
     where role_code='viewer' and allowed
