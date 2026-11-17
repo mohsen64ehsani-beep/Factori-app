@@ -1,9 +1,9 @@
 name: Build Android APK
-# Factori 1.2.24: reliable start license prompt and dynamic splash version
+# Factori 1.2.25: free-tier entry, no camera permission, release build
 
 on:
   push:
-    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings, feature/factori-v1.2.15-sms-guide-customers-advanced-dialogs, fix/factori-1.2.16-advanced-settings-selectors, feature/factori-v1.2.17-home-promo-copy, release/myket-first-release]
+    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings, feature/factori-v1.2.15-sms-guide-customers-advanced-dialogs, fix/factori-1.2.16-advanced-settings-selectors, feature/factori-v1.2.17-home-promo-copy, release/myket-first-release, work/factoori-redesign-myket-iap]
   workflow_dispatch:
 
 jobs:
@@ -31,13 +31,13 @@ jobs:
       - name: Set visible app version
         run: |
           set -euo pipefail
-          sed -i 's/__FACTOORI_VERSION__/1.2.24/g' www/index.html
+          sed -i 's/__FACTOORI_VERSION__/1.2.25/g' www/index.html
           if grep -Fq '__FACTOORI_VERSION__' www/index.html; then
             echo "::error::Visible app version placeholder was not replaced."
             exit 1
           fi
-          grep -Fq 'نسخه 1.2.24' www/index.html
-          echo "Splash version label verified: 1.2.24"
+          grep -Fq 'نسخه 1.2.25' www/index.html
+          echo "Splash version label verified: 1.2.25"
 
       - name: Verify requested homepage promo is in the active app entry
         run: |
@@ -85,22 +85,30 @@ jobs:
 
       - name: Set Android update version
         run: |
-          sed -i -E 's/versionCode [0-9]+/versionCode 26/' android/app/build.gradle
-          sed -i -E 's/versionName "[^"]+"/versionName "1.2.24"/' android/app/build.gradle
+          sed -i -E 's/versionCode [0-9]+/versionCode 27/' android/app/build.gradle
+          sed -i -E 's/versionName "[^"]+"/versionName "1.2.25"/' android/app/build.gradle
           grep -n -E 'versionCode|versionName' android/app/build.gradle
-          grep -q 'versionCode 26' android/app/build.gradle
-          grep -q 'versionName "1.2.24"' android/app/build.gradle
-          echo "Android update version verified: 1.2.24 (26)"
+          grep -q 'versionCode 27' android/app/build.gradle
+          grep -q 'versionName "1.2.25"' android/app/build.gradle
+          echo "Android update version verified: 1.2.25 (26)"
 
-      - name: Allow fingerprint permission
+      - name: Allow fingerprint permission only
         run: |
-          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_BIOMETRIC" />\\n    <uses-permission android:name="android.permission.CAMERA" />\\n</manifest>#' android/app/src/main/AndroidManifest.xml
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_BIOMETRIC" />\\n</manifest>#' android/app/src/main/AndroidManifest.xml
 
       - name: Generate app icons and splash
         run: npx capacitor-assets generate --android
 
       - name: Sync web files and plugins
         run: npx cap sync android
+      - name: Verify camera permission is absent
+        run: |
+          if grep -R -n 'android.permission.CAMERA' android/app/src/main; then
+            echo "::error::Unexpected CAMERA permission found in the Android app."
+            exit 1
+          fi
+          echo "No CAMERA permission found in the generated app."
+
 
       - name: Verify native license plugin registration
         run: |
@@ -182,12 +190,12 @@ jobs:
           echo "Actual APK certificate SHA256:       $APK_FP"
           test -n "$KEY_FP"
           test "$KEY_FP" = "$APK_FP" || { echo "::error::Release APK certificate does not match the dedicated release keystore."; exit 1; }
-          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.24-release.apk"
-          sha256sum "app/build/outputs/apk/release/Factori-v1.2.24-release.apk"
+          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.25-release.apk"
+          sha256sum "app/build/outputs/apk/release/Factori-v1.2.25-release.apk"
           echo "Official release APK signature verified."
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factori-android-v1.2.24-release
-          path: android/app/build/outputs/apk/release/Factori-v1.2.24-release.apk
+          name: factori-android-v1.2.25-release
+          path: android/app/build/outputs/apk/release/Factori-v1.2.25-release.apk
           if-no-files-found: error
