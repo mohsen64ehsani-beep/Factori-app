@@ -91,6 +91,9 @@ begin
  if p_expires_at is null or p_expires_at<=now() or p_expires_at>now()+interval '30 days' then
   raise exception using errcode='22023',message='Invitation expiry must be within 30 days';
  end if;
+ update public.business_invitations set status='expired'
+ where business_id=p_business_id and email_normalized=v_email
+   and status='pending' and expires_at<=now();
  insert into public.business_invitations(business_id,email_normalized,role_code,token_hash,invited_by,expires_at)
  values(p_business_id,v_email,p_role_code,p_token_hash,v_user,p_expires_at)
  returning id into v_id;
@@ -192,6 +195,9 @@ begin
  where business_id=p_business_id and user_id=p_member_user_id for update;
  if not found or v_target.status<>'active' or v_target.role_code='owner' or p_member_user_id=v_user then
   raise exception using errcode='42501',message='This member cannot be suspended or removed';
+ end if;
+ if v_target.role_code='admin' and not private.is_business_owner(p_business_id) then
+  raise exception using errcode='42501',message='Only the owner can suspend or remove an administrator';
  end if;
  update public.business_members set status=p_status,updated_at=now()
  where business_id=p_business_id and user_id=p_member_user_id;
