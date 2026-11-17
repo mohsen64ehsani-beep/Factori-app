@@ -422,7 +422,7 @@ begin
            and lower(coalesce(nullif(btrim(v_payload->>'status'),''),'draft'))<>'draft' then
           raise exception 'document_sync_accepts_drafts_only' using errcode='42501';
         end if;
-        if v_record_id is null then
+        if v_record_id is null or v_existing.deleted_at is not null then
           case v_collection
             when 'cust' then perform private.assert_feature_limit(p_business_id,'customers.total_limit',1);
             when 'prod' then perform private.assert_feature_limit(p_business_id,'products.total_limit',1);
