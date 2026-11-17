@@ -300,7 +300,7 @@ create policy journal_lines_read on public.journal_lines for select to authentic
  using(private.has_business_permission(business_id,'accounting.journal.read'));
 drop policy if exists contact_ledger_read on public.contact_ledger_entries;
 create policy contact_ledger_read on public.contact_ledger_entries for select to authenticated
- using(private.has_business_permission(business_id,'contacts.read'));
+ using(private.has_business_permission(business_id,'contacts.ledger.read'));
 
 revoke all on public.financial_accounts,public.financial_transactions,public.transaction_allocations,
  public.cheques,public.cheque_events,public.chart_of_accounts,public.journal_entries,
