@@ -55,6 +55,16 @@ begin
     where role_code='sales' and permission_code='invoice.settings.read' and allowed
   ) then raise exception 'Sales role must be able to read invoice bank details'; end if;
 
+  if not exists (
+    select 1 from public.business_role_permissions
+    where role_code='sales' and permission_code='contacts.ledger.read' and not allowed
+  ) then raise exception 'Sales role must not read contact ledger balances'; end if;
+
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='business_settings'
+      and policyname='business_settings_read' and qual like '%settings.read%'
+  ) then raise exception 'Business settings read policy must use settings.read'; end if;
+
   if exists (
     select 1 from public.business_role_permissions
     where role_code='viewer' and allowed
