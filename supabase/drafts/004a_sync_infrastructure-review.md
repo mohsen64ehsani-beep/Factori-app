@@ -15,6 +15,7 @@ Defines predecessor tables required by compatibility sync: device registry, per-
 ## Important implementation details
 - Device, cursor, operation, revision and quota tables have RLS enabled and no direct client grants.
 - A unique constraint protects (business_id, device_id, operation_id).
+- Member permission versions increment on role/status changes and per-member permission override changes; each sync device stores the version it last acknowledged.
 - The daily quota row is locked during consumption; duplicate operation IDs do not consume quota twice.
 - Lifetime catalog limits count non-deleted records in the compatibility state table. The function is defined before migration 005 creates that table; its SQL body resolves the relation when first invoked after 005 is installed.
 - The trigger seeds default limits for new businesses; existing businesses are backfilled without overwriting configured values.
@@ -28,5 +29,6 @@ Defines predecessor tables required by compatibility sync: device registry, per-
 5. Add reset/upgrade/downgrade behavior, grace periods, and concurrency tests.
 6. Add device key proof-of-possession and device revocation controls.
 7. Test quota races across multiple devices and local timezone boundaries.
+8. Verify permission-version triggers bump only the affected member and that devices are forced to reset after permission changes.
 
 The defaults are draft policy, not an active production subscription system.
