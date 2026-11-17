@@ -1,6 +1,6 @@
 {
   "name": "factori",
-  "version": "1.2.36",
+  "version": "1.2.37",
   "private": true,
   "dependencies": {
     "@capacitor/android": "^6.2.0",
