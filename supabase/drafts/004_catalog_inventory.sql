@@ -79,7 +79,7 @@ create table if not exists public.services (
 create index if not exists services_business_name_idx on public.services(business_id,lower(name));
 
 -- Attach normalized catalog references after the catalog tables exist.
-do $
+do $$
 begin
  if not exists(select 1 from pg_constraint where conname='document_items_product_tenant_fk') then
   alter table public.document_items add constraint document_items_product_tenant_fk
