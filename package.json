@@ -1,21 +1,21 @@
 {
   "name": "factori",
-  "version": "1.2.24",
+  "version": "1.2.43",
   "private": true,
   "dependencies": {
-    "@capacitor/android": "^6.2.0",
-    "@capacitor/core": "^6.2.0",
-    "@capacitor/filesystem": "^6.0.0",
-    "@capacitor/share": "^6.0.0",
-    "@capgo/capacitor-native-biometric": "^6.0.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/share": "^8.0.0",
+    "@capgo/capacitor-native-biometric": "^8.9.3",
     "capacitor-license-manager": "file:plugins/capacitor-license-manager",
     "html2canvas": "1.4.1",
-    "jspdf": "2.5.1",
-    "@capacitor/app": "^6.0.2"
+    "jspdf": "4.2.1",
+    "@capacitor/app": "^8.0.0"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^6.2.0",
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^8.0.0",
     "esbuild": "^0.25.0"
   }
 }

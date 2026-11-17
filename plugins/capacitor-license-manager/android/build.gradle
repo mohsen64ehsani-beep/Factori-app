@@ -1,16 +1,16 @@
 apply plugin: 'com.android.library'
 
 android {
-    namespace "com.factori.licensemanager"
-    compileSdk 35
+    namespace = "com.factori.licensemanager"
+    compileSdk = rootProject.ext.compileSdkVersion
 
     defaultConfig {
-        minSdk 23
-        targetSdk 35
+        minSdk = rootProject.ext.minSdkVersion
+        targetSdk = rootProject.ext.targetSdkVersion
     }
 }
 
 dependencies {
     implementation project(':capacitor-android')
-    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
 }
