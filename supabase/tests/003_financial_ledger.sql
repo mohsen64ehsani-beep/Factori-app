@@ -18,6 +18,10 @@ begin
  if not exists(select 1 from pg_constraint where conrelid='public.journal_lines'::regclass and contype='c') then
   raise exception 'Journal debit/credit checks are missing';
  end if;
+ if not exists (
+  select 1 from pg_policies where schemaname='public' and tablename='contact_ledger_entries'
+    and policyname='contact_ledger_read' and qual like '%contacts.ledger.read%'
+ ) then raise exception 'Contact ledger must require contacts.ledger.read'; end if;
  if not exists(select 1 from pg_indexes where schemaname='public' and indexname='financial_accounts_one_default') then
   raise exception 'Single default financial account index is missing';
  end if;
