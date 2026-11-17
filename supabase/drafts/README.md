@@ -9,7 +9,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 3. `003_financial_ledger.sql` — accounts, receipts/payments, allocations, cheques, contact ledger and journal primitives.
 4. `004_catalog_inventory.sql` — products/services, protected cost snapshots, stock movements, transfers and costing layers.
 5. `004a_sync_infrastructure.sql` — sync device/cursor/operation tables and initial Free-tier quota enforcement.
-6. `005_sync_compatibility.sql` — legacy compatibility sync transport; **not production-ready** and depends on additional sync schema/functions not yet delivered.
+6. `005_sync_compatibility.sql` — legacy compatibility sync bridge; currently limited to metadata and draft writes, with financial/stock mutations blocked pending normalized RPCs; **not production-ready**.
 7. `006_journal_integrity.sql` — database guards for balanced, immutable posted journal entries.
 
 ## Test scripts
