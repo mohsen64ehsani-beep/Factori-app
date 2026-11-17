@@ -1,5 +1,5 @@
 name: Build Android APK
-# Factori 1.2.43: reproducible npm ci builds with security-patched transitive tar
+# Factori 1.2.43: Capacitor 8 migration, Node 22 / Java 21, Android API 24+
 
 on:
   push:
@@ -114,7 +114,7 @@ jobs:
           grep -n -E 'versionCode|versionName' android/app/build.gradle
           grep -q 'versionCode 45' android/app/build.gradle
           grep -q 'versionName "1.2.43"' android/app/build.gradle
-          echo "Android update version verified: 1.2.43 (44)"
+          echo "Android update version verified: 1.2.43 (45)"
 
       - name: Allow fingerprint permission only
         run: |
