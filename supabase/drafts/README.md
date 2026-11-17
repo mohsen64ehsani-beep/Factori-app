@@ -17,6 +17,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 - `supabase/tests/002_core_documents.sql`
 - `supabase/tests/003_financial_ledger.sql`
 - `supabase/tests/004_catalog_inventory.sql`
+- `supabase/tests/005_sync_compatibility.sql`
 - `supabase/tests/006_journal_integrity.sql`
 
 The test scripts are designed for an isolated disposable Supabase/Postgres project after applying the corresponding draft migrations. They have not been run against production.
