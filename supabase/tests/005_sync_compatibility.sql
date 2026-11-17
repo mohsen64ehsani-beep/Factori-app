@@ -4,6 +4,13 @@ begin;
 do $$
 declare v_def text;
 begin
+ select pg_get_functiondef('private.sync_pull(uuid,uuid,bigint,integer)'::regprocedure) into v_def;
+ if position('scanned as' in lower(v_def))=0
+  or position('max(sc.revision)' in lower(v_def))=0
+  or position('can_sync_collection' in lower(v_def))=0 then
+  raise exception 'Sync pull must advance its cursor across scanned but unreadable records';
+ end if;
+
  select pg_get_functiondef('private.sync_push(uuid,uuid,jsonb)'::regprocedure) into v_def;
  if position('request_fingerprint' in v_def)=0
   or position('sync_operation_id_reused_with_different_payload' in v_def)=0 then
