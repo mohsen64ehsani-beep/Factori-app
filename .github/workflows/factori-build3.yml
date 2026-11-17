@@ -1,5 +1,5 @@
 name: Build Android APK
-# Factori 1.2.29: full free-tier limits, redesigned dashboard and no camera permission
+# Factori 1.2.30: full free-tier limits, redesigned dashboard and no camera permission
 
 on:
   push:
@@ -31,13 +31,13 @@ jobs:
       - name: Set visible app version
         run: |
           set -euo pipefail
-          sed -i 's/__FACTOORI_VERSION__/1.2.29/g' www/index.html
+          sed -i 's/__FACTOORI_VERSION__/1.2.30/g' www/index.html
           if grep -Fq '__FACTOORI_VERSION__' www/index.html; then
             echo "::error::Visible app version placeholder was not replaced."
             exit 1
           fi
-          grep -Fq 'نسخه 1.2.29' www/index.html
-          echo "Splash version label verified: 1.2.29"
+          grep -Fq 'نسخه 1.2.30' www/index.html
+          echo "Splash version label verified: 1.2.30"
 
       - name: Verify requested homepage promo is in the active app entry
         run: |
@@ -85,12 +85,12 @@ jobs:
 
       - name: Set Android update version
         run: |
-          sed -i -E 's/versionCode [0-9]+/versionCode 31/' android/app/build.gradle
-          sed -i -E 's/versionName "[^"]+"/versionName "1.2.29"/' android/app/build.gradle
+          sed -i -E 's/versionCode [0-9]+/versionCode 32/' android/app/build.gradle
+          sed -i -E 's/versionName "[^"]+"/versionName "1.2.30"/' android/app/build.gradle
           grep -n -E 'versionCode|versionName' android/app/build.gradle
-          grep -q 'versionCode 31' android/app/build.gradle
-          grep -q 'versionName "1.2.29"' android/app/build.gradle
-          echo "Android update version verified: 1.2.29 (31)"
+          grep -q 'versionCode 32' android/app/build.gradle
+          grep -q 'versionName "1.2.30"' android/app/build.gradle
+          echo "Android update version verified: 1.2.30 (31)"
 
       - name: Allow fingerprint permission only
         run: |
@@ -190,12 +190,12 @@ jobs:
           echo "Actual APK certificate SHA256:       $APK_FP"
           test -n "$KEY_FP"
           test "$KEY_FP" = "$APK_FP" || { echo "::error::Release APK certificate does not match the dedicated release keystore."; exit 1; }
-          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.29-release.apk"
-          sha256sum "app/build/outputs/apk/release/Factori-v1.2.29-release.apk"
+          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.30-release.apk"
+          sha256sum "app/build/outputs/apk/release/Factori-v1.2.30-release.apk"
           echo "Official release APK signature verified."
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factori-android-v1.2.29-release
-          path: android/app/build/outputs/apk/release/Factori-v1.2.29-release.apk
+          name: factori-android-v1.2.30-release
+          path: android/app/build/outputs/apk/release/Factori-v1.2.30-release.apk
           if-no-files-found: error
