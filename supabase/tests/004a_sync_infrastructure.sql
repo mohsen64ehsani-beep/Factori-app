@@ -14,6 +14,9 @@ begin
    and pg_get_constraintdef(oid) like '%business_id, device_id, operation_id%') then
   raise exception 'Sync operation idempotency unique constraint missing';
  end if;
+ if position('for update' in lower(pg_get_functiondef('private.assert_feature_limit(uuid,text,integer)'::regprocedure)))=0 then
+  raise exception 'Lifetime feature limit checks must lock the entitlement row';
+ end if;
  if has_function_privilege('authenticated','private.assert_feature_limit(uuid,text,integer)','EXECUTE') then
   raise exception 'Authenticated users must not call private quota helpers directly';
  end if;
