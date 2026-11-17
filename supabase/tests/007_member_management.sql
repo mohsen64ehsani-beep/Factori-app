@@ -15,6 +15,10 @@ begin
  if position('email_confirmed_at is not null' in pg_get_functiondef('public.accept_business_invitation(text)'::regprocedure))=0 then
   raise exception 'Invitation acceptance must require a confirmed email';
  end if;
+ if position('invalid invitation token' in lower(pg_get_functiondef('public.accept_business_invitation(text)'::regprocedure)))=0
+  or position('length(p_token_hash)<>64' in pg_get_functiondef('public.accept_business_invitation(text)'::regprocedure))=0 then
+  raise exception 'Invitation acceptance must validate a complete SHA-256 token hash';
+ end if;
  if position('Only the owner can change an administrator role' in pg_get_functiondef('public.update_business_member_role(uuid,uuid,text)'::regprocedure))=0 then
   raise exception 'Administrator role change restriction is missing';
  end if;
