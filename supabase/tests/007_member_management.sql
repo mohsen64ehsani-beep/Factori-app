@@ -24,6 +24,15 @@ begin
  if position('Only the owner can assign administrator role' in pg_get_functiondef('public.update_business_member_role(uuid,uuid,text)'::regprocedure))=0 then
   raise exception 'Administrator role assignment restriction is missing';
  end if;
+ if not exists(select 1 from public.permission_catalog where code='members.manage' and is_sensitive) then
+  raise exception 'Member management permission must be marked sensitive';
+ end if;
+ if not exists(select 1 from public.permission_catalog where code='accounting.journal.post' and is_sensitive) then
+  raise exception 'Journal posting permission must be marked sensitive';
+ end if;
+ if position('Only the owner can grant sensitive permissions' in pg_get_functiondef('public.set_business_member_permission_override(uuid,uuid,text,boolean,text)'::regprocedure))=0 then
+  raise exception 'Sensitive permission grant restriction is missing';
+ end if;
  if not has_function_privilege('authenticated','public.accept_business_invitation(text)','EXECUTE') then
   raise exception 'Authenticated invitation acceptance RPC missing';
  end if;
