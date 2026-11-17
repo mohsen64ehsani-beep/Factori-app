@@ -134,6 +134,21 @@ from (values ('owner'),('admin'),('accountant'),('sales'),('viewer')) as roles(r
 cross join public.permission_catalog p
 on conflict(role_code,permission_code) do nothing;
 
+insert into public.permission_catalog(code,description,is_sensitive) values
+ ('invoice.settings.read','Read bank details and invoice printing settings',true),
+ ('settings.read','Read non-sensitive business settings',false)
+on conflict(code) do nothing;
+
+insert into public.business_role_permissions(role_code,permission_code,allowed)
+values
+ ('owner','invoice.settings.read',true),('admin','invoice.settings.read',true),
+ ('accountant','invoice.settings.read',true),('sales','invoice.settings.read',true),
+ ('viewer','invoice.settings.read',false),
+ ('owner','settings.read',true),('admin','settings.read',true),
+ ('accountant','settings.read',true),('sales','settings.read',false),
+ ('viewer','settings.read',false)
+on conflict(role_code,permission_code) do nothing;
+
 create or replace function private.is_business_member(p_business_id uuid)
 returns boolean
 language sql stable security definer
