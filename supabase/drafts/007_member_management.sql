@@ -257,7 +257,7 @@ begin
   jsonb_build_object('permission_code',p_permission_code,'allowed',p_allowed));
  return true;
 end;
-$;
+$$;
 
 create or replace function public.clear_business_member_permission_override(
  p_business_id uuid,p_member_user_id uuid,p_permission_code text
@@ -286,7 +286,7 @@ begin
  end if;
  return v_deleted>0;
 end;
-$;
+$$;
 
 revoke all on function private.write_business_audit(uuid,uuid,text,text,text,jsonb) from public,anon,authenticated;
 revoke all on function public.create_business_invitation(uuid,text,text,text,timestamptz) from public,anon,authenticated;
