@@ -1,0 +1,35 @@
+name: Factoori Dependency Lock and Audit
+
+on:
+  push:
+    branches:
+      - work/factoori-redesign-myket-iap
+    paths:
+      - package.json
+      - .github/workflows/factoori-dependency-lock.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Generate deterministic npm lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit
+      - name: Audit resolved dependency tree
+        run: |
+          npm audit --json > npm-audit.json || true
+          node -e "const a=require('./npm-audit.json'); console.log(JSON.stringify(a.metadata?.vulnerabilities ?? {}, null, 2))"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: factoori-dependency-audit
+          path: |
+            package-lock.json
+            npm-audit.json
+          if-no-files-found: error
