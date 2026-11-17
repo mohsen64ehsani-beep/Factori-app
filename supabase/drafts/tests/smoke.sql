@@ -61,8 +61,12 @@ reset role;
 -- Sales role can read a sale but must not read purchase documents.
 set role authenticated;
 select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
-do $$
-declare a uuid := current_setting('test.business_a')::uuid;
+do $
+declare
+  a uuid := current_setting('test.business_a')::uuid;
+  d1 uuid;
+  d2 uuid;
+  d3 uuid;
 begin
   if (select count(*) from public.documents where business_id=a and document_type='sale') <> 1 then
     raise exception 'sales role cannot read sales document';
@@ -73,8 +77,36 @@ begin
   if has_table_privilege('authenticated','private.document_item_costs','SELECT') then
     raise exception 'private document cost table is exposed';
   end if;
+
+  select document_id into d1
+  from public.create_document_draft(
+    a,'sale',null,null,null,current_date,null,'smoke draft',0,null,
+    '[{"item_type":"free_text","description":"Smoke item","quantity":1,"unit_name":"عدد","unit_price":10000}]'::jsonb,
+    'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+  );
+  select document_id into d2
+  from public.create_document_draft(
+    a,'sale',null,null,null,current_date,null,'smoke draft',0,null,
+    '[{"item_type":"free_text","description":"Smoke item","quantity":1,"unit_name":"عدد","unit_price":10000}]'::jsonb,
+    'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+  );
+  if d1 is null or d1 <> d2 then
+    raise exception 'document draft idempotency failed';
+  end if;
+
+  begin
+    select document_id into d3
+    from public.create_document_draft(
+      a,'sale',null,null,null,current_date,null,'over limit',0,null,
+      '[{"item_type":"free_text","description":"1","quantity":1,"unit_price":1},{"item_type":"free_text","description":"2","quantity":1,"unit_price":1},{"item_type":"free_text","description":"3","quantity":1,"unit_price":1}]'::jsonb,
+      'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+    );
+    raise exception 'expected invoice item limit';
+  exception when check_violation then
+    null;
+  end;
 end
-$$;
+$;
 reset role;
 
 -- Quota helper is internal-only; run as postgres while retaining the owner JWT claim.

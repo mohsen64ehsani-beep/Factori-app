@@ -583,6 +583,322 @@ end;
 $$;
 revoke all on function private.assert_feature_limit(uuid,text,bigint) from public,anon,authenticated;
 
+
+create or replace function private.create_document_draft(
+  p_business_id uuid,
+  p_document_type text,
+  p_contact_id uuid,
+  p_warehouse_id uuid,
+  p_fiscal_period_id uuid,
+  p_document_date date,
+  p_due_date date,
+  p_notes text,
+  p_discount_amount bigint,
+  p_tax_rate numeric(8,4),
+  p_items jsonb,
+  p_idempotency_key uuid
+)
+returns table(document_id uuid,document_number text,version bigint)
+language plpgsql
+security definer
+set search_path = ''
+as $fn$
+declare
+  v_user_id uuid := auth.uid();
+  v_existing_id uuid;
+  v_existing_number text;
+  v_existing_version bigint;
+  v_number text;
+  v_warehouse_id uuid := p_warehouse_id;
+  v_currency_code text;
+  v_tax_enabled boolean;
+  v_default_tax_rate numeric(8,4);
+  v_tax_rate numeric(8,4);
+  v_doc_discount bigint := coalesce(p_discount_amount,0);
+  v_subtotal bigint := 0;
+  v_item_discount_total bigint := 0;
+  v_total_net bigint := 0;
+  v_total_discount bigint := 0;
+  v_taxable bigint := 0;
+  v_tax bigint := 0;
+  v_total bigint := 0;
+  v_item_count integer;
+  v_item jsonb;
+  v_normalized_items jsonb := '[]'::jsonb;
+  v_item_type text;
+  v_product_id uuid;
+  v_service_id uuid;
+  v_description text;
+  v_unit_name text;
+  v_default_price bigint;
+  v_unit_price bigint;
+  v_quantity numeric(20,4);
+  v_item_discount bigint;
+  v_base_amount bigint;
+  v_line_net bigint;
+  v_doc_discount_share bigint;
+  v_line_taxable bigint;
+  v_line_tax bigint;
+  v_line_total bigint;
+  v_allocated_doc_discount bigint := 0;
+  v_allocated_tax bigint := 0;
+  v_ord bigint;
+  v_period_start date;
+  v_period_end date;
+  v_period_status text;
+  v_doc_id uuid;
+begin
+  if v_user_id is null or not (select private.is_business_member(p_business_id)) then
+    raise exception 'not_authorized' using errcode='42501';
+  end if;
+  if p_idempotency_key is null then
+    raise exception 'idempotency_key_required' using errcode='22023';
+  end if;
+  if p_document_date is null or p_due_date is not null and p_due_date < p_document_date then
+    raise exception 'invalid_document_dates' using errcode='22023';
+  end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items)=0 then
+    raise exception 'document_items_required' using errcode='22023';
+  end if;
+
+  if p_document_type in ('sale','service_sale') then
+    if not (select private.has_business_permission(p_business_id,'sales.create')) then
+      raise exception 'not_authorized' using errcode='42501';
+    end if;
+  elsif p_document_type='purchase' then
+    if not (select private.has_business_permission(p_business_id,'purchases.create')) then
+      raise exception 'not_authorized' using errcode='42501';
+    end if;
+  else
+    raise exception 'unsupported_draft_document_type' using errcode='22023';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_business_id::text || ':' || p_idempotency_key::text,0)
+  );
+
+  select d.id,d.document_number,d.version
+    into v_existing_id,v_existing_number,v_existing_version
+  from public.documents d
+  where d.business_id=p_business_id and d.idempotency_key=p_idempotency_key
+  for update;
+  if found then
+    return query select v_existing_id,v_existing_number,v_existing_version;
+    return;
+  end if;
+
+  select bs.currency_code,bs.tax_enabled,bs.default_tax_rate
+    into v_currency_code,v_tax_enabled,v_default_tax_rate
+  from public.business_settings bs
+  where bs.business_id=p_business_id;
+  if not found then
+    raise exception 'business_settings_missing' using errcode='P0002';
+  end if;
+
+  if coalesce(v_tax_enabled,false) then
+    if (select private.has_business_permission(p_business_id,'settings.manage'))
+       and p_tax_rate is not null then
+      v_tax_rate:=p_tax_rate;
+    else
+      v_tax_rate:=coalesce(v_default_tax_rate,0);
+    end if;
+  else
+    v_tax_rate:=0;
+  end if;
+  if v_tax_rate < 0 or v_tax_rate > 100 then
+    raise exception 'invalid_tax_rate' using errcode='22023';
+  end if;
+
+  if p_document_type in ('sale','purchase') and v_warehouse_id is null then
+    select default_warehouse_id into v_warehouse_id
+    from public.business_inventory_settings
+    where business_id=p_business_id;
+    if v_warehouse_id is null then
+      raise exception 'default_warehouse_not_configured' using errcode='P0002';
+    end if;
+  end if;
+
+  if p_fiscal_period_id is not null then
+    select fp.start_date,fp.end_date,fp.status
+      into v_period_start,v_period_end,v_period_status
+    from public.fiscal_periods fp
+    where fp.business_id=p_business_id and fp.id=p_fiscal_period_id
+    for share;
+    if not found or v_period_status not in ('open','reopened')
+       or p_document_date < v_period_start or p_document_date > v_period_end then
+      raise exception 'invalid_or_closed_fiscal_period' using errcode='23514';
+    end if;
+  end if;
+
+  v_item_count:=jsonb_array_length(p_items);
+  if p_document_type in ('sale','service_sale') then
+    perform private.assert_feature_limit(p_business_id,'invoice.items.limit',v_item_count);
+  end if;
+
+  for v_item in select value from jsonb_array_elements(p_items) as x(value)
+  loop
+    v_item_type:=v_item->>'item_type';
+    v_product_id:=nullif(v_item->>'product_id','')::uuid;
+    v_service_id:=nullif(v_item->>'service_id','')::uuid;
+    v_description:=null;
+    v_unit_name:=null;
+    v_default_price:=null;
+
+    if p_document_type in ('sale','purchase') and v_item_type='product' then
+      if v_product_id is null or v_service_id is not null then
+        raise exception 'invalid_product_line' using errcode='22023';
+      end if;
+      select p.name,p.unit_name,p.sale_price
+        into v_description,v_unit_name,v_default_price
+      from public.products p
+      where p.business_id=p_business_id and p.id=v_product_id and p.is_active;
+      if not found then
+        raise exception 'product_not_found_or_inactive' using errcode='P0002';
+      end if;
+      if p_document_type='purchase' then v_default_price:=null; end if;
+    elsif p_document_type='service_sale' and v_item_type='service' then
+      if v_service_id is null or v_product_id is not null then
+        raise exception 'invalid_service_line' using errcode='22023';
+      end if;
+      select sv.name,sv.default_price
+        into v_description,v_default_price
+      from public.services sv
+      where sv.business_id=p_business_id and sv.id=v_service_id and sv.is_active;
+      if not found then
+        raise exception 'service_not_found_or_inactive' using errcode='P0002';
+      end if;
+      v_unit_name:='خدمت';
+    elsif v_item_type='free_text' and v_product_id is null and v_service_id is null then
+      v_description:=nullif(trim(v_item->>'description'),'');
+      v_unit_name:=coalesce(nullif(trim(v_item->>'unit_name'),''),'عدد');
+      if v_description is null then
+        raise exception 'free_text_description_required' using errcode='22023';
+      end if;
+    else
+      raise exception 'item_type_not_allowed_for_document' using errcode='22023';
+    end if;
+
+    v_quantity:=nullif(v_item->>'quantity','')::numeric;
+    v_unit_price:=coalesce(nullif(v_item->>'unit_price','')::bigint,v_default_price);
+    v_item_discount:=coalesce(nullif(v_item->>'discount_amount','')::bigint,0);
+    if v_quantity is null or v_quantity <= 0 or v_unit_price is null or v_unit_price < 0 or v_item_discount < 0 then
+      raise exception 'invalid_document_item_values' using errcode='22023';
+    end if;
+    v_base_amount:=round(v_quantity*v_unit_price)::bigint;
+    if v_item_discount > v_base_amount then
+      raise exception 'item_discount_exceeds_line_amount' using errcode='23514';
+    end if;
+
+    v_subtotal:=v_subtotal+v_base_amount;
+    v_item_discount_total:=v_item_discount_total+v_item_discount;
+    v_total_net:=v_total_net+v_base_amount-v_item_discount;
+    v_normalized_items:=v_normalized_items || jsonb_build_array(jsonb_build_object(
+      'item_type',v_item_type,'product_id',v_product_id,'service_id',v_service_id,
+      'description',v_description,'unit_name',v_unit_name,'quantity',v_quantity,
+      'unit_price',v_unit_price,'item_discount',v_item_discount,'base_amount',v_base_amount
+    ));
+  end loop;
+
+  if v_doc_discount < 0 or v_doc_discount > v_total_net then
+    raise exception 'document_discount_exceeds_net_amount' using errcode='23514';
+  end if;
+  v_total_discount:=v_item_discount_total+v_doc_discount;
+  v_taxable:=v_subtotal-v_total_discount;
+  v_tax:=round(v_taxable*v_tax_rate/100)::bigint;
+  v_total:=v_taxable+v_tax;
+
+  v_number:=private.next_document_number(p_business_id,p_document_type,p_fiscal_period_id);
+  insert into public.documents(
+    business_id,document_type,document_number,fiscal_period_id,contact_id,warehouse_id,
+    document_date,due_date,currency_code,status,subtotal,discount_amount,taxable_amount,
+    tax_amount,total_amount,notes,idempotency_key,created_by
+  ) values (
+    p_business_id,p_document_type,v_number,p_fiscal_period_id,p_contact_id,v_warehouse_id,
+    p_document_date,p_due_date,v_currency_code,'draft',v_subtotal,v_total_discount,v_taxable,
+    v_tax,v_total,p_notes,p_idempotency_key,v_user_id
+  ) returning id into v_doc_id;
+
+  for v_item,v_ord in
+    select value,ordinality from jsonb_array_elements(v_normalized_items) with ordinality as x(value,ordinality)
+  loop
+    v_line_net:=(v_item->>'base_amount')::bigint-(v_item->>'item_discount')::bigint;
+    if v_total_net=0 then
+      v_doc_discount_share:=0;
+    elsif v_ord < v_item_count then
+      v_doc_discount_share:=least(
+        round(v_doc_discount*v_line_net/v_total_net)::bigint,
+        v_doc_discount-v_allocated_doc_discount
+      );
+    else
+      v_doc_discount_share:=v_doc_discount-v_allocated_doc_discount;
+    end if;
+    v_allocated_doc_discount:=v_allocated_doc_discount+v_doc_discount_share;
+    v_line_taxable:=v_line_net-v_doc_discount_share;
+    if v_ord < v_item_count then
+      v_line_tax:=least(round(v_line_taxable*v_tax_rate/100)::bigint,v_tax-v_allocated_tax);
+    else
+      v_line_tax:=v_tax-v_allocated_tax;
+    end if;
+    v_allocated_tax:=v_allocated_tax+v_line_tax;
+    v_line_total:=v_line_taxable+v_line_tax;
+
+    insert into public.document_items(
+      business_id,document_id,product_id,service_id,item_type,description_snapshot,
+      quantity,unit_name_snapshot,unit_price,discount_amount,tax_rate_snapshot,tax_amount,
+      line_total,sort_order
+    ) values (
+      p_business_id,v_doc_id,
+      nullif(v_item->>'product_id','')::uuid,
+      nullif(v_item->>'service_id','')::uuid,
+      v_item->>'item_type',v_item->>'description',
+      (v_item->>'quantity')::numeric,v_item->>'unit_name',
+      (v_item->>'unit_price')::bigint,
+      (v_item->>'item_discount')::bigint+v_doc_discount_share,
+      v_tax_rate,v_line_tax,v_line_total,v_ord::integer
+    );
+  end loop;
+
+  insert into public.document_events(
+    business_id,document_id,event_type,old_status,new_status,event_payload,performed_by
+  ) values (
+    p_business_id,v_doc_id,'draft_created',null,'draft',
+    jsonb_build_object('item_count',v_item_count,'idempotency_key',p_idempotency_key),v_user_id
+  );
+
+  return query select v_doc_id,v_number,1::bigint;
+end;
+$fn$;
+
+revoke all on function private.create_document_draft(uuid,text,uuid,uuid,uuid,date,date,text,bigint,numeric,jsonb,uuid) from public,anon;
+grant execute on function private.create_document_draft(uuid,text,uuid,uuid,uuid,date,date,text,bigint,numeric,jsonb,uuid) to authenticated;
+
+create or replace function public.create_document_draft(
+  p_business_id uuid,
+  p_document_type text,
+  p_contact_id uuid,
+  p_warehouse_id uuid,
+  p_fiscal_period_id uuid,
+  p_document_date date,
+  p_due_date date,
+  p_notes text,
+  p_discount_amount bigint,
+  p_tax_rate numeric(8,4),
+  p_items jsonb,
+  p_idempotency_key uuid
+)
+returns table(document_id uuid,document_number text,version bigint)
+language sql
+security invoker
+set search_path = ''
+as $fn$
+  select * from private.create_document_draft(
+    p_business_id,p_document_type,p_contact_id,p_warehouse_id,p_fiscal_period_id,
+    p_document_date,p_due_date,p_notes,p_discount_amount,p_tax_rate,p_items,p_idempotency_key
+  );
+$fn$;
+revoke all on function public.create_document_draft(uuid,text,uuid,uuid,uuid,date,date,text,bigint,numeric,jsonb,uuid) from public,anon;
+grant execute on function public.create_document_draft(uuid,text,uuid,uuid,uuid,date,date,text,bigint,numeric,jsonb,uuid) to authenticated;
+
 create or replace function private.consume_feature_quota(
   p_business_id uuid,
   p_feature_code text,

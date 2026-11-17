@@ -15,6 +15,7 @@ create table public.contacts (
   is_active boolean not null default true,
   legacy_collection text,
   legacy_id text,
+  idempotency_key uuid,
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -177,6 +178,7 @@ create table public.documents (
   check (due_date is null or due_date >= document_date),
   check ((status <> 'posted') or posted_at is not null)
 );
+create unique index documents_idempotency_uidx on public.documents(business_id,idempotency_key) where idempotency_key is not null;
 create index documents_business_date_idx on public.documents(business_id,document_date desc);
 create index documents_business_type_status_idx on public.documents(business_id,document_type,status);
 
