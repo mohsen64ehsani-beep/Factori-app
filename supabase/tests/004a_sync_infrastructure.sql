@@ -1,0 +1,21 @@
+-- Disposable checks for 004a. Run after migration 001 and before 005 in staging.
+begin;
+do $$
+declare t text; r record;
+begin
+ foreach t in array array['sync_devices','sync_cursors','sync_operations','record_revisions','business_feature_limits','business_feature_usage'] loop
+  if to_regclass('public.'||t) is null then raise exception 'Missing public.%',t; end if;
+  select c.relrowsecurity into r from pg_class c where c.oid=to_regclass('public.'||t);
+  if not r.relrowsecurity then raise exception 'RLS disabled on public.%',t; end if;
+  if has_table_privilege('anon','public.'||t,'SELECT') then raise exception 'anon can read public.%',t; end if;
+  if has_table_privilege('authenticated','public.'||t,'INSERT') then raise exception 'authenticated can insert public.% directly',t; end if;
+ end loop;
+ if not exists(select 1 from pg_constraint where conrelid='public.sync_operations'::regclass and contype='u'
+   and pg_get_constraintdef(oid) like '%business_id, device_id, operation_id%') then
+  raise exception 'Sync operation idempotency unique constraint missing';
+ end if;
+ if has_function_privilege('authenticated','private.assert_feature_limit(uuid,text,integer)','EXECUTE') then
+  raise exception 'Authenticated users must not call private quota helpers directly';
+ end if;
+end $$;
+rollback;
