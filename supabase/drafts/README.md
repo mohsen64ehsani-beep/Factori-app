@@ -13,6 +13,15 @@ These files are **not production migrations**. They live under `supabase/drafts/
 7. `006_journal_integrity.sql` — database guards for balanced, immutable posted journal entries.
 8. `007_member_management.sql` — invitation acceptance, audited role changes and member suspension/removal.
 
+## Recent static-review fixes (2026-11-18)
+
+- Corrected invalid PostgreSQL dollar-quote delimiters in migrations 001, 004, 004a and 007.
+- Hardened 005 sync-pull pagination so unreadable collections cannot pin a device cursor.
+- Enforced the per-invoice item limit on draft invoice updates as well as inserts.
+- Restored draft invoices now consume the daily invoice quota again.
+- Added static regression assertions for sync-pull cursor progress and invoice quota coverage.
+- These are source-level fixes only; no production migration has been applied. Runtime SQL tests still require a disposable staging database.
+
 ## Test scripts
 
 - `supabase/tests/001_identity_business_permissions.sql`
