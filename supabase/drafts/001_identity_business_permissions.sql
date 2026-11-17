@@ -186,7 +186,23 @@ $$;
 
 create or replace function private.touch_updated_at()
 returns trigger language plpgsql set search_path=''
-as $$ begin new.updated_at=now(); return new; end $$;
+as $ begin new.updated_at=now(); return new; end $;
+
+drop trigger if exists profiles_touch_updated_at on public.profiles;
+create trigger profiles_touch_updated_at before update on public.profiles
+for each row execute function private.touch_updated_at();
+drop trigger if exists businesses_touch_updated_at on public.businesses;
+create trigger businesses_touch_updated_at before update on public.businesses
+for each row execute function private.touch_updated_at();
+drop trigger if exists business_members_touch_updated_at on public.business_members;
+create trigger business_members_touch_updated_at before update on public.business_members
+for each row execute function private.touch_updated_at();
+drop trigger if exists business_settings_touch_updated_at on public.business_settings;
+create trigger business_settings_touch_updated_at before update on public.business_settings
+for each row execute function private.touch_updated_at();
+drop trigger if exists member_overrides_touch_updated_at on public.business_member_permission_overrides;
+create trigger member_overrides_touch_updated_at before update on public.business_member_permission_overrides
+for each row execute function private.touch_updated_at();
 
 create or replace function private.handle_new_auth_user()
 returns trigger language plpgsql security definer
