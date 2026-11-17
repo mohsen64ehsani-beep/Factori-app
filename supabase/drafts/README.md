@@ -21,6 +21,8 @@ These files are **not production migrations**. They live under `supabase/drafts/
 - Enforced the per-invoice item limit on draft invoice updates as well as inserts.
 - Restored draft invoices now consume the daily invoice quota again.
 - Added static regression assertions for sync-pull cursor progress and invoice quota coverage.
+- Wrapped migration 005 in a transaction so a failed apply cannot leave a partially created sync bridge.
+- Extended migration 006 to reject DELETE as well as UPDATE on posted/reversed journal headers.
 - These are source-level fixes only; no production migration has been applied. Runtime SQL tests still require a disposable staging database.
 
 ## Test scripts
