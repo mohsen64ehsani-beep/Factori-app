@@ -6,6 +6,7 @@ create table if not exists public.sync_devices (
  id uuid primary key default gen_random_uuid(),
  business_id uuid not null references public.businesses(id) on delete cascade,
  user_id uuid not null,
+ permission_version bigint not null default 0 check(permission_version>=0),
  device_name text not null check(length(btrim(device_name)) between 1 and 120),
  platform text not null check(platform in ('android','web','ios','other')),
  device_public_key jsonb,
@@ -18,6 +19,42 @@ create table if not exists public.sync_devices (
  check(device_public_key is null or jsonb_typeof(device_public_key)='object')
 );
 create index if not exists sync_devices_member_idx on public.sync_devices(business_id,user_id,status);
+
+alter table public.business_members
+ add column if not exists permission_version bigint not null default 1 check(permission_version>0);
+
+create or replace function private.bump_member_permission_version()
+returns trigger language plpgsql set search_path=''
+as $
+begin
+ if new.role_code is distinct from old.role_code or new.status is distinct from old.status then
+  new.permission_version:=old.permission_version+1;
+ end if;
+ return new;
+end;
+$;
+drop trigger if exists business_members_permission_version on public.business_members;
+create trigger business_members_permission_version before update on public.business_members
+for each row execute function private.bump_member_permission_version();
+
+create or replace function private.bump_override_permission_version()
+returns trigger language plpgsql security definer set search_path=''
+as $
+declare v_business uuid; v_user uuid;
+begin
+ if tg_op='DELETE' then v_business:=old.business_id; v_user:=old.user_id;
+ else v_business:=new.business_id; v_user:=new.user_id; end if;
+ update public.business_members
+ set permission_version=permission_version+1,updated_at=now()
+ where business_id=v_business and user_id=v_user;
+ if tg_op='DELETE' then return old; end if;
+ return new;
+end;
+$;
+drop trigger if exists member_overrides_permission_version on public.business_member_permission_overrides;
+create trigger member_overrides_permission_version
+after insert or update or delete on public.business_member_permission_overrides
+for each row execute function private.bump_override_permission_version();
 
 create table if not exists public.sync_cursors (
  business_id uuid not null,
