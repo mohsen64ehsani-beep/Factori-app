@@ -33,6 +33,7 @@ create table if not exists public.sync_operations (
  business_id uuid not null,
  device_id uuid not null,
  operation_id uuid not null,
+ request_fingerprint text,
  operation_type text not null check(operation_type in ('upsert','delete')),
  record_type text not null,
  record_id uuid,
