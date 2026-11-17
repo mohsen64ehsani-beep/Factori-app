@@ -139,7 +139,8 @@ begin
  end if;
  select limit_value,period_type into v_limit,v_period
  from public.business_feature_limits
- where business_id=p_business_id and feature_code=p_feature_code and enabled;
+ where business_id=p_business_id and feature_code=p_feature_code and enabled
+ for update;
  if not found then raise exception using errcode='55000',message='Feature entitlement is not configured'; end if;
  if v_limit is null then return; end if;
  if v_period='per_record' then
