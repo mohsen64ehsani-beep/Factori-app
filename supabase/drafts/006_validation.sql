@@ -39,7 +39,7 @@ from pg_constraint
 where contype='f'
   and connamespace='public'::regnamespace
   and pg_get_constraintdef(oid) ilike '%business_id%'
-order by source_table::text,conname;
+order by conrelid::regclass::text,conname;
 
 -- 7) Check posted journal entries are balanced.
 select e.business_id,e.id,e.entry_number,
