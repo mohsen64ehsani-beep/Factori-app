@@ -17,6 +17,11 @@ begin
  if position('v_error' in v_def)>0 and position('''message'',v_error' in v_def)>0 then
   raise exception 'Raw database error is exposed to sync clients';
  end if;
+ if position('customers.total_limit' in v_def)=0
+  or position('products.total_limit' in v_def)=0
+  or position('services.total_limit' in v_def)=0 then
+  raise exception 'Catalog quotas are not enforced in sync';
+ end if;
  if position('operation_rejected' in v_def)=0 then
   raise exception 'Sanitized rejection message is missing';
  end if;
