@@ -455,12 +455,18 @@ begin
           end case;
         end if;
 
-        if v_collection in ('inv','serviceInv') and v_record_id is null then
-          if jsonb_typeof(v_payload->'items')<>'array' or jsonb_array_length(v_payload->'items')=0 then
+        if v_collection in ('inv','serviceInv') then
+          if jsonb_typeof(v_payload->'items') is distinct from 'array'
+             or jsonb_array_length(coalesce(v_payload->'items','[]'::jsonb))=0 then
             raise exception 'invoice_items_required' using errcode='22023';
           end if;
+          -- Enforce the per-invoice item cap on create, update and restore alike.
           v_item_count:=jsonb_array_length(v_payload->'items');
           perform private.assert_feature_limit(p_business_id,'invoice.items.limit',v_item_count);
+        end if;
+        if v_collection in ('inv','serviceInv')
+           and (v_record_id is null or v_existing.deleted_at is not null) then
+          -- A restored invoice is a new active invoice and must consume the daily quota again.
           select coalesce(bs.timezone,'Asia/Tehran') into v_timezone
           from public.business_settings bs where bs.business_id=p_business_id;
           v_local_date:=(now() at time zone coalesce(v_timezone,'Asia/Tehran'))::date;
