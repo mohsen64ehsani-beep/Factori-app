@@ -51,6 +51,14 @@ create policy business_audit_logs_read on public.business_audit_logs for select 
 revoke all on public.business_invitations,public.business_audit_logs from public,anon;
 grant select on public.business_invitations,public.business_audit_logs to authenticated;
 
+update public.permission_catalog set is_sensitive=true
+where code in (
+ 'members.manage','business.settings.manage','settings.manage','audit.read',
+ 'sales.post','sales.void','purchases.create','purchases.post',
+ 'payments.create','payments.refund','cheques.update_status',
+ 'inventory.adjust','inventory.transfer','expenses.create','accounting.journal.post'
+);
+
 create or replace function private.write_business_audit(
  p_business_id uuid,p_actor uuid,p_action text,p_entity_type text,p_entity_id text,p_metadata jsonb default '{}'::jsonb
 )
