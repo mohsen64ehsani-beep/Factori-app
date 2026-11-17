@@ -402,7 +402,7 @@ begin
             'status','conflict','current_version',0
           );
           insert into public.sync_operations(
-            business_id,device_id,operation_id,operation_type,record_type,record_id,
+            business_id,device_id,operation_id,request_fingerprint,operation_type,record_type,record_id,
             base_version,result_version,status,result_payload
           ) values (
             p_business_id,p_device_id,v_operation_id,v_request_fingerprint,v_operation_type,v_collection,null,
@@ -530,7 +530,7 @@ begin
       );
       if v_operation_id is not null then
         insert into public.sync_operations(
-          business_id,device_id,operation_id,operation_type,record_type,record_id,
+          business_id,device_id,operation_id,request_fingerprint,operation_type,record_type,record_id,
           base_version,result_version,status,result_payload
         ) values (
           p_business_id,p_device_id,v_operation_id,v_request_fingerprint,coalesce(v_operation_type,'unknown'),
