@@ -337,7 +337,12 @@ begin
     (v_business_id,'service_sale','',1,6,'never'),
     (v_business_id,'purchase','',1,6,'never'),
     (v_business_id,'sales_return','',1,6,'never'),
-    (v_business_id,'purchase_return','',1,6,'never');
+    (v_business_id,'purchase_return','',1,6,'never'),
+    (v_business_id,'expense','',1,6,'never'),
+    (v_business_id,'other_income','',1,6,'never'),
+    (v_business_id,'wastage','',1,6,'never'),
+    (v_business_id,'opening_balance','',1,6,'never'),
+    (v_business_id,'adjustment','',1,6,'never');
 
   insert into public.business_subscriptions(business_id,plan_id,status,starts_at)
   select v_business_id,id,'active',now()
@@ -373,7 +378,7 @@ declare
   v_next bigint;
   v_padding smallint;
 begin
-  if p_document_type not in ('sale','service_sale','purchase','sales_return','purchase_return') then
+  if p_document_type not in ('sale','service_sale','purchase','sales_return','purchase_return','expense','other_income','wastage','opening_balance','adjustment') then
     raise exception 'unsupported_document_type' using errcode='22023';
   end if;
   if auth.uid() is null or not (select private.is_business_member(p_business_id)) then
@@ -385,6 +390,14 @@ begin
   end if;
   if p_document_type in ('purchase','purchase_return')
      and not (select private.has_business_permission(p_business_id,'purchases.create')) then
+    raise exception 'not_authorized' using errcode='42501';
+  end if;
+  if p_document_type in ('expense','other_income','wastage')
+     and not (select private.has_business_permission(p_business_id,'expenses.create')) then
+    raise exception 'not_authorized' using errcode='42501';
+  end if;
+  if p_document_type in ('opening_balance','adjustment')
+     and not (select private.has_business_permission(p_business_id,'accounting.journal.post')) then
     raise exception 'not_authorized' using errcode='42501';
   end if;
 
@@ -1187,8 +1200,6 @@ revoke all on function private.guard_document_item_parent() from public,anon,aut
 revoke all on function private.guard_posted_journal_entry() from public,anon,authenticated;
 revoke all on function private.guard_journal_line_parent() from public,anon,authenticated;
 revoke all on function private.guard_posted_financial_transaction() from public,anon,authenticated;
-revoke all on function private.guard_posted_status_record() from public,anon,authenticated;
-revoke all on function private.guard_stock_transfer_item_parent() from public,anon,authenticated;
 revoke all on function private.consume_feature_quota(uuid,text,date,uuid,uuid) from public,anon,authenticated;
 
 create trigger financial_transactions_posted_immutable
@@ -1265,6 +1276,9 @@ begin
   if tg_op='DELETE' then return old; else return new; end if;
 end;
 $$;
+
+revoke all on function private.guard_posted_status_record() from public,anon,authenticated;
+revoke all on function private.guard_stock_transfer_item_parent() from public,anon,authenticated;
 
 create trigger account_transfers_posted_immutable
 before update or delete on public.account_transfers
