@@ -12,6 +12,12 @@ begin
   if has_table_privilege('authenticated','public.'||t,'UPDATE') then raise exception 'authenticated can directly update public.%',t; end if;
   if has_table_privilege('authenticated','public.'||t,'DELETE') then raise exception 'authenticated can directly delete public.%',t; end if;
  end loop;
+ if position('email_confirmed_at is not null' in pg_get_functiondef('public.accept_business_invitation(text)'::regprocedure))=0 then
+  raise exception 'Invitation acceptance must require a confirmed email';
+ end if;
+ if position('Only the owner can assign administrator role' in pg_get_functiondef('public.update_business_member_role(uuid,uuid,text)'::regprocedure))=0 then
+  raise exception 'Administrator role assignment restriction is missing';
+ end if;
  if not has_function_privilege('authenticated','public.accept_business_invitation(text)','EXECUTE') then
   raise exception 'Authenticated invitation acceptance RPC missing';
  end if;
