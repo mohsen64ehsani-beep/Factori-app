@@ -26,21 +26,21 @@ alter table public.business_members
 
 create or replace function private.bump_member_permission_version()
 returns trigger language plpgsql set search_path=''
-as $
+as $$
 begin
  if new.role_code is distinct from old.role_code or new.status is distinct from old.status then
   new.permission_version:=old.permission_version+1;
  end if;
  return new;
 end;
-$;
+$$;
 drop trigger if exists business_members_permission_version on public.business_members;
 create trigger business_members_permission_version before update on public.business_members
 for each row execute function private.bump_member_permission_version();
 
 create or replace function private.bump_override_permission_version()
 returns trigger language plpgsql security definer set search_path=''
-as $
+as $$
 declare v_business uuid; v_user uuid;
 begin
  if tg_op='DELETE' then v_business:=old.business_id; v_user:=old.user_id;
@@ -51,7 +51,7 @@ begin
  if tg_op='DELETE' then return old; end if;
  return new;
 end;
-$;
+$$;
 drop trigger if exists member_overrides_permission_version on public.business_member_permission_overrides;
 create trigger member_overrides_permission_version
 after insert or update or delete on public.business_member_permission_overrides
