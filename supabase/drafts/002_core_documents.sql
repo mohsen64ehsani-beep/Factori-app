@@ -169,9 +169,12 @@ declare
   v_tax_line numeric;
   v_total numeric;
   v_count integer:=0;
+  v_item_count integer:=0;
+  v_allocated_total numeric:=0;
+  v_header_discount numeric:=coalesce(p_discount_amount,0);
 begin
   if v_user is null then raise exception using errcode='28000',message='Authentication required'; end if;
-  if p_document_type not in ('goods_sale','service_sale','purchase','service_purchase') then
+  if p_document_type is null or p_document_type not in ('goods_sale','service_sale','purchase','service_purchase') then
     raise exception using errcode='22023',message='Unsupported document type';
   end if;
   v_permission:=case when p_document_type in ('goods_sale','service_sale') then 'sales.create' else 'purchases.create' end;
@@ -181,7 +184,7 @@ begin
   if p_items is null or jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items) not between 1 and 100 then
     raise exception using errcode='22023',message='Document must contain between 1 and 100 items';
   end if;
-  if coalesce(p_discount_amount,0)<0 or coalesce(p_discount_amount,0)>999999999999999999 then
+  if v_header_discount<0 or v_header_discount>999999999999999999 then
     raise exception using errcode='22023',message='Invalid document discount';
   end if;
   if p_tax_rate is not null and p_tax_rate not between 0 and 100 then
@@ -224,7 +227,8 @@ begin
     v_line_discounts:=v_line_discounts+v_line_discount;
     v_base_total:=v_base_total+v_base;
   end loop;
-  if p_discount_amount>v_base_total then raise exception using errcode='22023',message='Document discount exceeds taxable base'; end if;
+  v_item_count:=v_count;
+  if v_header_discount>v_base_total then raise exception using errcode='22023',message='Document discount exceeds taxable base'; end if;
 
   insert into public.documents(
     business_id,document_type,contact_id,warehouse_id,fiscal_period_id,
@@ -232,12 +236,13 @@ begin
     idempotency_key,created_by
   ) values (
     p_business_id,p_document_type,p_contact_id,p_warehouse_id,p_fiscal_period_id,
-    coalesce(p_document_date,current_date),p_due_date,p_discount_amount,
-    v_subtotal,v_base_total-p_discount_amount,nullif(btrim(coalesce(p_notes,'')),''),
+    coalesce(p_document_date,current_date),p_due_date,v_header_discount+v_line_discounts,
+    v_subtotal,v_base_total-v_header_discount,nullif(btrim(coalesce(p_notes,'')),''),
     p_idempotency_key,v_user
   ) returning id into v_doc_id;
 
   v_count:=0;
+  v_allocated_total:=0;
   for v_item in select value from jsonb_array_elements(p_items) loop
     v_count:=v_count+1;
     v_qty:=(v_item->>'quantity')::numeric;
@@ -245,8 +250,13 @@ begin
     v_line_discount:=coalesce((v_item->>'discount_amount')::numeric,0);
     v_rate:=coalesce(p_tax_rate,(v_item->>'tax_rate')::numeric,0);
     v_base:=round(v_qty*v_price)-v_line_discount;
-    v_allocated_header_discount:=case when v_base_total=0 then 0
-      else round(p_discount_amount*v_base/v_base_total) end;
+    if v_count=v_item_count then
+      v_allocated_header_discount:=v_header_discount-v_allocated_total;
+    else
+      v_allocated_header_discount:=case when v_base_total=0 then 0
+        else round(v_header_discount*v_base/v_base_total) end;
+    end if;
+    v_allocated_total:=v_allocated_total+v_allocated_header_discount;
     v_tax_line:=round(greatest(0,v_base-v_allocated_header_discount)*v_rate/100);
     v_tax:=v_tax+v_tax_line;
     insert into public.document_items(
@@ -262,7 +272,7 @@ begin
       v_count
     );
   end loop;
-  v_total:=greatest(0,v_subtotal-v_line_discounts-p_discount_amount)+v_tax;
+  v_total:=greatest(0,v_subtotal-v_line_discounts-v_header_discount)+v_tax;
   update public.documents set tax_amount=v_tax,total_amount=v_total
   where id=v_doc_id and business_id=p_business_id;
   return v_doc_id;
