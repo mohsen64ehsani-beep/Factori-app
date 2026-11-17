@@ -213,6 +213,19 @@ jobs:
           sha256sum "app/build/outputs/apk/release/Factori-v1.2.42-release.apk"
           echo "Official release APK signature verified."
 
+      - name: Package exact source snapshot
+        run: |
+          set -euo pipefail
+          git archive --format=zip --output="$RUNNER_TEMP/factoori-v1.2.42-source.zip" HEAD
+          test -s "$RUNNER_TEMP/factoori-v1.2.42-source.zip"
+          sha256sum "$RUNNER_TEMP/factoori-v1.2.42-source.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: factoori-source-v1.2.42
+          path: ${{ runner.temp }}/factoori-v1.2.42-source.zip
+          if-no-files-found: error
+
       - uses: actions/upload-artifact@v4
         with:
           name: factori-android-v1.2.42-release
