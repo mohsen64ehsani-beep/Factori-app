@@ -136,7 +136,8 @@ on conflict(role_code,permission_code) do nothing;
 
 insert into public.permission_catalog(code,description,is_sensitive) values
  ('invoice.settings.read','Read bank details and invoice printing settings',true),
- ('settings.read','Read non-sensitive business settings',false)
+ ('settings.read','Read non-sensitive business settings',false),
+ ('contacts.ledger.read','Read financial balances and contact ledger',true)
 on conflict(code) do nothing;
 
 insert into public.business_role_permissions(role_code,permission_code,allowed)
@@ -146,7 +147,10 @@ values
  ('viewer','invoice.settings.read',false),
  ('owner','settings.read',true),('admin','settings.read',true),
  ('accountant','settings.read',true),('sales','settings.read',false),
- ('viewer','settings.read',false)
+ ('viewer','settings.read',false),
+ ('owner','contacts.ledger.read',true),('admin','contacts.ledger.read',true),
+ ('accountant','contacts.ledger.read',true),('sales','contacts.ledger.read',false),
+ ('viewer','contacts.ledger.read',false)
 on conflict(role_code,permission_code) do nothing;
 
 create or replace function private.is_business_member(p_business_id uuid)
@@ -307,7 +311,7 @@ using(private.has_business_permission(business_id,'members.manage'));
 
 drop policy if exists business_settings_read on public.business_settings;
 create policy business_settings_read on public.business_settings for select to authenticated
-using(private.has_business_permission(business_id,'business.read'));
+using(private.has_business_permission(business_id,'settings.read'));
 
 revoke all on public.profiles,public.businesses,public.permission_catalog,public.business_members,
  public.business_role_permissions,public.business_member_permission_overrides,public.business_settings
