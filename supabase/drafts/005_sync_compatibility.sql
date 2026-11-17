@@ -195,29 +195,29 @@ begin
     v_permission:=case p_collection
       when 'cust' then 'contacts.write'
       when 'suppliers' then 'contacts.write'
-      when 'debt' then 'contacts.write'
+      when 'debt' then null
       when 'duedates' then 'contacts.write'
       when 'prod' then 'catalog.write'
       when 'services' then 'catalog.write'
       when 'categories' then 'catalog.write'
       when 'inv' then 'sales.create'
       when 'serviceInv' then 'sales.create'
-      when 'returns' then 'sales.create'
-      when 'pay' then 'payments.receive.create'
-      when 'creditors' then 'purchases.create'
-      when 'purchases' then 'purchases.create'
-      when 'supplierPayments' then 'payments.pay.create'
-      when 'creditorPayments' then 'payments.pay.create'
-      when 'expenses' then 'expenses.create'
-      when 'otherincome' then 'expenses.create'
-      when 'wastage' then 'expenses.create'
+      when 'returns' then null
+      when 'pay' then null
+      when 'creditors' then null
+      when 'purchases' then null
+      when 'supplierPayments' then null
+      when 'creditorPayments' then null
+      when 'expenses' then null
+      when 'otherincome' then null
+      when 'wastage' then null
       when 'warehouses' then 'inventory.adjust'
-      when 'stockMoves' then 'inventory.adjust'
-      when 'warehouseStocks' then 'inventory.adjust'
-      when 'transfers' then 'inventory.transfer'
-      when 'accounts' then 'payments.create'
-      when 'moneytransfers' then 'payments.create'
-      when 'opening' then 'accounting.journal.post'
+      when 'stockMoves' then null
+      when 'warehouseStocks' then null
+      when 'transfers' then null
+      when 'accounts' then null
+      when 'moneytransfers' then null
+      when 'opening' then null
       when 'bankAccounts' then 'settings.manage'
       when 'fiscal' then 'settings.manage'
       when 'advancedSettings' then 'settings.manage'
@@ -417,6 +417,10 @@ begin
       else
         if v_payload is null or jsonb_typeof(v_payload)<>'object' then
           raise exception 'sync_payload_must_be_object' using errcode='22023';
+        end if;
+        if v_collection in ('inv','serviceInv')
+           and lower(coalesce(nullif(btrim(v_payload->>'status'),''),'draft'))<>'draft' then
+          raise exception 'document_sync_accepts_drafts_only' using errcode='42501';
         end if;
         if v_collection in ('inv','serviceInv') and v_record_id is null then
           if jsonb_typeof(v_payload->'items')<>'array' or jsonb_array_length(v_payload->'items')=0 then
