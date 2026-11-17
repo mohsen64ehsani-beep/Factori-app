@@ -245,6 +245,7 @@ as $fn$
 declare
   v_user_id uuid:=auth.uid();
   v_device_id uuid;
+  v_permission_version bigint;
 begin
   if v_user_id is null or not (select private.is_business_member(p_business_id)) then
     raise exception 'not_authorized' using errcode='42501';
@@ -252,10 +253,12 @@ begin
   if p_platform not in ('android','web','ios','other') then
     raise exception 'invalid_device_platform' using errcode='22023';
   end if;
+  select permission_version into v_permission_version from public.business_members
+  where business_id=p_business_id and user_id=v_user_id and status='active';
   insert into public.sync_devices(
-    business_id,user_id,device_name,platform,device_public_key,status,last_seen_at
+    business_id,user_id,permission_version,device_name,platform,device_public_key,status,last_seen_at
   ) values (
-    p_business_id,v_user_id,left(coalesce(p_device_name,'Factoori device'),120),
+    p_business_id,v_user_id,v_permission_version,left(coalesce(p_device_name,'Factoori device'),120),
     p_platform,p_device_public_key,'active',now()
   ) returning id into v_device_id;
   insert into public.sync_cursors(business_id,device_id,last_revision,last_synced_at)
@@ -277,6 +280,7 @@ as $fn$
 declare
   v_user_id uuid:=auth.uid();
   v_device public.sync_devices%rowtype;
+  v_member_permission_version bigint;
   v_op jsonb;
   v_operation_id uuid;
   v_collection text;
@@ -315,6 +319,11 @@ begin
     and d.user_id=v_user_id and d.status='active'
   for update;
   if not found then raise exception 'sync_device_not_found' using errcode='42501'; end if;
+  select permission_version into v_member_permission_version from public.business_members
+  where business_id=p_business_id and user_id=v_user_id and status='active';
+  if v_device.permission_version<>v_member_permission_version then
+    raise exception 'sync_permissions_changed' using errcode='42501';
+  end if;
   update public.sync_devices set last_seen_at=now()
   where business_id=p_business_id and id=p_device_id;
   v_cost_allowed:=(select private.has_business_permission(p_business_id,'catalog.cost.read'));
@@ -562,6 +571,7 @@ as $fn$
 declare
   v_user_id uuid:=auth.uid();
   v_device public.sync_devices%rowtype;
+  v_member_permission_version bigint;
   v_cost_allowed boolean;
   v_limit integer:=least(greatest(coalesce(p_limit,200),1),500);
   v_records jsonb;
@@ -581,6 +591,13 @@ begin
     and d.user_id=v_user_id and d.status='active'
   for update;
   if not found then raise exception 'sync_device_not_found' using errcode='42501'; end if;
+  select permission_version into v_member_permission_version from public.business_members
+  where business_id=p_business_id and user_id=v_user_id and status='active';
+  if v_device.permission_version<>v_member_permission_version then
+    update public.sync_devices set permission_version=v_member_permission_version
+    where business_id=p_business_id and id=p_device_id;
+    return jsonb_build_object('records','[]'::jsonb,'next_cursor',0,'has_more',true,'reset_required',true);
+  end if;
   v_cost_allowed:=(select private.has_business_permission(p_business_id,'catalog.cost.read'));
 
   with latest as (
@@ -642,7 +659,8 @@ begin
   return jsonb_build_object(
     'records',v_records,
     'next_cursor',v_next_cursor,
-    'has_more',v_has_more
+    'has_more',v_has_more,
+    'reset_required',false
   );
 end;
 $fn$;
