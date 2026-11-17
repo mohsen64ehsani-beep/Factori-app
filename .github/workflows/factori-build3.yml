@@ -213,8 +213,9 @@ jobs:
           test -x "$APKSIGNER"
           test -x "$AAPT"
           "$APKSIGNER" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/apk-cert.txt"
+          cat "$RUNNER_TEMP/apk-cert.txt"
           KEY_FP=$(awk '/SHA256:/{print $2; exit}' "$RUNNER_TEMP/keystore-info.txt" | tr -d ':' | tr '[:upper:]' '[:lower:]')
-          APK_FP=$(awk -F': ' '/certificate SHA-256 digest:/{print $2; exit}' "$RUNNER_TEMP/apk-cert.txt" | tr -d ':' | tr '[:upper:]' '[:lower:]')
+          APK_FP=$(awk 'tolower($0) ~ /certificate sha-256 digest/ {print $NF; exit}' "$RUNNER_TEMP/apk-cert.txt" | tr -d ':' | tr '[:upper:]' '[:lower:]')
           echo "Expected release certificate SHA256: $KEY_FP"
           echo "Actual APK certificate SHA256:       $APK_FP"
           test -n "$KEY_FP"
