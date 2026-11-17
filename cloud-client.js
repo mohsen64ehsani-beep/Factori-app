@@ -104,10 +104,20 @@ const api = {
     // Use a deliberately nonexistent business only to probe the RPC endpoint.
     // A business-not-found / authorization error proves the function exists;
     // PostgREST's PGRST202 means the function itself is not exposed/found.
-    const entitlementProbe = await client.rpc('get_business_entitlements', {
-      p_business_id: '00000000-0000-0000-0000-000000000000'
-    });
-    return entitlementProbe.error?.code !== 'PGRST202';
+    const probeBusinessId = '00000000-0000-0000-0000-000000000000';
+    const [entitlementProbe, createBusinessProbe, draftProbe] = await Promise.all([
+      client.rpc('get_business_entitlements', { p_business_id: probeBusinessId }),
+      // Empty name is intentionally invalid; the function must reject it without creating a row.
+      client.rpc('create_business', { p_name: '' }),
+      // Unknown business is intentionally unauthorized; this only verifies the RPC is deployed.
+      client.rpc('create_document_draft', {
+        p_business_id: probeBusinessId,
+        p_document_type: 'goods_sale',
+        p_items: []
+      })
+    ]);
+    return [entitlementProbe, createBusinessProbe, draftProbe]
+      .every(result => result.error?.code !== 'PGRST202');
   }
 };
 
