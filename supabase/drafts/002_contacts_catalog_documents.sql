@@ -165,6 +165,7 @@ create table public.documents (
   posted_at timestamptz,
   legacy_collection text,
   legacy_id text,
+  idempotency_key uuid,
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
