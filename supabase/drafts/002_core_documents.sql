@@ -193,6 +193,27 @@ begin
   if p_due_date is not null and p_due_date<coalesce(p_document_date,current_date) then
     raise exception using errcode='22023',message='Due date cannot precede document date';
   end if;
+
+  if p_contact_id is not null and not exists (
+    select 1 from public.contacts c
+    where c.business_id=p_business_id and c.id=p_contact_id
+      and c.is_active
+      and (
+        (p_document_type in ('goods_sale','service_sale') and c.contact_type in ('customer','both'))
+        or (p_document_type in ('purchase','service_purchase') and c.contact_type in ('supplier','both'))
+      )
+  ) then
+    raise exception using errcode='22023',message='Contact is inactive, missing or has an incompatible role';
+  end if;
+
+  if p_fiscal_period_id is not null and not exists (
+    select 1 from public.fiscal_periods fp
+    where fp.business_id=p_business_id and fp.id=p_fiscal_period_id
+      and fp.status='open'
+      and coalesce(p_document_date,current_date) between fp.date_from and fp.date_to
+  ) then
+    raise exception using errcode='22023',message='Fiscal period is closed or document date is outside the period';
+  end if;
   if p_idempotency_key is not null and length(p_idempotency_key) not between 8 and 160 then
     raise exception using errcode='22023',message='Invalid idempotency key';
   end if;
@@ -221,6 +242,10 @@ begin
     end if;
     if coalesce(v_item->>'item_type','goods') not in ('goods','service') then
       raise exception using errcode='22023',message='Invalid item type';
+    end if;
+    if (p_document_type in ('goods_sale','purchase') and coalesce(v_item->>'item_type','goods')<>'goods')
+      or (p_document_type in ('service_sale','service_purchase') and coalesce(v_item->>'item_type','goods')<>'service') then
+      raise exception using errcode='22023',message='Item type does not match document type';
     end if;
     v_base:=round(v_qty*v_price)-v_line_discount;
     v_subtotal:=v_subtotal+round(v_qty*v_price);
