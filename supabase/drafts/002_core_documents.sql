@@ -294,7 +294,7 @@ begin
       v_allocated_header_discount:=v_header_discount-v_allocated_total;
     else
       v_allocated_header_discount:=case when v_base_total=0 then 0
-        else round(v_header_discount*v_base/v_base_total) end;
+        else floor(v_header_discount*v_base/v_base_total) end;
     end if;
     v_allocated_total:=v_allocated_total+v_allocated_header_discount;
     v_tax_line:=round(greatest(0,v_base-v_allocated_header_discount)*v_rate/100);
