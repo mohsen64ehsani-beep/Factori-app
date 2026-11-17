@@ -88,8 +88,19 @@ const api = {
     }));
   },
   async getClientHealth() {
-    const result = await client.from('permission_catalog').select('code').limit(1);
-    return !result.error;
+    // A successful Auth session alone does not mean the shared-account schema
+    // has been deployed. Probe every relation required by the account UI and
+    // verify that the entitlements RPC is present before enabling business actions.
+    const checks = await Promise.all([
+      client.from('profiles').select('id').limit(0),
+      client.from('businesses').select('id').limit(0),
+      client.from('business_members').select('business_id').limit(0),
+      client.from('permission_catalog').select('code').limit(0),
+      client.from('documents').select('id').limit(0),
+      client.from('business_settings').select('business_id').limit(0),
+      client.rpc('get_business_entitlements', { p_business_id: '00000000-0000-0000-0000-000000000000' })
+    ]);
+    return checks.every(result => !result.error);
   }
 };
 
