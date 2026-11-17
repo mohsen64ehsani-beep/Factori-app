@@ -299,6 +299,8 @@ declare
   v_item_count integer;
   v_error text;
   v_state text;
+  v_request_fingerprint text;
+  v_existing_fingerprint text;
 begin
   if v_user_id is null or not (select private.is_business_member(p_business_id)) then
     raise exception 'not_authorized' using errcode='42501';
@@ -320,6 +322,8 @@ begin
   for v_op in select value from jsonb_array_elements(p_operations) as x(value)
   loop
     v_operation_id:=null;
+    v_request_fingerprint:=null;
+    v_existing_fingerprint:=null;
     v_collection:=null;
     v_record_id:=null;
     begin
@@ -341,6 +345,9 @@ begin
       ) then
         raise exception 'invalid_sync_payload' using errcode='22023';
       end if;
+      v_request_fingerprint:=md5(jsonb_build_array(
+        v_operation_type,v_collection,v_legacy_id,v_base_version,v_payload
+      )::text);
       perform pg_catalog.pg_advisory_xact_lock(
         pg_catalog.hashtextextended(p_business_id::text||':'||p_device_id::text||':'||v_operation_id::text,0)
       );
@@ -348,10 +355,13 @@ begin
         raise exception 'sync_collection_write_forbidden' using errcode='42501';
       end if;
 
-      select so.result_payload into v_result
+      select so.result_payload,so.request_fingerprint into v_result,v_existing_fingerprint
       from public.sync_operations so
       where so.business_id=p_business_id and so.device_id=p_device_id and so.operation_id=v_operation_id;
       if found then
+        if v_existing_fingerprint is distinct from v_request_fingerprint then
+          raise exception 'sync_operation_id_reused_with_different_payload' using errcode='23505';
+        end if;
         v_results:=v_results||jsonb_build_array(coalesce(v_result,jsonb_build_object(
           'operation_id',v_operation_id,'status','duplicate'
         )));
@@ -372,10 +382,10 @@ begin
             'status','conflict','current_version',v_current_version
           );
           insert into public.sync_operations(
-            business_id,device_id,operation_id,operation_type,record_type,record_id,
+            business_id,device_id,operation_id,request_fingerprint,operation_type,record_type,record_id,
             base_version,result_version,status,result_payload
           ) values (
-            p_business_id,p_device_id,v_operation_id,v_operation_type,v_collection,v_record_id,
+            p_business_id,p_device_id,v_operation_id,v_request_fingerprint,v_operation_type,v_collection,v_record_id,
             v_base_version,v_current_version,'conflict',v_result
           );
           v_results:=v_results||jsonb_build_array(v_result);
@@ -395,7 +405,7 @@ begin
             business_id,device_id,operation_id,operation_type,record_type,record_id,
             base_version,result_version,status,result_payload
           ) values (
-            p_business_id,p_device_id,v_operation_id,v_operation_type,v_collection,null,
+            p_business_id,p_device_id,v_operation_id,v_request_fingerprint,v_operation_type,v_collection,null,
             v_base_version,0,'conflict',v_result
           );
           v_results:=v_results||jsonb_build_array(v_result);
@@ -498,10 +508,10 @@ begin
         'record_id',v_record_id,'status','applied','version',v_new_version,'revision',v_revision
       );
       insert into public.sync_operations(
-        business_id,device_id,operation_id,operation_type,record_type,record_id,
+        business_id,device_id,operation_id,request_fingerprint,operation_type,record_type,record_id,
         base_version,result_version,status,result_payload
       ) values (
-        p_business_id,p_device_id,v_operation_id,v_operation_type,v_collection,v_record_id,
+        p_business_id,p_device_id,v_operation_id,v_request_fingerprint,v_operation_type,v_collection,v_record_id,
         v_base_version,v_new_version,'applied',v_result
       );
       v_results:=v_results||jsonb_build_array(v_result);
@@ -523,7 +533,7 @@ begin
           business_id,device_id,operation_id,operation_type,record_type,record_id,
           base_version,result_version,status,result_payload
         ) values (
-          p_business_id,p_device_id,v_operation_id,coalesce(v_operation_type,'unknown'),
+          p_business_id,p_device_id,v_operation_id,v_request_fingerprint,coalesce(v_operation_type,'unknown'),
           coalesce(v_collection,'unknown'),v_record_id,v_base_version,null,'rejected',v_result
         ) on conflict (business_id,device_id,operation_id) do nothing;
       end if;
