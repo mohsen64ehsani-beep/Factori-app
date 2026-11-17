@@ -1,5 +1,5 @@
 name: Build Android APK
-# Factori 1.2.42: reproducible npm ci builds with security-patched transitive tar
+# Factori 1.2.43: reproducible npm ci builds with security-patched transitive tar
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - uses: actions/setup-java@v4
         with:
@@ -50,13 +50,13 @@ jobs:
       - name: Set visible app version
         run: |
           set -euo pipefail
-          sed -i 's/__FACTOORI_VERSION__/1.2.42/g' www/index.html
+          sed -i 's/__FACTOORI_VERSION__/1.2.43/g' www/index.html
           if grep -Fq '__FACTOORI_VERSION__' www/index.html; then
             echo "::error::Visible app version placeholder was not replaced."
             exit 1
           fi
-          grep -Fq 'نسخه 1.2.42' www/index.html
-          echo "Splash version label verified: 1.2.42"
+          grep -Fq 'نسخه 1.2.43' www/index.html
+          echo "Splash version label verified: 1.2.43"
 
       - name: Verify requested homepage promo is in the active app entry
         run: |
@@ -81,8 +81,10 @@ jobs:
           console.log('Inline application JavaScript syntax is valid.');
           NODE
 
-      - name: Install dependencies reproducibly
-        run: npm ci
+      - name: Generate and verify Capacitor 8 dependency lock
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit
+          npm ci --no-audit
 
       - name: Bundle license client
         run: |
@@ -98,18 +100,21 @@ jobs:
         run: |
           rm -rf android
           npx cap add android
-          sed -i 's/minSdkVersion = 22/minSdkVersion = 23/g' android/variables.gradle
-          sed -i 's/minSdkVersion 22/minSdkVersion 23/g' android/variables.gradle
+          sed -i 's/minSdkVersion = 22/minSdkVersion = 24/g' android/variables.gradle
+          sed -i 's/minSdkVersion = 23/minSdkVersion = 24/g' android/variables.gradle
+          sed -i 's/minSdkVersion 22/minSdkVersion 24/g' android/variables.gradle
+          sed -i 's/minSdkVersion 23/minSdkVersion 24/g' android/variables.gradle
           grep -n 'minSdk' android/variables.gradle
+          grep -Eq 'minSdkVersion = 24|minSdkVersion 24' android/variables.gradle
 
       - name: Set Android update version
         run: |
-          sed -i -E 's/versionCode [0-9]+/versionCode 44/' android/app/build.gradle
-          sed -i -E 's/versionName "[^"]+"/versionName "1.2.42"/' android/app/build.gradle
+          sed -i -E 's/versionCode [0-9]+/versionCode 45/' android/app/build.gradle
+          sed -i -E 's/versionName "[^"]+"/versionName "1.2.43"/' android/app/build.gradle
           grep -n -E 'versionCode|versionName' android/app/build.gradle
-          grep -q 'versionCode 44' android/app/build.gradle
-          grep -q 'versionName "1.2.42"' android/app/build.gradle
-          echo "Android update version verified: 1.2.42 (44)"
+          grep -q 'versionCode 45' android/app/build.gradle
+          grep -q 'versionName "1.2.43"' android/app/build.gradle
+          echo "Android update version verified: 1.2.43 (44)"
 
       - name: Allow fingerprint permission only
         run: |
@@ -209,25 +214,25 @@ jobs:
           echo "Actual APK certificate SHA256:       $APK_FP"
           test -n "$KEY_FP"
           test "$KEY_FP" = "$APK_FP" || { echo "::error::Release APK certificate does not match the dedicated release keystore."; exit 1; }
-          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.42-release.apk"
-          sha256sum "app/build/outputs/apk/release/Factori-v1.2.42-release.apk"
+          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.43-release.apk"
+          sha256sum "app/build/outputs/apk/release/Factori-v1.2.43-release.apk"
           echo "Official release APK signature verified."
 
       - name: Package exact source snapshot
         run: |
           set -euo pipefail
-          git archive --format=zip --output="$RUNNER_TEMP/factoori-v1.2.42-source.zip" HEAD
-          test -s "$RUNNER_TEMP/factoori-v1.2.42-source.zip"
-          sha256sum "$RUNNER_TEMP/factoori-v1.2.42-source.zip"
+          git archive --format=zip --output="$RUNNER_TEMP/factoori-v1.2.43-source.zip" HEAD
+          test -s "$RUNNER_TEMP/factoori-v1.2.43-source.zip"
+          sha256sum "$RUNNER_TEMP/factoori-v1.2.43-source.zip"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factoori-source-v1.2.42
-          path: ${{ runner.temp }}/factoori-v1.2.42-source.zip
+          name: factoori-source-v1.2.43
+          path: ${{ runner.temp }}/factoori-v1.2.43-source.zip
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factori-android-v1.2.42-release
-          path: android/app/build/outputs/apk/release/Factori-v1.2.42-release.apk
+          name: factori-android-v1.2.43-release
+          path: android/app/build/outputs/apk/release/Factori-v1.2.43-release.apk
           if-no-files-found: error
