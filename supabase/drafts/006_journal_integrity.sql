@@ -54,6 +54,7 @@ declare
  v_credit numeric(30,0);
  v_count integer;
  v_period_status text;
+ v_period_id uuid;
 begin
  if tg_table_name='journal_entries' then
   v_business:=coalesce(new.business_id,old.business_id);
@@ -63,7 +64,7 @@ begin
   v_entry:=coalesce(new.journal_entry_id,old.journal_entry_id);
  end if;
 
- select status,fiscal_period_id into v_status,v_period_status
+ select status,fiscal_period_id into v_status,v_period_id
  from public.journal_entries
  where business_id=v_business and id=v_entry;
  if not found or v_status<>'posted' then return null; end if;
