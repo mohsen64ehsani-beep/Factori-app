@@ -210,17 +210,91 @@ begin
 end;
 $$;
 
+create or replace function public.set_business_member_permission_override(
+ p_business_id uuid,p_member_user_id uuid,p_permission_code text,p_allowed boolean,p_reason text default null
+)
+returns boolean language plpgsql security definer set search_path=''
+as $
+declare
+ v_user uuid:=auth.uid(); v_target public.business_members%rowtype; v_sensitive boolean;
+begin
+ if v_user is null or not private.has_business_permission(p_business_id,'members.manage') then
+  raise exception using errcode='42501',message='Member permission management is not permitted';
+ end if;
+ if p_allowed is null or p_permission_code is null then
+  raise exception using errcode='22023',message='Permission and decision are required';
+ end if;
+ select is_sensitive into v_sensitive from public.permission_catalog where code=p_permission_code;
+ if not found then raise exception using errcode='22023',message='Unknown permission code'; end if;
+ select * into v_target from public.business_members
+ where business_id=p_business_id and user_id=p_member_user_id for update;
+ if not found or v_target.status<>'active' or v_target.role_code='owner' or p_member_user_id=v_user then
+  raise exception using errcode='42501',message='This member permission cannot be changed';
+ end if;
+ if v_target.role_code='admin' and not private.is_business_owner(p_business_id) then
+  raise exception using errcode='42501',message='Only the owner can change administrator permissions';
+ end if;
+ if v_sensitive and p_allowed and not private.is_business_owner(p_business_id) then
+  raise exception using errcode='42501',message='Only the owner can grant sensitive permissions';
+ end if;
+ insert into public.business_member_permission_overrides(
+  business_id,user_id,permission_code,allowed,reason,updated_by,updated_at
+ ) values(
+  p_business_id,p_member_user_id,p_permission_code,p_allowed,
+  nullif(left(btrim(coalesce(p_reason,'')),500),''),v_user,now()
+ )
+ on conflict(business_id,user_id,permission_code) do update
+ set allowed=excluded.allowed,reason=excluded.reason,updated_by=excluded.updated_by,updated_at=now();
+ perform private.write_business_audit(p_business_id,v_user,'member.permission.updated','member',p_member_user_id::text,
+  jsonb_build_object('permission_code',p_permission_code,'allowed',p_allowed,'reason',nullif(left(btrim(coalesce(p_reason,'')),500),'')));
+ return true;
+end;
+$;
+
+create or replace function public.clear_business_member_permission_override(
+ p_business_id uuid,p_member_user_id uuid,p_permission_code text
+)
+returns boolean language plpgsql security definer set search_path=''
+as $
+declare v_user uuid:=auth.uid(); v_target public.business_members%rowtype; v_deleted integer;
+begin
+ if v_user is null or not private.has_business_permission(p_business_id,'members.manage') then
+  raise exception using errcode='42501',message='Member permission management is not permitted';
+ end if;
+ select * into v_target from public.business_members
+ where business_id=p_business_id and user_id=p_member_user_id for update;
+ if not found or v_target.status<>'active' or v_target.role_code='owner' or p_member_user_id=v_user then
+  raise exception using errcode='42501',message='This member permission cannot be changed';
+ end if;
+ if v_target.role_code='admin' and not private.is_business_owner(p_business_id) then
+  raise exception using errcode='42501',message='Only the owner can change administrator permissions';
+ end if;
+ delete from public.business_member_permission_overrides
+ where business_id=p_business_id and user_id=p_member_user_id and permission_code=p_permission_code;
+ get diagnostics v_deleted=row_count;
+ if v_deleted>0 then
+  perform private.write_business_audit(p_business_id,v_user,'member.permission.cleared','member',p_member_user_id::text,
+   jsonb_build_object('permission_code',p_permission_code));
+ end if;
+ return v_deleted>0;
+end;
+$;
+
 revoke all on function private.write_business_audit(uuid,uuid,text,text,text,jsonb) from public,anon,authenticated;
 revoke all on function public.create_business_invitation(uuid,text,text,text,timestamptz) from public,anon,authenticated;
 revoke all on function public.accept_business_invitation(text) from public,anon,authenticated;
 revoke all on function public.revoke_business_invitation(uuid) from public,anon,authenticated;
 revoke all on function public.update_business_member_role(uuid,uuid,text) from public,anon,authenticated;
 revoke all on function public.set_business_member_status(uuid,uuid,text) from public,anon,authenticated;
+revoke all on function public.set_business_member_permission_override(uuid,uuid,text,boolean,text) from public,anon,authenticated;
+revoke all on function public.clear_business_member_permission_override(uuid,uuid,text) from public,anon,authenticated;
 grant execute on function public.create_business_invitation(uuid,text,text,text,timestamptz) to authenticated;
 grant execute on function public.accept_business_invitation(text) to authenticated;
 grant execute on function public.revoke_business_invitation(uuid) to authenticated;
 grant execute on function public.update_business_member_role(uuid,uuid,text) to authenticated;
 grant execute on function public.set_business_member_status(uuid,uuid,text) to authenticated;
+grant execute on function public.set_business_member_permission_override(uuid,uuid,text,boolean,text) to authenticated;
+grant execute on function public.clear_business_member_permission_override(uuid,uuid,text) to authenticated;
 
 commit;
  then
