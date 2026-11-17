@@ -5,6 +5,9 @@ begin
  if not exists(select 1 from pg_trigger where tgname='journal_entries_immutable_guard' and not tgisinternal) then
   raise exception 'Journal immutability trigger missing';
  end if;
+ if not exists(select 1 from pg_trigger where tgname='journal_entries_immutable_guard' and not tgisinternal and (tgtype & 8)=8) then
+  raise exception 'Journal immutability trigger must also block DELETE';
+ end if;
  if not exists(select 1 from pg_trigger where tgname='journal_lines_immutable_guard' and not tgisinternal) then
   raise exception 'Journal line immutability trigger missing';
  end if;
