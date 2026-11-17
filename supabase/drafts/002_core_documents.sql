@@ -221,11 +221,11 @@ begin
     raise exception using errcode='22023',message='Invalid idempotency key';
   end if;
 
-  v_request_fingerprint:=md5(concat_ws('|',
-    p_business_id::text,p_document_type,p_contact_id::text,p_warehouse_id::text,
-    p_fiscal_period_id::text,coalesce(p_document_date,current_date)::text,p_due_date::text,
-    coalesce(p_notes,''),v_header_discount::text,coalesce(p_tax_rate::text,'null'),p_items::text
-  ));
+  v_request_fingerprint:=md5(jsonb_build_array(
+    p_business_id,p_document_type,p_contact_id,p_warehouse_id,p_fiscal_period_id,
+    coalesce(p_document_date,current_date),p_due_date,coalesce(p_notes,''),
+    v_header_discount,coalesce(p_tax_rate::text,'null'),p_items
+  )::text);
 
   if p_idempotency_key is not null then
     select id,request_fingerprint into v_doc_id,v_existing_fingerprint
