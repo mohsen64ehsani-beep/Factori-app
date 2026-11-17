@@ -81,8 +81,8 @@ jobs:
           console.log('Inline application JavaScript syntax is valid.');
           NODE
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies reproducibly
+        run: npm ci
 
       - name: Bundle license client
         run: |
