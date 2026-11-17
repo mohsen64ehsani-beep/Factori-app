@@ -11,6 +11,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 5. `004a_sync_infrastructure.sql` — sync device/cursor/operation tables and initial Free-tier quota enforcement.
 6. `005_sync_compatibility.sql` — legacy compatibility sync bridge; currently limited to metadata and draft writes, with financial/stock mutations blocked pending normalized RPCs; **not production-ready**.
 7. `006_journal_integrity.sql` — database guards for balanced, immutable posted journal entries.
+8. `007_member_management.sql` — invitation acceptance, audited role changes and member suspension/removal.
 
 ## Test scripts
 
@@ -21,6 +22,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 - `supabase/tests/004a_sync_infrastructure.sql`
 - `supabase/tests/005_sync_compatibility.sql`
 - `supabase/tests/006_journal_integrity.sql`
+- `supabase/tests/007_member_management.sql`
 
 The test scripts are designed for an isolated disposable Supabase/Postgres project after applying the corresponding draft migrations. They have not been run against production.
 
@@ -29,7 +31,7 @@ The test scripts are designed for an isolated disposable Supabase/Postgres proje
 - Invoice numbering sequences and complete fiscal close/reopen controls
 - Posting/reversal RPCs and cheque assignment lifecycle (journal integrity guards are drafted, but the posting engine is not)
 - Server-side stock mutation RPCs and inventory balance projections
-- Invitations, audited member management and owner transfer
+- Owner transfer, account deletion/retention and owner recovery
 - Verified subscription upgrades, downgrades, grace periods and paid-plan entitlements
 - Device proof-of-possession, full multi-device sync tests and normalized financial sync operations
 - Legacy `db:v2` import/reconciliation and migration id mapping
