@@ -78,6 +78,26 @@ create table if not exists public.services (
 );
 create index if not exists services_business_name_idx on public.services(business_id,lower(name));
 
+-- Attach normalized catalog references after the catalog tables exist.
+do $
+begin
+ if not exists(select 1 from pg_constraint where conname='document_items_product_tenant_fk') then
+  alter table public.document_items add constraint document_items_product_tenant_fk
+   foreign key(business_id,product_id) references public.products(business_id,id);
+ end if;
+ if not exists(select 1 from pg_constraint where conname='document_items_service_tenant_fk') then
+  alter table public.document_items add constraint document_items_service_tenant_fk
+   foreign key(business_id,service_id) references public.services(business_id,id);
+ end if;
+ if not exists(select 1 from pg_constraint where conname='document_items_catalog_type_check') then
+  alter table public.document_items add constraint document_items_catalog_type_check
+   check(
+    (item_type='goods' and service_id is null)
+    or (item_type='service' and product_id is null)
+   );
+ end if;
+end $;
+
 create table if not exists public.document_item_costs (
  id uuid primary key default gen_random_uuid(),
  business_id uuid not null,
