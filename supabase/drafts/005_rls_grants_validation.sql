@@ -621,6 +621,7 @@ declare
   v_existing_id uuid;
   v_existing_number text;
   v_existing_version bigint;
+  v_existing_type text;
   v_number text;
   v_warehouse_id uuid := p_warehouse_id;
   v_currency_code text;
@@ -690,12 +691,15 @@ begin
     pg_catalog.hashtextextended(p_business_id::text || ':' || p_idempotency_key::text,0)
   );
 
-  select d.id,d.document_number,d.version
-    into v_existing_id,v_existing_number,v_existing_version
+  select d.id,d.document_number,d.version,d.document_type
+    into v_existing_id,v_existing_number,v_existing_version,v_existing_type
   from public.documents d
   where d.business_id=p_business_id and d.idempotency_key=p_idempotency_key
   for update;
   if found then
+    if v_existing_type <> p_document_type then
+      raise exception 'idempotency_key_payload_conflict' using errcode='23505';
+    end if;
     return query select v_existing_id,v_existing_number,v_existing_version;
     return;
   end if;
@@ -839,7 +843,7 @@ begin
       v_doc_discount_share:=0;
     elsif v_ord < v_item_count then
       v_doc_discount_share:=least(
-        round(v_doc_discount*v_line_net/v_total_net)::bigint,
+        round(v_doc_discount::numeric*v_line_net/v_total_net)::bigint,
         v_doc_discount-v_allocated_doc_discount
       );
     else

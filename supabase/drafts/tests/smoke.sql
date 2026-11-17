@@ -61,7 +61,7 @@ reset role;
 -- Sales role can read a sale but must not read purchase documents.
 set role authenticated;
 select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
-do $
+do $$
 declare
   a uuid := current_setting('test.business_a')::uuid;
   d1 uuid;
@@ -106,7 +106,7 @@ begin
     null;
   end;
 end
-$;
+$$;
 reset role;
 
 -- Quota helper is internal-only; run as postgres while retaining the owner JWT claim.
