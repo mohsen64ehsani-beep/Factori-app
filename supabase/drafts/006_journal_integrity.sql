@@ -27,15 +27,24 @@ returns trigger
 language plpgsql
 set search_path=''
 as $$
-declare v_business uuid; v_entry uuid; v_status text;
+declare v_status text;
 begin
- v_business:=coalesce(new.business_id,old.business_id);
- v_entry:=coalesce(new.journal_entry_id,old.journal_entry_id);
- select status into v_status from public.journal_entries
- where business_id=v_business and id=v_entry for update;
- if v_status in ('posted','reversed') then
-  raise exception using errcode='55000',message='Lines of a posted journal entry are immutable';
+ if tg_op in ('UPDATE','DELETE') then
+  select status into v_status from public.journal_entries
+  where business_id=old.business_id and id=old.journal_entry_id for update;
+  if v_status in ('posted','reversed') then
+   raise exception using errcode='55000',message='Lines of a posted journal entry are immutable';
+  end if;
  end if;
+
+ if tg_op in ('INSERT','UPDATE') then
+  select status into v_status from public.journal_entries
+  where business_id=new.business_id and id=new.journal_entry_id for update;
+  if v_status in ('posted','reversed') then
+   raise exception using errcode='55000',message='Lines of a posted journal entry are immutable';
+  end if;
+ end if;
+
  if tg_op='DELETE' then return old; end if;
  return new;
 end;
