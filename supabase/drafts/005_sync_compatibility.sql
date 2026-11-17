@@ -596,6 +596,8 @@ begin
   if v_device.permission_version<>v_member_permission_version then
     update public.sync_devices set permission_version=v_member_permission_version
     where business_id=p_business_id and id=p_device_id;
+    update public.sync_cursors set last_revision=0,last_synced_at=null
+    where business_id=p_business_id and device_id=p_device_id;
     return jsonb_build_object('records','[]'::jsonb,'next_cursor',0,'has_more',true,'reset_required',true);
   end if;
   v_cost_allowed:=(select private.has_business_permission(p_business_id,'catalog.cost.read'));
