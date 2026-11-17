@@ -254,7 +254,7 @@ begin
  on conflict(business_id,user_id,permission_code) do update
  set allowed=excluded.allowed,reason=excluded.reason,updated_by=excluded.updated_by,updated_at=now();
  perform private.write_business_audit(p_business_id,v_user,'member.permission.updated','member',p_member_user_id::text,
-  jsonb_build_object('permission_code',p_permission_code,'allowed',p_allowed,'reason',nullif(left(btrim(coalesce(p_reason,'')),500),'')));
+  jsonb_build_object('permission_code',p_permission_code,'allowed',p_allowed));
  return true;
 end;
 $;
