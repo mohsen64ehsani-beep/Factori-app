@@ -1,0 +1,25 @@
+-- Disposable checks for 007. Run after migration 001 in isolated staging.
+begin;
+do $$
+declare t text; r record;
+begin
+ foreach t in array array['business_invitations','business_audit_logs'] loop
+  if to_regclass('public.'||t) is null then raise exception 'Missing public.%',t; end if;
+  select c.relrowsecurity into r from pg_class c where c.oid=to_regclass('public.'||t);
+  if not r.relrowsecurity then raise exception 'RLS disabled on public.%',t; end if;
+  if has_table_privilege('anon','public.'||t,'SELECT') then raise exception 'anon can read public.%',t; end if;
+  if has_table_privilege('authenticated','public.'||t,'INSERT') then raise exception 'authenticated can directly insert public.%',t; end if;
+  if has_table_privilege('authenticated','public.'||t,'UPDATE') then raise exception 'authenticated can directly update public.%',t; end if;
+  if has_table_privilege('authenticated','public.'||t,'DELETE') then raise exception 'authenticated can directly delete public.%',t; end if;
+ end loop;
+ if not has_function_privilege('authenticated','public.accept_business_invitation(text)','EXECUTE') then
+  raise exception 'Authenticated invitation acceptance RPC missing';
+ end if;
+ if has_function_privilege('anon','public.accept_business_invitation(text)','EXECUTE') then
+  raise exception 'Anonymous invitation acceptance must be disabled';
+ end if;
+ if has_function_privilege('authenticated','private.write_business_audit(uuid,uuid,text,text,text,jsonb)','EXECUTE') then
+  raise exception 'Audit helper must not be directly callable by clients';
+ end if;
+end $$;
+rollback;
