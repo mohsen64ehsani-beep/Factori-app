@@ -6,22 +6,24 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 1. `001_identity_business_permissions.sql` — profiles, businesses, memberships, role defaults, permission helpers, business settings, and the initial Auth/RPC integration.
 2. `002_core_documents.sql` — tenant-scoped contacts, warehouses, fiscal periods, document headers/items, and draft-only document creation.
-3. `005_sync_compatibility.sql` — legacy compatibility sync transport; **not production-ready** and depends on additional sync schema/functions not yet delivered.
+3. `003_financial_ledger.sql` — accounts, receipts/payments, allocations, cheques, contact ledger and journal primitives.
+4. `004_catalog_inventory.sql` — products/services, protected cost snapshots, stock movements, transfers and costing layers.
+5. `005_sync_compatibility.sql` — legacy compatibility sync transport; **not production-ready** and depends on additional sync schema/functions not yet delivered.
 
 ## Test scripts
 
 - `supabase/tests/001_identity_business_permissions.sql`
 - `supabase/tests/002_core_documents.sql`
+- `supabase/tests/003_financial_ledger.sql`
+- `supabase/tests/004_catalog_inventory.sql`
 
 The test scripts are designed for an isolated disposable Supabase/Postgres project after applying the corresponding draft migrations. They have not been run against production.
 
 ## Deliberately not included yet
 
-- Normalized product/service catalog and private cost snapshots
 - Invoice numbering sequences and complete fiscal close/reopen controls
-- Journal entries, chart of accounts, posting/reversal RPCs
-- Inventory movement ledger and cost layers
-- Financial transactions, allocations, cheques and assignment lifecycle
+- Posting/reversal RPCs and cheque assignment lifecycle
+- Server-side stock mutation RPCs and inventory balance projections
 - Invitations, audited member management and owner transfer
 - Subscription entitlements and server-enforced free/pro quotas
 - Offline sync device registry, cursors, operation log and conflict handling
