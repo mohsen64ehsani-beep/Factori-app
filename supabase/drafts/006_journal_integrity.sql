@@ -12,6 +12,12 @@ language plpgsql
 set search_path=''
 as $$
 begin
+ if tg_op='DELETE' then
+  if old.status in ('posted','reversed') then
+   raise exception using errcode='55000',message='Posted journal entries are immutable; create a reversal instead';
+  end if;
+  return old;
+ end if;
  if old.status in ('posted','reversed') then
   raise exception using errcode='55000',message='Posted journal entries are immutable; create a reversal instead';
  end if;
@@ -117,7 +123,7 @@ $$;
 
 drop trigger if exists journal_entries_immutable_guard on public.journal_entries;
 create trigger journal_entries_immutable_guard
-before update on public.journal_entries
+before update or delete on public.journal_entries
 for each row execute function private.guard_journal_entry_update();
 
 drop trigger if exists journal_lines_immutable_guard on public.journal_lines;
