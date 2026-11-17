@@ -47,6 +47,7 @@ create table if not exists public.sync_operations (
  foreign key(business_id,device_id) references public.sync_devices(business_id,id) on delete cascade
 );
 create index if not exists sync_operations_record_idx on public.sync_operations(business_id,record_type,record_id,created_at desc);
+alter table public.sync_operations add column if not exists request_fingerprint text;
 
 create table if not exists public.record_revisions (
  id bigint generated always as identity primary key,
