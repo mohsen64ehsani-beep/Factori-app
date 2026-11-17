@@ -32,7 +32,7 @@ Migrations 001 and 004a now draft the identity, membership, sync device/cursor/o
 7. **Deletion and tombstones.** Define retention, restore, and cross-device tombstone behavior; ensure deletes cannot bypass posted-document reversal rules.
 8. **Quota coverage.** The bridge checks invoice daily/item limits and customer/product/service/warehouse lifetime limits. Add equivalent checks to normalized RPCs and verify upgrade entitlements.
 9. **Payload validation.** The bridge now limits each upsert payload to 256 KiB and legacy IDs to 200 characters. Per-collection field allowlists, JSON depth limits, schema versioning, ID/date/amount validation, and protected-field validation remain open.
-10. **Sync cursor tests.** Prove pagination and coalescing behavior under concurrent updates, role-filtered collections, tombstones, and more than one page.
+10. **Sync cursor tests.** Prove pagination and coalescing behavior under concurrent updates, role-filtered collections, tombstones, and more than one page. Verify permission changes force a local business-data reset before another pull.
 11. **Device registration.** Validate public-key shape and bind device identity to an authenticated user with a revocation flow.
 12. **RPC grants and schema exposure.** Verify private schema usage, function ownership, search_path, PUBLIC/anon revokes, authenticated grants, and wrapper behavior against the actual Supabase project settings.
 
