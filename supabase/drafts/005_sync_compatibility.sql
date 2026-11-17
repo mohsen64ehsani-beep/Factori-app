@@ -422,6 +422,16 @@ begin
            and lower(coalesce(nullif(btrim(v_payload->>'status'),''),'draft'))<>'draft' then
           raise exception 'document_sync_accepts_drafts_only' using errcode='42501';
         end if;
+        if v_record_id is null then
+          case v_collection
+            when 'cust' then perform private.assert_feature_limit(p_business_id,'customers.total_limit',1);
+            when 'prod' then perform private.assert_feature_limit(p_business_id,'products.total_limit',1);
+            when 'services' then perform private.assert_feature_limit(p_business_id,'services.total_limit',1);
+            when 'warehouses' then perform private.assert_feature_limit(p_business_id,'warehouses.total_limit',1);
+            else null;
+          end case;
+        end if;
+
         if v_collection in ('inv','serviceInv') and v_record_id is null then
           if jsonb_typeof(v_payload->'items')<>'array' or jsonb_array_length(v_payload->'items')=0 then
             raise exception 'invoice_items_required' using errcode='22023';
