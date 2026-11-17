@@ -222,7 +222,7 @@ create or replace function public.set_business_member_permission_override(
  p_business_id uuid,p_member_user_id uuid,p_permission_code text,p_allowed boolean,p_reason text default null
 )
 returns boolean language plpgsql security definer set search_path=''
-as $
+  as $$
 declare
  v_user uuid:=auth.uid(); v_target public.business_members%rowtype; v_sensitive boolean;
 begin
@@ -263,7 +263,7 @@ create or replace function public.clear_business_member_permission_override(
  p_business_id uuid,p_member_user_id uuid,p_permission_code text
 )
 returns boolean language plpgsql security definer set search_path=''
-as $
+  as $$
 declare v_user uuid:=auth.uid(); v_target public.business_members%rowtype; v_deleted integer;
 begin
  if v_user is null or not private.has_business_permission(p_business_id,'members.manage') then
