@@ -96,7 +96,7 @@ begin
     or (item_type='service' and product_id is null)
    );
  end if;
-end $;
+end $$;
 
 create table if not exists public.document_item_costs (
  id uuid primary key default gen_random_uuid(),
