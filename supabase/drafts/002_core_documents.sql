@@ -77,6 +77,7 @@ create table if not exists public.documents (
   notes text,
   source_document_id uuid,
   idempotency_key text,
+  request_fingerprint text,
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -170,6 +171,8 @@ declare
   v_total numeric;
   v_count integer:=0;
   v_item_count integer:=0;
+  v_request_fingerprint text;
+  v_existing_fingerprint text;
   v_allocated_total numeric:=0;
   v_header_discount numeric:=coalesce(p_discount_amount,0);
 begin
@@ -218,10 +221,22 @@ begin
     raise exception using errcode='22023',message='Invalid idempotency key';
   end if;
 
+  v_request_fingerprint:=md5(concat_ws('|',
+    p_business_id::text,p_document_type,p_contact_id::text,p_warehouse_id::text,
+    p_fiscal_period_id::text,coalesce(p_document_date,current_date)::text,p_due_date::text,
+    coalesce(p_notes,''),v_header_discount::text,coalesce(p_tax_rate::text,'null'),p_items::text
+  ));
+
   if p_idempotency_key is not null then
-    select id into v_doc_id from public.documents
+    select id,request_fingerprint into v_doc_id,v_existing_fingerprint
+    from public.documents
     where business_id=p_business_id and idempotency_key=p_idempotency_key;
-    if v_doc_id is not null then return v_doc_id; end if;
+    if v_doc_id is not null then
+      if v_existing_fingerprint is distinct from v_request_fingerprint then
+        raise exception using errcode='23505',message='Idempotency key was already used with a different request';
+      end if;
+      return v_doc_id;
+    end if;
   end if;
 
   -- Validate and total the submitted rows before inserting anything.
@@ -258,12 +273,12 @@ begin
   insert into public.documents(
     business_id,document_type,contact_id,warehouse_id,fiscal_period_id,
     document_date,due_date,discount_amount,subtotal,taxable_amount,notes,
-    idempotency_key,created_by
+    idempotency_key,request_fingerprint,created_by
   ) values (
     p_business_id,p_document_type,p_contact_id,p_warehouse_id,p_fiscal_period_id,
     coalesce(p_document_date,current_date),p_due_date,v_header_discount+v_line_discounts,
     v_subtotal,v_base_total-v_header_discount,nullif(btrim(coalesce(p_notes,'')),''),
-    p_idempotency_key,v_user
+    p_idempotency_key,v_request_fingerprint,v_user
   ) returning id into v_doc_id;
 
   v_count:=0;
@@ -304,9 +319,15 @@ begin
 exception
   when unique_violation then
     if p_idempotency_key is not null then
-      select id into v_doc_id from public.documents
+      select id,request_fingerprint into v_doc_id,v_existing_fingerprint
+      from public.documents
       where business_id=p_business_id and idempotency_key=p_idempotency_key;
-      if v_doc_id is not null then return v_doc_id; end if;
+      if v_doc_id is not null then
+        if v_existing_fingerprint is distinct from v_request_fingerprint then
+          raise exception using errcode='23505',message='Idempotency key was already used with a different request';
+        end if;
+        return v_doc_id;
+      end if;
     end if;
     raise;
 end;
