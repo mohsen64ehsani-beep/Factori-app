@@ -54,9 +54,10 @@ begin
         into v_result
       from jsonb_each(p_value) e
       where e.key not in (
-        'buy','b','cost','costTotal','unitCostAtReturn','unit_cost','total_cost',
-        'last_purchase_cost','average_cost','average_unit_cost','inventory_value',
-        'profit','margin','purchase_cost','cost_snapshot','unit_cost_snapshot'
+        'buy','b','cost','costTotal','cost_total','unitCostAtReturn','unit_cost_at_return',
+        'unit_cost','unitCost','buyPrice','purchasePrice','costPrice','cost_price','total_cost',
+        'last_purchase_cost','average_cost','averageCost','avgCost','average_unit_cost','inventory_value',
+        'profit','profitAmount','margin','marginAmount','purchase_cost','cost_snapshot','unit_cost_snapshot'
       );
       return v_result;
     when 'array' then
@@ -84,17 +85,19 @@ begin
     when 'object' then
       select coalesce(jsonb_object_agg(e.key,
         case when e.key in (
-          'buy','b','cost','costTotal','unitCostAtReturn','unit_cost','total_cost',
-          'last_purchase_cost','average_cost','average_unit_cost','inventory_value',
-          'profit','margin','purchase_cost','cost_snapshot','unit_cost_snapshot'
+          'buy','b','cost','costTotal','cost_total','unitCostAtReturn','unit_cost_at_return',
+        'unit_cost','unitCost','buyPrice','purchasePrice','costPrice','cost_price','total_cost',
+          'last_purchase_cost','average_cost','averageCost','avgCost','average_unit_cost','inventory_value',
+          'profit','profitAmount','margin','marginAmount','purchase_cost','cost_snapshot','unit_cost_snapshot'
         ) then e.value else private.extract_sensitive_json(e.value) end
       ),'{}'::jsonb)
         into v_result
       from jsonb_each(p_value) e
       where e.key in (
-        'buy','b','cost','costTotal','unitCostAtReturn','unit_cost','total_cost',
-        'last_purchase_cost','average_cost','average_unit_cost','inventory_value',
-        'profit','margin','purchase_cost','cost_snapshot','unit_cost_snapshot'
+        'buy','b','cost','costTotal','cost_total','unitCostAtReturn','unit_cost_at_return',
+        'unit_cost','unitCost','buyPrice','purchasePrice','costPrice','cost_price','total_cost',
+        'last_purchase_cost','average_cost','averageCost','avgCost','average_unit_cost','inventory_value',
+        'profit','profitAmount','margin','marginAmount','purchase_cost','cost_snapshot','unit_cost_snapshot'
       )
       or private.extract_sensitive_json(e.value) not in ('{}'::jsonb,'[]'::jsonb,'null'::jsonb);
       return v_result;
@@ -328,9 +331,19 @@ begin
       v_payload:=v_op->'payload';
 
       if v_operation_id is null or v_collection is null or v_legacy_id is null
+         or length(v_legacy_id) not between 1 and 200
          or v_operation_type is null or v_operation_type not in ('upsert','delete') then
         raise exception 'invalid_sync_operation' using errcode='22023';
       end if;
+      if v_operation_type='upsert' and (
+        v_payload is null or jsonb_typeof(v_payload)<>'object'
+        or octet_length(v_payload::text)>262144
+      ) then
+        raise exception 'invalid_sync_payload' using errcode='22023';
+      end if;
+      perform pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtextextended(p_business_id::text||':'||p_device_id::text||':'||v_operation_id::text,0)
+      );
       if not (select private.can_sync_collection(p_business_id,v_collection,'write')) then
         raise exception 'sync_collection_write_forbidden' using errcode='42501';
       end if;
@@ -482,7 +495,14 @@ begin
       get stacked diagnostics v_error=message_text,v_state=returned_sqlstate;
       v_result:=jsonb_build_object(
         'operation_id',v_operation_id,'collection',v_collection,'legacy_id',v_legacy_id,
-        'status','rejected','error_code',v_state,'message',v_error
+        'status','rejected','error_code',v_state,
+        'message',case v_state
+          when '42501' then 'operation_not_allowed'
+          when '22023' then 'invalid_operation_data'
+          when '23505' then 'duplicate_or_conflicting_operation'
+          when '40001' then 'concurrent_change_retry'
+          else 'operation_rejected'
+        end
       );
       if v_operation_id is not null then
         insert into public.sync_operations(
