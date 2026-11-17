@@ -274,22 +274,31 @@ alter table public.journal_entries enable row level security;
 alter table public.journal_lines enable row level security;
 alter table public.contact_ledger_entries enable row level security;
 
+drop policy if exists financial_accounts_read on public.financial_accounts;
 create policy financial_accounts_read on public.financial_accounts for select to authenticated
  using(private.has_business_permission(business_id,'payments.read'));
+drop policy if exists financial_transactions_read on public.financial_transactions;
 create policy financial_transactions_read on public.financial_transactions for select to authenticated
  using(private.has_business_permission(business_id,'payments.read'));
+drop policy if exists transaction_allocations_read on public.transaction_allocations;
 create policy transaction_allocations_read on public.transaction_allocations for select to authenticated
  using(private.has_business_permission(business_id,'payments.read'));
+drop policy if exists cheques_read on public.cheques;
 create policy cheques_read on public.cheques for select to authenticated
  using(private.has_business_permission(business_id,'cheques.read'));
+drop policy if exists cheque_events_read on public.cheque_events;
 create policy cheque_events_read on public.cheque_events for select to authenticated
  using(private.has_business_permission(business_id,'cheques.read'));
+drop policy if exists chart_of_accounts_read on public.chart_of_accounts;
 create policy chart_of_accounts_read on public.chart_of_accounts for select to authenticated
  using(private.has_business_permission(business_id,'accounting.journal.read'));
+drop policy if exists journal_entries_read on public.journal_entries;
 create policy journal_entries_read on public.journal_entries for select to authenticated
  using(private.has_business_permission(business_id,'accounting.journal.read'));
+drop policy if exists journal_lines_read on public.journal_lines;
 create policy journal_lines_read on public.journal_lines for select to authenticated
  using(private.has_business_permission(business_id,'accounting.journal.read'));
+drop policy if exists contact_ledger_read on public.contact_ledger_entries;
 create policy contact_ledger_read on public.contact_ledger_entries for select to authenticated
  using(private.has_business_permission(business_id,'contacts.read'));
 
