@@ -30,8 +30,8 @@ The test scripts are designed for an isolated disposable Supabase/Postgres proje
 - Posting/reversal RPCs and cheque assignment lifecycle (journal integrity guards are drafted, but the posting engine is not)
 - Server-side stock mutation RPCs and inventory balance projections
 - Invitations, audited member management and owner transfer
-- Subscription entitlements and server-enforced free/pro quotas
-- Offline sync device registry, cursors, operation log and conflict handling
+- Verified subscription upgrades, downgrades, grace periods and paid-plan entitlements
+- Device proof-of-possession, full multi-device sync tests and normalized financial sync operations
 - Legacy `db:v2` import/reconciliation and migration id mapping
 - Private cheque-image storage and SMS retention policy
 
