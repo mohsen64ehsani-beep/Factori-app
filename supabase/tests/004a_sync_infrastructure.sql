@@ -21,6 +21,18 @@ begin
  if position('for update' in lower(pg_get_functiondef('private.assert_feature_limit(uuid,text,integer)'::regprocedure)))=0 then
   raise exception 'Lifetime feature limit checks must lock the entitlement row';
  end if;
+ if not exists(select 1 from information_schema.columns where table_schema='public'
+  and table_name='business_members' and column_name='permission_version') then
+  raise exception 'Business member permission version column missing';
+ end if;
+ if not exists(select 1 from information_schema.columns where table_schema='public'
+  and table_name='sync_devices' and column_name='permission_version') then
+  raise exception 'Sync device permission version column missing';
+ end if;
+ if not exists(select 1 from pg_trigger where tgname='business_members_permission_version' and not tgisinternal)
+  or not exists(select 1 from pg_trigger where tgname='member_overrides_permission_version' and not tgisinternal) then
+  raise exception 'Permission version triggers are missing';
+ end if;
  if has_function_privilege('authenticated','private.assert_feature_limit(uuid,text,integer)','EXECUTE') then
   raise exception 'Authenticated users must not call private quota helpers directly';
  end if;
