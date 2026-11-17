@@ -132,7 +132,7 @@ select roles.role_code, p.code,
  end
 from (values ('owner'),('admin'),('accountant'),('sales'),('viewer')) as roles(role_code)
 cross join public.permission_catalog p
-on conflict(role_code,permission_code) do update set allowed=excluded.allowed;
+on conflict(role_code,permission_code) do nothing;
 
 create or replace function private.is_business_member(p_business_id uuid)
 returns boolean
