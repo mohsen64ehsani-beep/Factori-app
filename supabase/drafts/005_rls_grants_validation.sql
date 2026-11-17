@@ -10,7 +10,7 @@ begin
     select n.nspname, c.relname
     from pg_class c join pg_namespace n on n.oid=c.relnamespace
     where n.nspname='public' and c.relkind='r'
-      and c.relname not in ('profiles','permission_catalog','user_device_settings')
+      and c.relname not in ('profiles','permission_catalog','user_device_settings','subscription_plans','plan_features')
   loop
     execute format('alter table %I.%I enable row level security',r.nspname,r.relname);
   end loop;
@@ -18,6 +18,8 @@ end $$;
 
 alter table public.profiles enable row level security;
 alter table public.permission_catalog enable row level security;
+alter table public.subscription_plans enable row level security;
+alter table public.plan_features enable row level security;
 alter table private.document_item_costs enable row level security;
 alter table private.document_cost_summaries enable row level security;
 alter table private.product_costs enable row level security;
@@ -39,6 +41,12 @@ using (id=(select auth.uid()))
 with check (id=(select auth.uid()));
 
 create policy permission_catalog_read on public.permission_catalog
+for select to authenticated using (true);
+
+create policy subscription_plans_read on public.subscription_plans
+for select to authenticated using (true);
+
+create policy plan_features_read on public.plan_features
 for select to authenticated using (true);
 
 create policy businesses_read_member on public.businesses
@@ -181,8 +189,6 @@ begin
       ('sms_templates','settings.manage'),
       ('sms_history','settings.manage'),
       ('due_date_reminders','contacts.read'),
-      ('subscription_plans','settings.manage'),
-      ('plan_features','settings.manage'),
       ('business_subscriptions','settings.manage'),
       ('business_entitlements','settings.manage'),
       ('business_license_links','settings.manage'),
@@ -327,11 +333,11 @@ begin
 
   insert into public.invoice_number_sequences(business_id,document_type,prefix,next_number,number_padding,reset_policy)
   values
-    (v_business_id,'sale','',1,0,'never'),
-    (v_business_id,'service_sale','',1,0,'never'),
-    (v_business_id,'purchase','',1,0,'never'),
-    (v_business_id,'sales_return','',1,0,'never'),
-    (v_business_id,'purchase_return','',1,0,'never');
+    (v_business_id,'sale','',1,6,'never'),
+    (v_business_id,'service_sale','',1,6,'never'),
+    (v_business_id,'purchase','',1,6,'never'),
+    (v_business_id,'sales_return','',1,6,'never'),
+    (v_business_id,'purchase_return','',1,6,'never');
 
   insert into public.business_subscriptions(business_id,plan_id,status,starts_at)
   select v_business_id,id,'active',now()
