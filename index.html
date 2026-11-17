@@ -414,14 +414,15 @@ function render(){const a=$('app');if(lock){a.innerHTML=lockV2();return}
  if(v.t==='set')collapseSettingsMenus();if(v.t=='invf')upd()}
 function collapseSettingsMenus(){
  const main=$('app').querySelector('main');if(!main)return;
- Array.from(main.children).filter(el=>el.classList&&el.classList.contains('c')&&el.querySelector(':scope > h2')).forEach((card,index)=>{
-  if(card.classList.contains('settings-menu'))return;
+ Array.from(main.children).filter(el=>el.classList&&el.classList.contains('c')&&el.querySelector(':scope > h2')).forEach(card=>{
+  if(card.matches('details.settings-menu'))return;
   const heading=card.querySelector(':scope > h2');const title=heading.textContent.trim();
   const body=document.createElement('div');body.className='settings-menu-body';
   Array.from(card.children).forEach(child=>{if(child!==heading)body.appendChild(child)});
   const summary=document.createElement('summary');summary.className='settings-menu-head';
-  summary.innerHTML='<span>'+esc(title)+'</span><span class="settings-menu-arrow">⌄</span>';
-  card.replaceChildren(summary,body);card.classList.add('settings-menu');card.open=false;
+  summary.innerHTML='<span>'+esc(title)+'</span><span class="settings-menu-arrow" aria-hidden="true">⌄</span>';
+  const menu=document.createElement('details');menu.className=card.className+' settings-menu';menu.open=false;
+  menu.append(summary,body);card.replaceWith(menu);
  });
 }
 function upd(){const t=$('tt');if(t)t.innerHTML=`<div><span>جمع</span><span>${money(subt(D))}</span></div><div><span>تخفیف</span><span>${money(disc(D))}</span></div><div><span>مالیات</span><span>${money(taxv(D))}</span></div><div class="gt"><span>قابل پرداخت</span><span>${money(tot(D))}</span></div>`}
