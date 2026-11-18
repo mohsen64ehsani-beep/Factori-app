@@ -140,3 +140,12 @@ test('object-shaped advanced settings remain local and are not flattened or over
   assert.equal(pulled.db.cust.find(x => x.id === 'c2').n, 'remote');
 });
 
+
+
+test('durable checkpoint API rejects incomplete snapshots before opening storage', async () => {
+  const { loadSyncCheckpoint, commitSyncCheckpoint, clearSyncCheckpoint } = await import('./sync-storage.js');
+  await assert.rejects(() => loadSyncCheckpoint(''), /businessId is required/);
+  await assert.rejects(() => clearSyncCheckpoint(''), /businessId is required/);
+  await assert.rejects(() => commitSyncCheckpoint('b1', null, createSyncState()), /dbSnapshot must be a database object/);
+  await assert.rejects(() => commitSyncCheckpoint('b1', {}, { cursor: -1 }), /syncState cursor is invalid/);
+});
