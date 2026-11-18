@@ -584,3 +584,47 @@ test('cloud account switch and membership failures fail closed before rendering 
   assert.match(source, /\}else if\(!demoMode\)\{\s*resetCloudBusinessContext\(\);\s*\}/);
 
 });
+
+
+test('permission reset clears unreadable collections but retains permitted private data', async () => {
+  const { applySyncPullPage } = await import('./sync-engine.js');
+  const db = {
+    cust: [{ id: 'c1', n: 'مشتری محروم' }],
+    prod: [{ id: 'p1', n: 'محصول', buy: 120 }],
+    advancedSettings: { sms: { apiKey: 'KEEP-LOCAL' } }
+  };
+  const state = {
+    ...createSyncState(),
+    versions: { cust: { c1: 2 }, prod: { p1: 3 } },
+    snapshots: { cust: { c1: '{"id":"c1","n":"مشتری محروم"}' }, prod: { p1: '{"buy":120,"id":"p1","n":"محصول"}' } },
+    pending: [
+      { operation_id: 'cust-op', collection: 'cust', legacy_id: 'c1', operation_type: 'upsert', payload: { id: 'c1', n: 'مشتری محروم' } },
+      { operation_id: 'prod-op', collection: 'prod', legacy_id: 'p1', operation_type: 'upsert', payload: { id: 'p1', n: 'محصول', buy: 120 } }
+    ]
+  };
+  const result = applySyncPullPage(db, state, {
+    reset_required: true, readable_collections: ['prod'], cost_access: true
+  });
+  assert.deepEqual(result.db.cust, []);
+  assert.equal(result.db.prod[0].buy, 120);
+  assert.equal(result.db.advancedSettings.sms.apiKey, 'KEEP-LOCAL');
+  assert.equal(result.state.pending.length, 1);
+  assert.equal(result.state.pending[0].collection, 'prod');
+  assert.equal(result.state.conflicts.at(-1).reason, 'read_permission_revoked');
+  assert.equal(result.state.conflicts.at(-1).operation_id, 'cust-op');
+  assert.equal(result.state.versions.cust, undefined);
+  assert.equal(result.state.snapshots.cust, undefined);
+  assert.equal(state.pending.length, 2, 'permission reset must not mutate input state');
+});
+
+
+test('permission reset without access metadata clears shared collections fail-closed', async () => {
+  const { applySyncPullPage } = await import('./sync-engine.js');
+  const result = applySyncPullPage(
+    { cust: [{ id: 'c1', n: 'stale' }], prod: [{ id: 'p1', n: 'stale' }] },
+    createSyncState(),
+    { reset_required: true }
+  );
+  assert.deepEqual(result.db.cust, []);
+  assert.deepEqual(result.db.prod, []);
+});
