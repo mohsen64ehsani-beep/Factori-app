@@ -23,9 +23,16 @@ These files are **not production migrations**. They live under `supabase/drafts/
 - Added static regression assertions for sync-pull cursor progress and invoice quota coverage.
 - Wrapped migration 005 in a transaction so a failed apply cannot leave a partially created sync bridge.
 - Extended migration 006 to reject DELETE as well as UPDATE on posted/reversed journal headers.
-- These are source-level fixes only; no production migration has been applied. Runtime SQL regression tests are configured in GitHub Actions using an isolated PostgreSQL 17 service; this does not create or modify a Supabase project. The workflow bootstraps only the minimal Auth compatibility objects needed by these drafts, applies all eight drafts, and runs their regression scripts.
 
-## Test scripts
+## Automated isolated PostgreSQL tests
+
+GitHub Actions workflow: `.github/workflows/factoori-sql-regression.yml`.
+
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all eight draft migrations in dependency order, then runs all eight SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+
+This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it will validate SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it will not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
+
+The test scripts are:
 
 - `supabase/tests/001_identity_business_permissions.sql`
 - `supabase/tests/002_core_documents.sql`
@@ -35,8 +42,6 @@ These files are **not production migrations**. They live under `supabase/drafts/
 - `supabase/tests/005_sync_compatibility.sql`
 - `supabase/tests/006_journal_integrity.sql`
 - `supabase/tests/007_member_management.sql`
-
-The test scripts are designed for an isolated disposable Supabase/Postgres project after applying the corresponding draft migrations. They have not been run against production.
 
 ## Deliberately not included yet
 
@@ -53,7 +58,7 @@ The test scripts are designed for an isolated disposable Supabase/Postgres proje
 
 Do not move these drafts into `supabase/migrations/` or run them against the live project until:
 1. schema dependencies and exact RPC signatures are reconciled;
-2. SQL syntax and tests pass in a disposable staging project;
+2. the isolated PostgreSQL 17 workflow passes and its limitations are addressed with Supabase-specific verification;
 3. cross-business RLS, permission matrix, concurrency, idempotency and data reconciliation tests pass;
 4. rollback/restore plan and a complete migration package are prepared; and
 5. the user explicitly approves production execution.
