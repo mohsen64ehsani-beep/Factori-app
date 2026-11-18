@@ -18,6 +18,8 @@ These files are **not production migrations**. They live under `supabase/drafts/
 12. `011_employee_provisioning.sql` — service-role-only employee provisioning, warehouse role defaults and effective permission lookup.
 13. `012_member_reactivation.sql` — audited reactivation/suspension controls with owner-only administrator status changes.
 14. `013_account_bound_license_entitlements.sql` — authenticated account/business claim of verified perpetual licenses, idempotent same-owner claim, server-derived Premium status, and Premium-aware server quota bypass. Requires the existing license-key schema.
+15. `014_legacy_normalized_mapping.sql` — private business-scoped legacy-to-normalized identity map; no source records are imported.
+16. `015_legacy_normalization_preflight.sql` — read-only audit RPC for legacy collection quality and orphan references.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -36,7 +38,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all fourteen draft migrations in dependency order, then runs all sixteen SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all sixteen draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all eighteen SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -60,7 +62,8 @@ The test scripts are:
 - `supabase/tests/012_account_transfers.sql`
 - `supabase/tests/012_member_reactivation.sql`
 - `supabase/tests/013_account_bound_license_entitlements.sql`
-- `supabase/tests/014_legacy_normalization_preflight.sql`
+- `supabase/tests/014_legacy_normalized_mapping.sql`
+- `supabase/tests/015_legacy_normalization_preflight.sql`
 
 ## Device proof deployment note
 
@@ -74,7 +77,7 @@ Migration 009, the `prove-sync-device` Edge Function source, and the Android/Web
 - Owner transfer, account deletion/retention and owner recovery
 - Verified subscription upgrades, downgrades, grace periods and paid-plan entitlements
 - Full multi-device sync runtime tests and normalized financial sync operations
-- Legacy `db:v2` normalized writes, repeatable import mapping and transactional financial/stock reconciliation (014 currently adds only a read-only preflight audit)
+- Legacy `db:v2` normalized writes, import execution, and transactional financial/stock reconciliation (014 adds only the private identity map; 015 adds only a read-only preflight audit)
 - Private cheque-image storage and SMS retention policy
 
 ## Release gate
@@ -87,7 +90,7 @@ Do not move these drafts into `supabase/migrations/` or run them against the liv
 5. the user explicitly approves production execution.
 
 
-## Legacy normalization preflight (014)
+## Legacy normalization preflight (015)
 
 Migration 015 adds `public.preview_legacy_normalization(uuid)`, a read-only owner/admin preflight over the compatibility store. It reports collection counts, tombstones, malformed/mismatched legacy IDs, and orphan customer/product references in invoices. It does not expose payload values, read protected payloads, write normalized tables, post documents, or change inventory. Financial and stock collections remain explicitly deferred. The RPC requires `business.settings.manage`; anon/public execution is revoked. This is an audit gate, not an importer or proof of normalized synchronization.
 
