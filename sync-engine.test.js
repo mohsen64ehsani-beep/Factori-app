@@ -111,7 +111,8 @@ test('SQL pull envelope is validated and cursor advances only after successful m
   assert.equal(initialDb.cust[0].n, 'local');
 
   const reset = applySyncPullPage(initialDb, initialState, {
-    records: [], next_cursor: 0, has_more: true, reset_required: true
+    records: [], next_cursor: 0, has_more: true, reset_required: true,
+    readable_collections: ['cust'], cost_access: true
   });
   assert.equal(reset.resetRequired, true);
   assert.equal(reset.state.cursor, 0);
@@ -489,7 +490,7 @@ test('permission-version reset redacts stale private cache and quarantines pendi
     conflicts: [{ remote_record: { collection: 'prod', payload: { id: 'p1', cost: 70 } } }],
     rejected: [{ operation: { payload: { id: 'p1', profit: 50 } } }]
   };
-  const result = applySyncPullPage(db, state, { reset_required: true });
+  const result = applySyncPullPage(db, state, { reset_required: true, readable_collections: ['prod', 'inv'], cost_access: false });
   assert.equal(result.resetRequired, true);
   assert.equal(result.state.cursor, 0);
   assert.equal(result.db.prod[0].buy, undefined);
@@ -518,7 +519,7 @@ test('permission-version reset redacts stale private cache and quarantines pendi
         operation_type: 'upsert', base_version: 1,
         payload: { id: 'p2', name: 'edited locally', buy: 30 } }]
     },
-    { reset_required: true }
+    { reset_required: true, readable_collections: ['prod'], cost_access: false }
   );
   const replayed = applySyncPullPage(unsynced.db, unsynced.state, {
     records: [{ collection: 'prod', legacy_id: 'p2', version: 2, revision: 1,
