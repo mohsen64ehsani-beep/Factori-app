@@ -1,5 +1,6 @@
-// Factoori local/shared sync primitives. Intentionally not wired to db:v2 until
-// local save/delete hooks and financial posting flows are covered by integration tests.
+// Factoori local/shared sync primitives wired to the db:v2 business-scoped runtime.
+// Financial, payment, purchase, return and stock mutations stay out of generic sync
+// until their normalized transactional RPCs and reconciliation flows are available.
 export const SYNC_WRITE_COLLECTIONS = Object.freeze([
   'cust', 'suppliers', 'duedates', 'prod', 'services', 'categories',
   'inv', 'serviceInv', 'warehouses', 'bankAccounts', 'fiscal',
