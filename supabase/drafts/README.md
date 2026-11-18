@@ -15,7 +15,9 @@ These files are **not production migrations**. They live under `supabase/drafts/
 9. `008_transactional_posting.sql` — atomic balanced-journal posting and stock-transfer posting with permission checks, idempotency and row locking.
 10. `009_device_proof.sql` — P-256 challenge-response device verification, single-use nonces, device revocation and verified-device sync gate.
 11. `010_account_transfers.sql` — financial account mapping and atomic paired transfer records with a balanced journal entry.
-12. `013_account_bound_license_entitlements.sql` — authenticated account/business claim of verified perpetual licenses, idempotent same-owner claim, server-derived Premium status, and Premium-aware server quota bypass. Requires the existing license-key schema.
+12. `011_employee_provisioning.sql` — service-role-only employee provisioning, warehouse role defaults and effective permission lookup.
+13. `012_member_reactivation.sql` — audited reactivation/suspension controls with owner-only administrator status changes.
+14. `013_account_bound_license_entitlements.sql` — authenticated account/business claim of verified perpetual licenses, idempotent same-owner claim, server-derived Premium status, and Premium-aware server quota bypass. Requires the existing license-key schema.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -28,14 +30,15 @@ These files are **not production migrations**. They live under `supabase/drafts/
 - Wrapped migration 005 in a transaction so a failed apply cannot leave a partially created sync bridge.
 - Extended migration 006 to reject DELETE as well as UPDATE on posted/reversed journal headers.
 - Fixed the first PostgreSQL 17 integration failure: `stock_movements` now declares the composite unique key required by tenant-scoped inventory cost-layer foreign keys; migration 004 regression tests assert this key.
+- Added employee provisioning and member reactivation migrations and wired their regression checks into CI so these security-sensitive changes are no longer skipped.
 
 ## Automated isolated PostgreSQL tests
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all eleven draft migrations in dependency order, then runs all twelve SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all fourteen draft migrations in dependency order, then runs all sixteen SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
-This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it will validate SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it will not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
+This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
 The CI workflow creates an isolated fixture matching the existing `factori_license_keys` and `factori_license_activations` production schema, installs pgcrypto in the `extensions` schema, then applies draft 013. This fixture is test-only and is not a production migration.
 
@@ -53,7 +56,9 @@ The test scripts are:
 - `supabase/tests/009_sensitive_payload_partition.sql`
 - `supabase/tests/010_transactional_posting.sql`
 - `supabase/tests/011_device_proof.sql`
+- `supabase/tests/011_employee_provisioning.sql`
 - `supabase/tests/012_account_transfers.sql`
+- `supabase/tests/012_member_reactivation.sql`
 - `supabase/tests/013_account_bound_license_entitlements.sql`
 
 ## Device proof deployment note
