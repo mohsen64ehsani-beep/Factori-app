@@ -21,6 +21,7 @@ on:
       - "sync-engine.test.js"
       - "sync-storage.js"
       - "sync-db-adapter.js"
+      - "sync-runtime.js"
       - "cloud-client.js"
       - "index.html"
       - ".github/workflows/factoori-sync-engine-tests.yml"
