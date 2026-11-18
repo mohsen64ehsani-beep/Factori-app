@@ -1,0 +1,117 @@
+name: Validate Factoori database drafts
+
+on:
+  push:
+    branches:
+      - work/factoori-shared-db-integration
+    paths:
+      - "supabase/drafts/**"
+      - "supabase/tests/**"
+      - ".github/workflows/factoori-database-tests.yml"
+  pull_request:
+    paths:
+      - "supabase/drafts/**"
+      - "supabase/tests/**"
+      - ".github/workflows/factoori-database-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-migration-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: factoori_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d factoori_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: factoori_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Bootstrap minimal Supabase Auth compatibility
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create role service_role nologin bypassrls;
+          create schema auth;
+          create table auth.users (
+            id uuid primary key,
+            email text,
+            email_confirmed_at timestamptz
+          );
+          create or replace function auth.uid()
+          returns uuid
+          language sql stable
+          as $$
+            select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+          $$;
+          grant usage on schema auth to anon, authenticated, service_role;
+          grant select on auth.users to authenticated, service_role;
+          SQL
+
+      - name: Apply draft migrations in dependency order
+        run: |
+          set -euo pipefail
+          for migration in \
+            001_identity_business_permissions.sql \
+            002_core_documents.sql \
+            003_financial_ledger.sql \
+            004_catalog_inventory.sql \
+            004a_sync_infrastructure.sql \
+            005_sync_compatibility.sql \
+            006_journal_integrity.sql \
+            007_member_management.sql
+          do
+            echo "::group::Applying $migration"
+            psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
+            echo "::endgroup::"
+          done
+
+      - name: Run database regression checks
+        run: |
+          set -euo pipefail
+          for test_file in \
+            001_identity_business_permissions.sql \
+            002_core_documents.sql \
+            003_financial_ledger.sql \
+            004_catalog_inventory.sql \
+            004a_sync_infrastructure.sql \
+            005_sync_compatibility.sql \
+            006_journal_integrity.sql \
+            007_member_management.sql
+          do
+            echo "::group::Testing $test_file"
+            psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
+            echo "::endgroup::"
+          done
+
+      - name: Verify migration objects and isolation
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -c "select count(*) as public_tables from information_schema.tables where table_schema='public' and table_type='BASE TABLE';"
+          psql -v ON_ERROR_STOP=1 -c "select count(*) as security_definer_functions from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and p.prosecdef;"
