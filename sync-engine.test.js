@@ -417,12 +417,16 @@ test('cloud readiness probe covers every RPC used by the shared cloud client', a
 });
 
 
-test('cloud readiness fails closed when RPC probes have transport errors', async () => {
-  const { readFile } = await import('node:fs/promises');
-  const source = await readFile(new URL('./cloud-client.js', import.meta.url), 'utf8');
-  assert.ok(source.includes("return /^[0-9A-Z]{5}$/.test(code) || /^PGRST[0-9]{3}$/.test(code)"));
-  assert.ok(source.includes("? code !== 'PGRST202'"));
-  assert.match(source, /Network\/client errors fail closed/i);
+test('cloud readiness distinguishes schema errors from transport failures', async () => {
+  const { isSchemaProbeErrorReady } = await import('./cloud-health.js');
+  assert.equal(isSchemaProbeErrorReady(null), true);
+  assert.equal(isSchemaProbeErrorReady({ code: '42501' }), true);
+  assert.equal(isSchemaProbeErrorReady({ code: '22P02' }), true);
+  assert.equal(isSchemaProbeErrorReady({ code: 'PGRST116' }), true);
+  assert.equal(isSchemaProbeErrorReady({ code: 'PGRST202' }), false);
+  assert.equal(isSchemaProbeErrorReady({ message: 'Failed to fetch' }), false);
+  assert.equal(isSchemaProbeErrorReady({ code: 'ECONNRESET' }), false);
+  assert.equal(isSchemaProbeErrorReady({ code: 'FETCH_ERROR' }), false);
 });
 
 
