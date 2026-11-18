@@ -3,7 +3,7 @@
 export const SYNC_WRITE_COLLECTIONS = Object.freeze([
   'cust', 'suppliers', 'duedates', 'prod', 'services', 'categories',
   'inv', 'serviceInv', 'warehouses', 'bankAccounts', 'fiscal',
-  'advancedSettings', 'smsHistory'
+  'smsHistory'
 ]);
 
 export const SYNC_READ_COLLECTIONS = Object.freeze([
