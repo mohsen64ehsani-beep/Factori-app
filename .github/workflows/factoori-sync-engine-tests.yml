@@ -11,6 +11,7 @@ on:
       - "sync-db-adapter.js"
       - "cloud-client.js"
       - "cloud-health.js"
+      - "supabase/drafts/**.sql"
       - "index.html"
       - ".github/workflows/factoori-sync-engine-tests.yml"
   pull_request:
@@ -23,6 +24,7 @@ on:
       - "index.html"
       - ".github/workflows/factoori-sync-engine-tests.yml"
       - "cloud-health.js"
+      - "supabase/drafts/**.sql"
   workflow_dispatch:
 
 permissions:
