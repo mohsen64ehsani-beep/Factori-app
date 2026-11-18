@@ -45,6 +45,7 @@ declare
   v_owner uuid := '81000000-0000-4000-8000-000000000001';
   v_business uuid := '82000000-0000-4000-8000-000000000001';
   v_other_business uuid := '82000000-0000-4000-8000-000000000002';
+  v_clean_business uuid := '82000000-0000-4000-8000-000000000003';
   v_report jsonb;
   v_before bigint;
   v_after bigint;
@@ -56,20 +57,24 @@ begin
   insert into public.businesses(id,name,owner_user_id)
   values
     (v_business,'Legacy preflight fixture',v_owner),
-    (v_other_business,'Isolated business fixture',v_owner)
+    (v_other_business,'Isolated business fixture',v_owner),
+    (v_clean_business,'Clean legacy fixture',v_owner)
   on conflict(id) do nothing;
 
   insert into public.business_members(business_id,user_id,role_code,status)
   values
     (v_business,v_owner,'owner','active'),
-    (v_other_business,v_owner,'owner','active')
+    (v_other_business,v_owner,'owner','active'),
+    (v_clean_business,v_owner,'owner','active')
   on conflict(business_id,user_id) do update set role_code='owner',status='active';
 
   insert into private.business_state_records(business_id,collection,legacy_id,payload_public)
   values
     (v_business,'cust','cust-1','{"id":"cust-1","n":"Customer"}'::jsonb),
     (v_business,'prod','prod-1','{"id":"prod-1","n":"Product"}'::jsonb),
-    (v_business,'inv','inv-1','{"id":"inv-1","cid":"missing-customer","items":[{"pid":"missing-product"}]}'::jsonb)
+    (v_business,'inv','inv-1','{"id":"inv-1","cid":"missing-customer","items":[{"pid":"missing-product"}]}'::jsonb),
+    (v_business,'categories','value:دسته اصلی','{"value":"دسته اصلی"}'::jsonb),
+    (v_business,'services','value:نصب','{"value":"نصب"}'::jsonb)
   on conflict(business_id,collection,legacy_id) do update
     set payload_public=excluded.payload_public,deleted_at=null;
 
@@ -90,6 +95,28 @@ begin
   where business_id=v_business;
   if v_after<>v_before then
     raise exception 'Preflight must not mutate legacy source records';
+  end if;
+
+  if (select (value->>'missing_payload_ids')::bigint
+      from jsonb_array_elements(v_report->'collections') where value->>'collection'='categories')<>0
+    or (select (value->>'payload_id_mismatches')::bigint
+      from jsonb_array_elements(v_report->'collections') where value->>'collection'='categories')<>0
+    or (select (value->>'missing_payload_ids')::bigint
+      from jsonb_array_elements(v_report->'collections') where value->>'collection'='services')<>0
+    or (select (value->>'payload_id_mismatches')::bigint
+      from jsonb_array_elements(v_report->'collections') where value->>'collection'='services')<>0 then
+    raise exception 'String-based categories/services must validate through their value: legacy identity';
+  end if;
+
+  insert into private.business_state_records(business_id,collection,legacy_id,payload_public)
+  values
+    (v_clean_business,'cust','clean-customer','{"id":"clean-customer","n":"Clean Customer"}'::jsonb),
+    (v_clean_business,'prod','clean-product','{"id":"clean-product","n":"Clean Product"}'::jsonb),
+    (v_clean_business,'categories','value:دسته تمیز','{"value":"دسته تمیز"}'::jsonb),
+    (v_clean_business,'services','value:خدمت تمیز','{"value":"خدمت تمیز"}'::jsonb);
+  v_report:=public.preview_legacy_normalization(v_clean_business);
+  if (v_report->>'safe_to_import')::boolean is not true then
+    raise exception 'Valid primitive categories and services must not block preflight: %',v_report;
   end if;
 
   if exists(select 1 from public.contacts where business_id=v_business)
