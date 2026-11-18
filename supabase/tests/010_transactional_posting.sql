@@ -20,13 +20,16 @@ begin
  end if;
  v_fn:=pg_get_functiondef('public.post_journal_entry(uuid,date,text,uuid,jsonb,text)'::regprocedure);
  if position('accounting.journal.post' in v_fn)=0 or position('debit_total' in v_fn)=0
-   or position('credit_total' in v_fn)=0 or position('status=''posted''' in v_fn)=0 then
+   or position('credit_total' in v_fn)=0 or position('status=''posted''' in v_fn)=0
+   or position('pg_advisory_xact_lock' in v_fn)=0 or position('trunc(v_debit)' in v_fn)=0 then
   raise exception 'Journal posting permission, balance or posting checks are missing';
  end if;
  v_fn:=pg_get_functiondef('public.post_stock_transfer(uuid,uuid,uuid,date,text,jsonb,text)'::regprocedure);
  if position('inventory.adjust' in v_fn)=0 or position('for update' in lower(v_fn))=0
    or position('transfer_out' in v_fn)=0 or position('transfer_in' in v_fn)=0
-   or position('insufficient stock' in lower(v_fn))=0 then
+   or position('insufficient stock' in lower(v_fn))=0
+   or position('pg_advisory_xact_lock' in v_fn)=0 or position('track_inventory' in v_fn)=0
+   or position('round(v_qty,4)' in v_fn)=0 then
   raise exception 'Stock transfer permission, locking, paired movements or stock check is missing';
  end if;
  if has_table_privilege('authenticated','public.stock_movements','INSERT')
