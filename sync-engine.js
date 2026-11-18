@@ -311,10 +311,6 @@ export function applyPulledRecords(db, state, records) {
       nextState.conflicts.push({ remote_record: clone(record), reason: 'local_pending_change' });
       continue;
     }
-    const index = rows.findIndex(row => String(
-      row && typeof row === 'object' && row.id !== undefined ? row.id :
-      (typeof row === 'string' || typeof row === 'number') ? 'value:' + row : ''
-    ) === legacyId);
     if (record.deleted_at || record.change_type === 'delete') {
       if (index >= 0) rows.splice(index, 1);
       if (nextState.snapshots[collection]) delete nextState.snapshots[collection][legacyId];
