@@ -6,7 +6,7 @@
   const base = String(cfg.supabaseUrl || '').replace(/\/$/, '');
   const key = String(cfg.publishableKey || '');
   const storageKey = 'factoori_web_session_v1';
-  const state = {session:null,user:null,businesses:[],business:null,contacts:[],products:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],cheques:[],stockMovements:[],legacyCollections:{},section:'dashboard',signup:false,busy:false};
+  const state = {session:null,user:null,businesses:[],business:null,contacts:[],products:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],cheques:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},section:'dashboard',signup:false,busy:false};
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => new Intl.NumberFormat('fa-IR').format(Number(v || 0));
   const dateFa = v => { try { return new Intl.DateTimeFormat('fa-IR').format(new Date(v+'T12:00:00')); } catch (_) { return v || '—'; } };
@@ -54,7 +54,7 @@
     state.business=selected;
     if(selected) await loadData(); else clearData();
   }
-  function clearData(){state.contacts=[];state.products=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.cheques=[];state.stockMovements=[];state.legacyCollections={};}
+  function clearData(){state.contacts=[];state.products=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.cheques=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};}
   async function loadData(){
     const b=state.business?.id;if(!b){clearData();return;}
     const f='business_id=eq.'+encodeURIComponent(b);
@@ -72,11 +72,13 @@
     const optional=await Promise.allSettled([
       rest('financial_transactions','select=id,transaction_type,direction,amount,transaction_date,reference_number,description,status,account_id,contact_id,financial_accounts(name),contacts(name)&'+f+'&order=transaction_date.desc&limit=100'),
       rest('cheques','select=id,cheque_direction,cheque_number,sayad_id,bank_name,amount,issue_date,due_date,status,contact_id,contacts(name),note&'+f+'&order=due_date.asc&limit=100'),
-      rest('stock_movements','select=id,product_id,warehouse_id,movement_type,quantity_delta,movement_date,note,products(name),warehouses(name)&'+f+'&order=movement_date.desc&limit=150')
+      rest('stock_movements','select=id,product_id,warehouse_id,movement_type,quantity_delta,movement_date,note,products(name),warehouses(name)&'+f+'&order=movement_date.desc&limit=150'),
+      rpc('web_list_inventory_balances',{p_business_id:b})
     ]);
     state.transactions=optional[0].status==='fulfilled'?(optional[0].value||[]):[];
     state.cheques=optional[1].status==='fulfilled'?(optional[1].value||[]):[];
     state.stockMovements=optional[2].status==='fulfilled'?(optional[2].value||[]):[];
+    state.inventoryBalances=optional[3].status==='fulfilled'?(optional[3].value||[]):[];
     const legacyGroups=[
       ['pay','debt','creditors','creditorPayments','expenses','otherincome','supplierPayments','moneytransfers'],
       ['serviceInv','purchases','returns','duedates','fiscal'],
@@ -139,9 +141,7 @@
     shell(form+'<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>دفتر چک‌ها</h2><p>'+money(state.cheques.length)+' چک ثبت‌شده</p></div></div>'+table(rows,['شماره','نوع','شخص','سررسید','مبلغ','وضعیت','عملیات'],'چکی ثبت نشده است.')+'</section>','مدیریت چک‌ها','ثبت و پیگیری چک‌های دریافتی و پرداختی');
   }
   function inventory(){
-    const balances=new Map();
-    state.stockMovements.forEach(m=>{const key=m.product_id+'|'+m.warehouse_id;const cur=balances.get(key)||{product:m.products?.name||m.product_id,warehouse:m.warehouses?.name||'—',qty:0};cur.qty+=Number(m.quantity_delta||0);balances.set(key,cur);});
-    const rows=[...balances.values()].map(x=>'<tr><td>'+esc(x.product)+'</td><td>'+esc(x.warehouse)+'</td><td>'+money(x.qty)+'</td></tr>');
+    const rows=state.inventoryBalances.map(x=>'<tr><td>'+esc(x.product_name)+'</td><td>'+esc(x.warehouse_name)+'</td><td>'+money(x.quantity)+'</td></tr>');
     const moves=state.stockMovements.slice(0,40).map(m=>'<tr><td>'+dateFa(m.movement_date?.slice(0,10))+'</td><td>'+esc(m.products?.name||'—')+'</td><td>'+esc(m.warehouses?.name||'—')+'</td><td>'+esc(m.movement_type)+'</td><td>'+money(m.quantity_delta)+'</td></tr>');
     const products=state.products.filter(x=>x.track_inventory).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
     const warehouses=state.warehouses.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
