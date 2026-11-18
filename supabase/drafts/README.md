@@ -48,6 +48,8 @@ The SQL source files remain under `supabase/drafts/` as the tested development s
 42. `041_sales_invoice_mobile_bridge.sql` — mirrors normalized web goods-sale drafts into the Android `inv` sync stream and exposes mobile-origin invoices to web.
 43. `042_invoice_bridge_warehouse_fix.sql` — removes an unsupported legacy warehouse lookup and safely handles non-numeric document numbers.
 44. `043_restrict_legacy_license_rpc.sql` — removes direct anon/authenticated execution of the legacy license RPC; the signed Edge Function retains service-role access.
+45. `044_web_legacy_collection_reads.sql` — adds permission-checked access to Android legacy collections for the web workspace.
+46. `045_web_inventory_balance_rpc.sql` — exposes complete product/warehouse balances aggregated from all stock movements.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -66,7 +68,7 @@ The SQL source files remain under `supabase/drafts/` as the tested development s
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all forty-four draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all forty-six SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all forty-five draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all forty-eight SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -120,6 +122,8 @@ The test scripts are:
 - `supabase/tests/041_sales_invoice_mobile_bridge.sql`
 - `supabase/tests/042_invoice_bridge_warehouse_fix.sql`
 - `supabase/tests/043_restrict_legacy_license_rpc.sql`
+- `supabase/tests/044_web_legacy_collection_reads.sql`
+- `supabase/tests/045_web_inventory_balance_rpc.sql`
 
 ## Device proof deployment note
 
@@ -290,3 +294,8 @@ Normalized web goods-sale drafts receive a mobile-compatible document number and
 ## Legacy license RPC hardening (043)
 
 The Android license client calls the signed `activate-license` Edge Function, which uses the service-role client internally. Direct execution of the older `public.activate_license` SECURITY DEFINER function is therefore revoked from anon/authenticated and retained only for `service_role`.
+
+
+## Web legacy data and inventory (044–045)
+
+The web workspace can request Android legacy collections through a permission-checked allowlisted RPC, keeping private cost fields behind the catalog cost permission. Inventory balances are calculated from the complete stock movement history by a separate permission-checked RPC; the UI no longer needs to infer current stock from a truncated recent-movement list.
