@@ -165,11 +165,22 @@ const api = {
     }));
     try {
       await saveDevicePrivateKey(deviceId, payload.businessId, privateKey);
+      localStorage.setItem('factoori:sync-device:' + payload.businessId, deviceId);
     } catch (error) {
       await client.rpc('revoke_sync_device', { p_business_id: payload.businessId, p_device_id: deviceId });
       throw error;
     }
     return { deviceId, businessId: payload.businessId, proofRequired: true };
+  },
+  async ensureSyncDevice(payload) {
+    if (!payload?.businessId) throw new Error('کسب‌وکار برای تأیید دستگاه مشخص نشده است.');
+    let deviceId = '';
+    try { deviceId = localStorage.getItem('factoori:sync-device:' + payload.businessId) || ''; } catch {}
+    if (deviceId && await getDevicePrivateKey(deviceId)) {
+      return await this.proveSyncDevice({ businessId: payload.businessId, deviceId });
+    }
+    const registered = await this.registerSyncDevice(payload);
+    return await this.proveSyncDevice({ businessId: payload.businessId, deviceId: registered.deviceId });
   },
   async proveSyncDevice(payload) {
     if (!payload?.businessId || !payload?.deviceId) throw new Error('دستگاه برای تأیید مشخص نشده است.');
@@ -194,6 +205,7 @@ const api = {
       p_business_id: businessId, p_device_id: deviceId
     }));
     await deleteDevicePrivateKey(deviceId);
+    try { if (localStorage.getItem('factoori:sync-device:' + businessId) === deviceId) localStorage.removeItem('factoori:sync-device:' + businessId); } catch {}
     return result;
   },
   async postJournalEntry(payload) {
