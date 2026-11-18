@@ -934,6 +934,13 @@ test('checkpoint recovery restores pulled records and overlays only local edits 
   ]);
   assert.deepEqual(merged.prod, [{ id: 'p1', n: 'remote unchanged' }]);
   assert.equal(merged.advancedSettings.sms.apiKey, 'NEW-LOCAL');
+  const noIdMerge = mergeLocalChangesOntoCheckpoint({
+    baseDatabase: { services: ['cut', 'wash', 'cut'] },
+    localDatabase: { services: ['cut', 'local-service', 'wash', 'cut'] },
+    checkpointDatabase: { services: ['cut', 'wash', 'remote-service', 'cut'] }
+  });
+  assert.deepEqual(noIdMerge.services, ['cut', 'local-service', 'wash', 'cut'],
+    'collections without stable IDs must preserve the complete local list, including duplicate values');
 });
 
 
