@@ -421,9 +421,9 @@ async function loadCloudBusinesses(){
  }
  try{cloudBusinesses=await api.listBusinesses(cloudSession.user.id)}
  catch(error){
-  cloudBusinesses=[];cloudActiveBusinessId='';
-  try{localStorage.removeItem('factoori:active-business')}catch(e){}
-  if(!demoMode)resetCloudBusinessContext();
+  // A failed membership request is not proof that the user has no businesses.
+  // Preserve the current selection and local database; only a successful
+  // membership response may invalidate an active business.
   throw error;
  }
  businessScopedMode=true;
