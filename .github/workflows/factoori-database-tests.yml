@@ -167,7 +167,7 @@ jobs:
       - name: Apply post-license hardening and web read APIs
         run: |
           set -euo pipefail
-          for migration in 043_restrict_legacy_license_rpc.sql 044_web_legacy_collection_reads.sql 045_web_inventory_balance_rpc.sql; do
+          for migration in 043_restrict_legacy_license_rpc.sql 044_web_legacy_collection_reads.sql 045_web_inventory_balance_rpc.sql 046_web_mobile_financial_inventory_bridge.sql 047_stock_bridge_warehouse_compatibility.sql; do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
             echo "::endgroup::"
@@ -223,7 +223,9 @@ jobs:
             042_invoice_bridge_warehouse_fix.sql \
             043_restrict_legacy_license_rpc.sql \
             044_web_legacy_collection_reads.sql \
-            045_web_inventory_balance_rpc.sql
+            045_web_inventory_balance_rpc.sql \
+            046_web_mobile_financial_inventory_bridge.sql \
+            047_stock_bridge_warehouse_compatibility.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
