@@ -74,7 +74,7 @@
       rest('cheques','select=id,cheque_direction,cheque_number,sayad_id,bank_name,amount,issue_date,due_date,status,contact_id,contacts(name),note&'+f+'&order=due_date.asc&limit=100'),
       rest('stock_movements','select=id,product_id,warehouse_id,movement_type,quantity_delta,movement_date,note,products(name),warehouses(name)&'+f+'&order=movement_date.desc&limit=150'),
       rpc('web_list_inventory_balances',{p_business_id:b}),
-      rest('services','select=id,name,description,sale_price,is_active&'+f+'&is_active=eq.true&order=name.asc')
+      rest('services','select=id,legacy_id,name,description,sale_price,is_active&'+f+'&is_active=eq.true&order=name.asc')
     ]);
     state.transactions=optional[0].status==='fulfilled'?(optional[0].value||[]):[];
     state.cheques=optional[1].status==='fulfilled'?(optional[1].value||[]):[];
