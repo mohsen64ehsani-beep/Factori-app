@@ -10,6 +10,7 @@ on:
       - "sync-storage.js"
       - "sync-db-adapter.js"
       - "cloud-client.js"
+      - "cloud-health.js"
       - "index.html"
       - ".github/workflows/factoori-sync-engine-tests.yml"
   pull_request:
@@ -21,6 +22,7 @@ on:
       - "cloud-client.js"
       - "index.html"
       - ".github/workflows/factoori-sync-engine-tests.yml"
+      - "cloud-health.js"
   workflow_dispatch:
 
 permissions:
