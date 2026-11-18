@@ -95,7 +95,7 @@ begin
   );
   return true;
 end;
-$;
+$$;
 
 revoke all on function public.provision_business_member(uuid,uuid,text,uuid,jsonb) from public,anon,authenticated;
 grant execute on function public.provision_business_member(uuid,uuid,text,uuid,jsonb) to service_role;
