@@ -172,8 +172,13 @@ begin
    if v_payload ? 'minQty' and coalesce(v_payload->>'minQty','') !~ '^[0-9]+([.][0-9]{1,4})?$' then
     v_invalid:=v_invalid+1; continue;
    end if;
-   v_sale_price:=coalesce(nullif(v_payload->>'sell','')::numeric,0)::numeric(20,0);
-   v_minimum_stock:=coalesce(nullif(v_payload->>'minQty','')::numeric,0)::numeric(20,4);
+   begin
+    v_sale_price:=coalesce(nullif(v_payload->>'sell','')::numeric,0)::numeric(20,0);
+    v_minimum_stock:=coalesce(nullif(v_payload->>'minQty','')::numeric,0)::numeric(20,4);
+   exception when numeric_value_out_of_range or invalid_text_representation then
+    v_invalid:=v_invalid+1;
+    continue;
+   end;
    if v_sale_price<0 or v_minimum_stock<0 then
     v_invalid:=v_invalid+1; continue;
    end if;
