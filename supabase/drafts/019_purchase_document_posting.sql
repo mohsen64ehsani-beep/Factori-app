@@ -34,7 +34,8 @@ declare
   v_user uuid:=auth.uid();
   v_doc record;
   v_item record;
-  v_existing record;
+  v_existing_journal_id uuid;
+  v_existing_fingerprint text;
   v_fingerprint text;
   v_journal_id uuid;
   v_inventory_account_id uuid;
@@ -56,7 +57,10 @@ declare
   v_quantity numeric(20,4);
   v_unit_cost numeric(20,0);
   v_tax numeric(30,0):=0;
+  v_expected_tax numeric(30,0):=0;
+  v_line_tax numeric(30,0):=0;
   v_line_total numeric(30,0):=0;
+  v_expected_total numeric(30,0):=0;
   v_inventory_total numeric(30,0):=0;
   v_document_total numeric(30,0):=0;
 begin
@@ -95,14 +99,14 @@ begin
     where di.business_id=p_business_id and di.document_id=p_document_id),'[]'::jsonb)
   )::text);
 
-  select dp.journal_entry_id,dp.request_fingerprint into v_existing
+  select dp.journal_entry_id,dp.request_fingerprint into v_existing_journal_id,v_existing_fingerprint
   from public.document_postings dp
   where dp.business_id=p_business_id and dp.idempotency_key=p_idempotency_key;
-  if v_existing.journal_entry_id is not null then
-    if v_existing.request_fingerprint is distinct from v_fingerprint then
+  if v_existing_journal_id is not null then
+    if v_existing_fingerprint is distinct from v_fingerprint then
       raise exception using errcode='23505',message='Idempotency key was already used with different purchase data';
     end if;
-    return v_existing.journal_entry_id;
+    return v_existing_journal_id;
   end if;
 
   if v_doc.status<>'draft' or v_doc.document_type<>'purchase' then
@@ -160,6 +164,7 @@ begin
     or v_tax<>v_doc.tax_amount
     or v_line_total<>v_doc.total_amount
     or v_doc.taxable_amount+v_doc.tax_amount<>v_doc.total_amount
+    or v_subtotal<>v_doc.subtotal
     or v_subtotal-v_doc.discount_amount<>v_doc.taxable_amount then
     raise exception using errcode='23514',message='Purchase document totals do not reconcile';
   end if;
@@ -169,7 +174,8 @@ begin
     where di.business_id=p_business_id and di.document_id=p_document_id
       and (di.item_type<>'goods' or di.product_id is null or di.service_id is not null
         or di.quantity<=0 or di.unit_price<0 or di.discount_amount<0
-        or di.discount_amount>round(di.quantity*di.unit_price))
+        or di.discount_amount>round(di.quantity*di.unit_price)
+        or di.tax_rate_snapshot<0 or di.tax_rate_snapshot>100)
   ) then
     raise exception using errcode='22023',message='Purchase document contains an invalid goods line';
   end if;
@@ -240,6 +246,12 @@ begin
     end if;
     v_allocated_total:=v_allocated_total+v_allocated_header_discount;
     v_line_cost:=greatest(0,v_line_base-v_allocated_header_discount);
+    v_line_tax:=round(v_line_cost*v_item.tax_rate_snapshot/100);
+    if v_line_tax<>v_item.tax_amount or v_line_cost+v_line_tax<>v_item.line_total then
+      raise exception using errcode='23514',message='Purchase line tax or total does not reconcile';
+    end if;
+    v_expected_tax:=v_expected_tax+v_line_tax;
+    v_expected_total:=v_expected_total+v_line_cost+v_line_tax;
     v_unit_cost:=case when v_quantity=0 then 0 else round(v_line_cost/v_quantity) end;
     v_inventory_total:=v_inventory_total+v_line_cost;
 
@@ -271,8 +283,9 @@ begin
     );
   end loop;
 
-  if v_inventory_total<>v_doc.taxable_amount then
-    raise exception using errcode='23514',message='Inventory cost does not match the purchase taxable amount';
+  if v_inventory_total<>v_doc.taxable_amount or v_expected_tax<>v_doc.tax_amount
+    or v_expected_total<>v_doc.total_amount then
+    raise exception using errcode='23514',message='Purchase inventory, tax, or total does not reconcile';
   end if;
 
   insert into public.journal_lines(
