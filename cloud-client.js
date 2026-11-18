@@ -165,7 +165,8 @@ const api = {
     }));
     try {
       await saveDevicePrivateKey(deviceId, payload.businessId, privateKey);
-      localStorage.setItem('factoori:sync-device:' + payload.businessId, deviceId);
+      try { localStorage.setItem('factoori:sync-device:' + payload.businessId, deviceId); }
+      catch (storageError) { await deleteDevicePrivateKey(deviceId); throw storageError; }
     } catch (error) {
       await client.rpc('revoke_sync_device', { p_business_id: payload.businessId, p_device_id: deviceId });
       throw error;
@@ -178,6 +179,9 @@ const api = {
     try { deviceId = localStorage.getItem('factoori:sync-device:' + payload.businessId) || ''; } catch {}
     if (deviceId && await getDevicePrivateKey(deviceId)) {
       return await this.proveSyncDevice({ businessId: payload.businessId, deviceId });
+    }
+    if (deviceId) {
+      await this.revokeSyncDevice(payload.businessId, deviceId);
     }
     const registered = await this.registerSyncDevice(payload);
     return await this.proveSyncDevice({ businessId: payload.businessId, deviceId: registered.deviceId });
