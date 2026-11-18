@@ -5,7 +5,7 @@ begin;
 -- The minimal CI Auth shim omits this Supabase users column by default.
 alter table auth.users add column if not exists raw_user_meta_data jsonb not null default '{}'::jsonb;
 
-do $
+do $static$
 declare v_def text;
 begin
  if to_regprocedure('public.preview_legacy_normalization(uuid)') is null then
