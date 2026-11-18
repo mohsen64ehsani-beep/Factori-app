@@ -132,6 +132,7 @@ create table if not exists public.stock_movements (
  foreign key(business_id,warehouse_id) references public.warehouses(business_id,id),
  foreign key(business_id,document_id) references public.documents(business_id,id),
  foreign key(business_id,document_item_id) references public.document_items(business_id,id),
+ unique(business_id,id),
  unique(business_id,idempotency_key),
  unique(business_id,source_legacy_id)
 );
