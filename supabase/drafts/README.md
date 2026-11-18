@@ -54,7 +54,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all thirty-three draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all thirty-five SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all thirty-four draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all thirty-six SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -97,6 +97,7 @@ The test scripts are:
 - `supabase/tests/030_legacy_fiscal_period_import.sql`
 - `supabase/tests/031_service_document_posting.sql`
 - `supabase/tests/032_cheque_lifecycle_posting.sql`
+- `supabase/tests/033_cheque_reversal_posting.sql`
 - `supabase/tests/031_service_document_posting.sql`
 
 ## Device proof deployment note
@@ -223,3 +224,8 @@ Migration 031 adds `public.post_service_document(uuid,uuid,text)` for normalized
 ## Cheque lifecycle and settlement (032)
 
 Migration 032 adds `public.create_cheque(...)` and `public.transition_cheque(...)`. Cheque creation is fingerprinted and idempotent, validates same-business customer/supplier ownership, Sayad ID format and date/amount fields, and records a `created` event. Allowed pre-settlement transitions are audited (`pending` to `deposited`, `bounced`, `cancelled` or `returned`; received `deposited` to `cleared`, `bounced`, `cancelled` or `returned`; issued `pending` to `cleared`, `bounced` or `cancelled`). Clearing a received cheque posts a normal customer receipt; clearing an issued cheque posts a normal supplier payment. The transaction and cheque event/status update are atomic. A cheque already cleared cannot be marked bounced/returned by status edit; it requires a separate audited reversal flow, which remains a release gate. Test 032 covers idempotent creation/event replay, deposit without premature cash posting, received and issued cheque settlement, bounced-before-clear behavior and tenant isolation.
+
+
+## Cleared-cheque reversal (033)
+
+Migration 033 adds `public.reverse_cleared_cheque(uuid,uuid,date,text,text)`. It is separate from ordinary status transitions: it locks the cheque, validates the original posted settlement transaction and journal, copies the original journal lines with debit/credit reversed, links the new journal through `reverses_entry_id`, writes a reversal financial transaction and the opposite contact-ledger entry, stores a private one-to-one reversal record, and only then changes the cheque to `bounced`. The original transaction and journal remain intact; the reversal is a new auditable event. Test 033 covers both received and issued cheque reversals, journal balance, contact-ledger direction, idempotent replay and tenant isolation.
