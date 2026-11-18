@@ -84,3 +84,32 @@ test('cursor cannot move backwards or exceed safe integer precision', () => {
   assert.throws(() => advanceSyncCursor(state, 8));
   assert.throws(() => advanceSyncCursor(state, Number.MAX_SAFE_INTEGER + 1));
 });
+
+test('SQL pull envelope is validated and cursor advances only after successful merge', async () => {
+  const { applySyncPullPage } = await import('./sync-engine.js');
+  const initialDb = { cust: [{ id: 'c1', n: 'local' }] };
+  const initialState = createSyncState();
+  const applied = applySyncPullPage(initialDb, initialState, {
+    records: [{ collection: 'cust', legacy_id: 'c1', version: 2, revision: 8, change_type: 'upsert', deleted_at: null, payload: { id: 'c1', n: 'remote' } }],
+    next_cursor: 8, has_more: false, reset_required: false
+  });
+  assert.equal(applied.db.cust[0].n, 'remote');
+  assert.equal(applied.state.cursor, 8);
+  assert.equal(initialState.cursor, 0);
+  assert.equal(initialDb.cust[0].n, 'local');
+
+  const reset = applySyncPullPage(initialDb, initialState, {
+    records: [], next_cursor: 0, has_more: true, reset_required: true
+  });
+  assert.equal(reset.resetRequired, true);
+  assert.equal(reset.state.cursor, 0);
+  assert.equal(reset.db, initialDb);
+
+  assert.throws(() => applySyncPullPage(initialDb, initialState, {
+    records: 'invalid', next_cursor: 1, has_more: false, reset_required: false
+  }));
+  assert.throws(() => applySyncPullPage(initialDb, { ...initialState, cursor: 9 }, {
+    records: [], next_cursor: 8, has_more: false, reset_required: false
+  }));
+});
+
