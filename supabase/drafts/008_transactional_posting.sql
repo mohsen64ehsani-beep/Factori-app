@@ -80,7 +80,7 @@ begin
   raise exception using errcode='23514',message='Journal entry is not balanced';
  end if;
 
- v_fingerprint:=md5(jsonb_build_array(p_business_id,p_entry_date,coalesce(p_description,''),p_fiscal_period_id,v_canonical_lines)::text);
+ v_fingerprint:=md5(jsonb_build_array(p_business_id,p_entry_date,nullif(btrim(coalesce(p_description,'')),''),p_fiscal_period_id,v_canonical_lines)::text);
  perform pg_advisory_xact_lock(hashtextextended(p_business_id::text||':journal:'||p_idempotency_key,0));
  select je.id,md5(jsonb_build_array(je.business_id,je.entry_date,nullif(btrim(coalesce(je.description,'')),''),je.fiscal_period_id,
    coalesce((select jsonb_agg(jsonb_build_object('account_id',jl.account_id,'contact_id',jl.contact_id,
