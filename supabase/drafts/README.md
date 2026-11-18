@@ -27,6 +27,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 21. `020_goods_sale_posting.sql` — atomic goods-sale posting with FIFO layer consumption, cost allocations, customer ledger, revenue/tax/COGS/inventory journal and idempotency.
 22. `021_fifo_warehouse_transfers.sql` — replaces quantity-only stock transfers with FIFO-layer movement and preserved cost provenance.
 23. `022_inventory_opening_posting.sql` — posts valued opening stock into warehouse movements, FIFO layers, product cost history, and opening-equity journal atomically.
+24. `023_inventory_wastage_posting.sql` — posts wastage as FIFO stock consumption, cost allocations and an expense/inventory write-off journal.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -45,7 +46,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all twenty-three draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty-five SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all twenty-four draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty-six SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -78,6 +79,7 @@ The test scripts are:
 - `supabase/tests/020_goods_sale_posting.sql`
 - `supabase/tests/021_fifo_warehouse_transfers.sql`
 - `supabase/tests/022_inventory_opening_posting.sql`
+- `supabase/tests/023_inventory_wastage_posting.sql`
 
 ## Device proof deployment note
 
@@ -88,7 +90,7 @@ Migration 009, the `prove-sync-device` Edge Function source, and the Android/Web
 - Invoice numbering sequences and complete fiscal close/reopen controls
 - Journal reversal RPC, cheque lifecycle posting/assignment, normalized invoice-to-ledger posting and purchase/expense/receipt RPCs
 - Full inventory adjustment/purchase/sale posting RPCs and materialized inventory balance projections
-- Sales returns, purchase returns, refunds, cheque lifecycle, (purchase posting is in 019, goods-sale posting in 020, FIFO-layer warehouse transfers in 021, and valued opening-stock provisioning in 022)
+- Sales returns, purchase returns, refunds, cheque lifecycle, (purchase posting is in 019, goods-sale posting in 020, FIFO-layer warehouse transfers in 021, valued opening-stock provisioning in 022, and FIFO-valued wastage posting in 023)
 - Owner transfer, account deletion/retention and owner recovery
 - Verified subscription upgrades, downgrades, grace periods and paid-plan entitlements
 - Full multi-device sync runtime tests and normalized financial sync operations
@@ -148,3 +150,8 @@ Migration 021 replaces the earlier quantity-only `post_stock_transfer` implement
 ## Valued inventory opening (022)
 
 Migration 022 adds `public.post_inventory_opening(uuid,date,text,jsonb,text)`. It accepts product/warehouse/quantity/unit-cost lines, rejects duplicates and any product/warehouse pair that already has stock history, locks products and warehouses, and atomically creates opening stock movements, FIFO cost layers, protected product-cost history, and a balanced journal (debit inventory 1200 / credit owner equity 3000). The RPC is permission-gated by `inventory.adjust`, idempotent by request fingerprint, and fails closed for zero or missing cost. Opening stock is not fabricated from product display price or legacy quantity alone. Test 022 covers stock/layer creation, valuation, balanced journal, idempotent retry, changed-key rejection, duplicate-opening rejection and tenant isolation.
+
+
+## Inventory wastage posting (023)
+
+Migration 023 adds `public.post_inventory_wastage(uuid,date,text,jsonb,text)`. It validates and locks the affected products/warehouses, checks both stock movement and FIFO-layer availability before writing, creates negative wastage movements, consumes cost layers FIFO, records cost allocations, and posts the write-off to operating expense (6000) against inventory (1200). Zero-cost stock is allowed and does not create an invalid zero-value journal. The operation is idempotent, tenant-scoped and permission-gated. Test 023 covers purchase-to-wastage cost consumption, remaining quantity, balanced journal, insufficient stock, retry and cross-business denial.
