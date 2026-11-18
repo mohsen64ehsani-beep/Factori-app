@@ -886,3 +886,22 @@ test('app wires guarded sync scheduling to the runtime and rejects stale results
   assert.match(runtime, /window\.FactooriSyncRuntime = Object\.freeze/);
   assert.match(runtime, /factoori-sync-runtime-ready/);
 });
+
+
+test('business sync lock is released when checkpoint initialization fails', async () => {
+  const { runBusinessSync } = await import('./sync-runtime.js');
+  const api = {
+    ensureSyncDevice: async () => ({ verified: true, device_id: 'device-lock-test' }),
+    getSyncDeviceId: () => 'device-lock-test',
+    syncPushBatches: async () => [],
+    syncPull: async () => ({ records: [], next_cursor: 0, has_more: false, reset_required: false })
+  };
+  const options = {
+    businessId: 'business-checkpoint-failure',
+    database: { cust: [] },
+    api,
+    indexedDBImpl: { open() { throw new Error('IndexedDB unavailable in test'); } }
+  };
+  await assert.rejects(runBusinessSync(options), /IndexedDB is unavailable/);
+  await assert.rejects(runBusinessSync(options), /IndexedDB is unavailable/);
+});
