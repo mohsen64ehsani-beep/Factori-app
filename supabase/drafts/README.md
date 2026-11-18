@@ -94,6 +94,7 @@ The test scripts are:
 - `supabase/tests/028_legacy_reconciliation_gate.sql`
 - `supabase/tests/029_legacy_supplier_contact_import.sql`
 - `supabase/tests/030_legacy_fiscal_period_import.sql`
+- `supabase/tests/031_service_document_posting.sql`
 
 ## Device proof deployment note
 
@@ -204,3 +205,8 @@ Migration 029 extends the private legacy identity-map collection allowlist with 
 ## Legacy fiscal period import (030)
 
 Migration 030 adds `public.import_legacy_fiscal_periods(uuid,uuid)`. Legacy `fiscal` records contain a title and inclusive `from`/`to` dates; each is mapped to a normalized `fiscal_periods` row with `status='closed'`, preserving the old app's date-lock behavior. Invalid ranges, overlapping periods and duplicate targets are not silently imported. Repeated imports are no-ops and changed source rows become conflicts. Test 030 verifies closed status, idempotency, source-change conflict and tenant isolation.
+
+
+## Service document posting (031)
+
+Migration 031 adds `public.post_service_document(uuid,uuid,text)` for draft `service_sale` and `service_purchase` documents. It validates the same-business active customer/supplier and service catalog rows, exact line/header/tax totals, fiscal-period status, and idempotency. Service sales debit receivables and credit service revenue/output tax; service purchases debit direct service expense/recoverable input tax and credit supplier payable. Both create a contact-ledger entry and a balanced posted journal atomically. The RPC deliberately creates no stock movement or service-cost snapshot because the legacy app's service-cost fields remain excluded from import. Test 031 covers both directions, balanced journals, contact ledgers, replay, duplicate posting denial, tenant isolation, and absence of fabricated stock/cost data.
