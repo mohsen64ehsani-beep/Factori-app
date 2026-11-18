@@ -69,7 +69,7 @@ The draft review documents explicitly record blockers:
 - paid-plan entitlement enforcement is a placeholder;
 - several accounting, payment, purchase, expense, cheque and inventory workflows still need normalized transactional RPCs.
 
-The current app-side free limits (3 invoices/day, 5 customers, 5 products, 2 items/invoice) do not match the draft database quota defaults (3 invoices/day, 50 customers, 50 products, 10 items/invoice). These must be reconciled before quotas are authoritative. Draft 013 now ensures a valid Premium entitlement bypasses server-side Free quota checks, but the actual Free thresholds still need product approval and alignment.
+The app-side free limits and draft database quota defaults are now aligned at 3 invoices/day, 5 customers, 5 products, and 2 items/invoice. Migration 004a seeds these values for new and existing draft businesses; regression test 013 asserts the customer, product, invoice-item, and daily-invoice caps. This alignment is still draft-only and is not active in production. Draft 013 ensures a valid perpetual Premium entitlement bypasses server-side Free quota checks; subscription lifecycle and paid-plan entitlements beyond the perpetual license remain out of scope.
 
 The existing isolated PostgreSQL 17 CI validates SQL draft application and regression assertions, but its own README correctly states that it is not a full Supabase/Auth/Edge Function emulator and does not prove production readiness.
 
