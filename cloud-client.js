@@ -87,6 +87,34 @@ const api = {
       p_idempotency_key: payload.idempotencyKey
     }));
   },
+  async postJournalEntry(payload) {
+    if (!payload?.businessId || !payload?.entryDate || !payload?.idempotencyKey || !Array.isArray(payload?.lines)) {
+      throw new Error('اطلاعات سند حسابداری کامل نیست.');
+    }
+    return unwrap(await client.rpc('post_journal_entry', {
+      p_business_id: payload.businessId,
+      p_entry_date: payload.entryDate,
+      p_description: payload.description || null,
+      p_fiscal_period_id: payload.fiscalPeriodId || null,
+      p_lines: payload.lines,
+      p_idempotency_key: payload.idempotencyKey
+    }));
+  },
+  async postStockTransfer(payload) {
+    if (!payload?.businessId || !payload?.fromWarehouseId || !payload?.toWarehouseId
+      || !payload?.transferDate || !payload?.idempotencyKey || !Array.isArray(payload?.items)) {
+      throw new Error('اطلاعات انتقال انبار کامل نیست.');
+    }
+    return unwrap(await client.rpc('post_stock_transfer', {
+      p_business_id: payload.businessId,
+      p_from_warehouse_id: payload.fromWarehouseId,
+      p_to_warehouse_id: payload.toWarehouseId,
+      p_transfer_date: payload.transferDate,
+      p_note: payload.note || null,
+      p_items: payload.items,
+      p_idempotency_key: payload.idempotencyKey
+    }));
+  },
   async getClientHealth() {
     // A successful Auth session alone does not mean the shared-account schema
     // has been deployed. Probe every relation required by the account UI and
