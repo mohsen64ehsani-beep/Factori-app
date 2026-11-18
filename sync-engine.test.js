@@ -955,3 +955,30 @@ test('account isolation and logout preserve the active database when local persi
   assert.ok(restore.indexOf('return false') < restore.indexOf("localDbBusinessId=''"), 'failed logout persistence must preserve the active local database');
   assert.match(html, /const initialSession=await api\.getSession\(\);[\s\S]*?isolateLocalDataForCloudSession\(\);\s*cloudSession=initialSession/);
 });
+
+
+test('splash routes through full-screen shared account auth and logout returns to auth gate', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const app = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  assert.match(app, /if\(lk=='auth'\)return/);
+  assert.match(app, /lk='auth';lock=true/);
+  assert.match(app, /cloudContinue:async/);
+  assert.match(app, /lock=true;lk='auth';cloudAuthMode='login'/);
+  assert.match(app, /data-a="cloudRegister"/);
+});
+
+test('employee management is wired to a server-side provisioning function', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const app = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const ui = await readFile(new URL('./member-management-ui.js', import.meta.url), 'utf8');
+  const cloud = await readFile(new URL('./cloud-client.js', import.meta.url), 'utf8');
+  const edge = await readFile(new URL('./supabase/functions/manage-business-members/index.ts', import.meta.url), 'utf8');
+  const migration = await readFile(new URL('./supabase/drafts/011_employee_provisioning.sql', import.meta.url), 'utf8');
+  assert.match(app, /cloudMemberCreate:async/);
+  assert.match(ui, /memberPassword/);
+  assert.match(ui, /data-member-perm/);
+  assert.match(cloud, /manageBusinessMembers\(payload\)/);
+  assert.match(edge, /auth\.admin\.createUser/);
+  assert.match(edge, /provision_business_member/);
+  assert.match(migration, /role_code in \('owner','admin','accountant','sales','viewer','warehouse'\)/);
+});
