@@ -21,8 +21,14 @@ begin
  end if;
  if not has_function_privilege('authenticated','public.set_financial_account_ledger_map(uuid,uuid,uuid)','EXECUTE')
    or not has_function_privilege('authenticated','public.post_account_transfer(uuid,uuid,uuid,numeric,date,text,text,uuid)','EXECUTE')
+   or has_function_privilege('anon','public.set_financial_account_ledger_map(uuid,uuid,uuid)','EXECUTE')
    or has_function_privilege('anon','public.post_account_transfer(uuid,uuid,uuid,numeric,date,text,text,uuid)','EXECUTE') then
   raise exception 'Account transfer RPC grants are incorrect';
+ end if;
+ v_fn:=pg_get_functiondef('public.set_financial_account_ledger_map(uuid,uuid,uuid)'::regprocedure);
+ if position('settings.manage' in v_fn)=0 or position('account_class=''asset''' in v_fn)=0
+   or position('is_active' in v_fn)=0 then
+  raise exception 'Financial account mapping must require settings permission and active asset ledger accounts';
  end if;
  v_fn:=pg_get_functiondef('public.post_account_transfer(uuid,uuid,uuid,numeric,date,text,text,uuid)'::regprocedure);
  if position('payments.create' in v_fn)=0 or position('pg_advisory_xact_lock' in v_fn)=0
