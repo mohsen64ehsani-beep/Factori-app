@@ -1,3 +1,4 @@
+import { isSchemaProbeErrorReady } from './cloud-health.js';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://rtlwztotaolbnjdtsjqy.supabase.co';
@@ -413,15 +414,7 @@ const api = {
       revokeDeviceProbe, journalPostProbe, stockTransferProbe];
     // A transport failure has no Postgres/PostgREST code and must never be
     // interpreted as proof that the schema is deployed.
-    const rpcReady = rpcResults.every(result => {
-      if (!result.error) return true;
-      const code = String(result.error.code || '');
-      // Only a PostgreSQL SQLSTATE or a PostgREST error code proves that the
-      // request reached the API/schema layer. Network/client errors fail closed.
-      return /^[0-9A-Z]{5}$/.test(code) || /^PGRST[0-9]{3}$/.test(code)
-        ? code !== 'PGRST202'
-        : false;
-    });
+    const rpcReady = rpcResults.every(result => isSchemaProbeErrorReady(result.error));
     if (!rpcReady) return false;
 
     // A 400 response for an empty body means the function is deployed and correctly rejects
