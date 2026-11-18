@@ -92,7 +92,9 @@ jobs:
             007_member_management.sql \
             008_transactional_posting.sql \
             009_device_proof.sql \
-            010_account_transfers.sql
+            010_account_transfers.sql \
+            011_employee_provisioning.sql \
+            012_member_reactivation.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
@@ -148,7 +150,9 @@ jobs:
             009_sensitive_payload_partition.sql \
             010_transactional_posting.sql \
             011_device_proof.sql \
+            011_employee_provisioning.sql \
             012_account_transfers.sql \
+            012_member_reactivation.sql \
             013_account_bound_license_entitlements.sql
           do
             echo "::group::Testing $test_file"
