@@ -81,6 +81,16 @@ export function mergeLocalChangesOntoCheckpoint({ localDatabase, baseDatabase, c
     if (sameJson(before, current)) continue;
 
     if (Array.isArray(before) && Array.isArray(current) && Array.isArray(remote)) {
+      // Collections without stable row IDs cannot be safely merged by position
+      // or value (duplicates are valid). Preserve the user's complete local
+      // version rather than silently dropping or misidentifying entries.
+      const hasStableIds = [...before, ...current, ...remote].every(value =>
+        value && typeof value === 'object' && !Array.isArray(value) && value.id !== undefined && value.id !== null
+      );
+      if (!hasStableIds) {
+        merged[key] = current;
+        continue;
+      }
       const beforeMap = new Map(before.map((value, index) => [rowIdentity(value, index), value]));
       const currentMap = new Map(current.map((value, index) => [rowIdentity(value, index), value]));
       const changed = new Set();
