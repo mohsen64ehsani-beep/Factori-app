@@ -245,7 +245,7 @@ const invoiceIssuedDay=i=>String(i.createdAt||i.dt||'').slice(0,10);
 const invoicesIssuedToday=()=>[...db.inv,...db.serviceInv].filter(i=>invoiceIssuedDay(i)===today()).length;
 const canCreateInvoice=()=>{if(licenseActive)return true;const left=FREE_DAILY_INVOICE_LIMIT-invoicesIssuedToday();if(left<=0){toast('سهمیه رایگان امروز تکمیل شده است؛ روزانه فقط ۳ فاکتور می‌توانید صادر کنید.');return false}return true};
 const freeInvoiceUsage=()=>Math.min(FREE_DAILY_INVOICE_LIMIT,invoicesIssuedToday());
-const save=()=>{if(demoMode)return;if(businessScopedMode&&!localDbBusinessId)return;try{localStorage.setItem(localDbBusinessId?BUSINESS_DB_PREFIX+localDbBusinessId:K,JSON.stringify(db))}catch(e){toast('حافظه پر است')}},
+const save=()=>{if(demoMode)return;if(businessScopedMode&&!localDbBusinessId)return;try{localStorage.setItem(localDbBusinessId?BUSINESS_DB_PREFIX+localDbBusinessId:K,JSON.stringify(db));dbRevision++;scheduleBusinessSync()}catch(e){toast('حافظه پر است')}},
 uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6),
 money=n=>fa(n)+' '+db.cu,
 dstr=d=>d?new Date(d).toLocaleDateString('fa-IR-u-ca-persian',{year:'numeric',month:'long',day:'numeric',timeZone:'UTC'}):'',
