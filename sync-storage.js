@@ -41,8 +41,11 @@ export async function loadSyncCheckpoint(businessId, indexedDBImpl) {
   const db = await openSyncCheckpointStore(indexedDBImpl);
   try {
     const tx = db.transaction(STORE_NAME, 'readonly');
+    // Attach completion handlers immediately: IndexedDB may complete the
+    // transaction before the request promise continuation resumes.
+    const done = transactionDone(tx);
     const result = await requestResult(tx.objectStore(STORE_NAME).get(String(businessId)));
-    await transactionDone(tx);
+    await done;
     return result || null;
   } finally {
     db.close();
@@ -60,6 +63,7 @@ export async function commitSyncCheckpoint(businessId, dbSnapshot, syncState, in
   const db = await openSyncCheckpointStore(indexedDBImpl);
   try {
     const tx = db.transaction(STORE_NAME, 'readwrite');
+    const done = transactionDone(tx);
     tx.objectStore(STORE_NAME).put({
       businessId: String(businessId),
       db: dbSnapshot,
@@ -67,7 +71,7 @@ export async function commitSyncCheckpoint(businessId, dbSnapshot, syncState, in
       savedAt: Date.now(),
       schemaVersion: 1
     });
-    await transactionDone(tx);
+    await done;
     return true;
   } finally {
     db.close();
@@ -79,8 +83,9 @@ export async function clearSyncCheckpoint(businessId, indexedDBImpl) {
   const db = await openSyncCheckpointStore(indexedDBImpl);
   try {
     const tx = db.transaction(STORE_NAME, 'readwrite');
+    const done = transactionDone(tx);
     tx.objectStore(STORE_NAME).delete(String(businessId));
-    await transactionDone(tx);
+    await done;
     return true;
   } finally {
     db.close();
