@@ -133,6 +133,9 @@ jobs:
           echo "::group::Applying 013_account_bound_license_entitlements.sql"
           psql -v ON_ERROR_STOP=1 -f supabase/drafts/013_account_bound_license_entitlements.sql
           echo "::endgroup::"
+          echo "::group::Applying 014_legacy_normalization_preflight.sql"
+          psql -v ON_ERROR_STOP=1 -f supabase/drafts/014_legacy_normalization_preflight.sql
+          echo "::endgroup::"
 
       - name: Run database regression checks
         run: |
@@ -153,7 +156,8 @@ jobs:
             011_employee_provisioning.sql \
             012_account_transfers.sql \
             012_member_reactivation.sql \
-            013_account_bound_license_entitlements.sql
+            013_account_bound_license_entitlements.sql \
+            014_legacy_normalization_preflight.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
