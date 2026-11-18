@@ -86,7 +86,8 @@ jobs:
             005_sync_compatibility.sql \
             006_journal_integrity.sql \
             007_member_management.sql \
-            008_transactional_posting.sql
+            008_transactional_posting.sql \
+            009_device_proof.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
@@ -107,7 +108,8 @@ jobs:
             007_member_management.sql \
             008_security_surface.sql \
             009_sensitive_payload_partition.sql \
-            010_transactional_posting.sql
+            010_transactional_posting.sql \
+            011_device_proof.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
