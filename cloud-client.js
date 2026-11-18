@@ -27,6 +27,11 @@ function unwrap(result) {
   return result?.data;
 }
 
+function emitAuthCallback(detail) {
+  // Let the app's inline UI script register its listener before notifying it.
+  setTimeout(() => window.dispatchEvent(new CustomEvent('factoori:auth-callback', { detail })), 0);
+}
+
 const handledAuthCodes = new Set();
 async function completeAuthRedirect(rawUrl) {
   if (!rawUrl) return false;
@@ -47,9 +52,7 @@ async function completeAuthRedirect(rawUrl) {
   handledAuthCodes.add(code);
   try {
     unwrap(await client.auth.exchangeCodeForSession(code));
-    window.dispatchEvent(new CustomEvent('factoori:auth-callback', {
-      detail: { success: true }
-    }));
+    emitAuthCallback({ success: true });
     return true;
   } catch (error) {
     handledAuthCodes.delete(code);
@@ -59,9 +62,7 @@ async function completeAuthRedirect(rawUrl) {
 
 function reportAuthRedirectError(error) {
   console.error('[Factoori email confirmation]', error);
-  window.dispatchEvent(new CustomEvent('factoori:auth-callback', {
-    detail: { success: false, message: error?.message || 'تأیید ایمیل انجام نشد.' }
-  }));
+  emitAuthCallback({ success: false, message: error?.message || 'تأیید ایمیل انجام نشد.' });
 }
 
 async function initializeAuthDeepLinks() {
