@@ -5,7 +5,7 @@ begin;
 -- Supabase Auth user rows expose raw_user_meta_data; add it to the minimal CI shim.
 alter table auth.users add column if not exists raw_user_meta_data jsonb not null default '{}'::jsonb;
 
-do $
+do $test$
 declare
   v_owner uuid := '10000000-0000-4000-8000-000000000001';
   v_other uuid := '10000000-0000-4000-8000-000000000002';
@@ -115,6 +115,6 @@ begin
   exception when insufficient_privilege then null;
   end;
 end;
-$$;
+$test$;
 
 rollback;
