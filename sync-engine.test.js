@@ -469,3 +469,37 @@ test('cloud client RPC argument names exist in the checked-in SQL contracts', as
     assert.deepEqual([...keys].filter(key => !accepted.has(key)), [], 'unknown RPC args for ' + name);
   }
 });
+
+
+test('permission-version reset redacts stale private cache and quarantines pending payloads', async () => {
+  const { applySyncPullPage } = await import('./sync-engine.js');
+  const db = {
+    prod: [{ id: 'p1', n: 'محصول', buy: 120, averageCost: 90, nested: [{ profit: 30, qty: 2 }] }],
+    inv: [{ id: 'i1', items: [{ name: 'x', costTotal: 500, price: 900 }], profitAmount: 400 }],
+    advancedSettings: { sms: { apiKey: 'LOCAL-SECRET' } }
+  };
+  const state = {
+    ...createSyncState(),
+    cursor: 81,
+    versions: { prod: { p1: 3 } },
+    snapshots: { prod: { p1: JSON.stringify({ id: 'p1', n: 'محصول', buy: 120 }) } },
+    pending: [{ operation_id: 'pending-secret', collection: 'prod', legacy_id: 'p1',
+      operation_type: 'upsert', base_version: 3, payload: { id: 'p1', buy: 150, price: 200 } }]
+  };
+  const result = applySyncPullPage(db, state, { reset_required: true });
+  assert.equal(result.resetRequired, true);
+  assert.equal(result.state.cursor, 0);
+  assert.equal(result.db.prod[0].buy, undefined);
+  assert.equal(result.db.prod[0].averageCost, undefined);
+  assert.equal(result.db.prod[0].nested[0].profit, undefined);
+  assert.equal(result.db.inv[0].items[0].costTotal, undefined);
+  assert.equal(result.db.inv[0].items[0].price, 900);
+  assert.equal(result.db.inv[0].profitAmount, undefined);
+  assert.equal(result.db.advancedSettings.sms.apiKey, 'LOCAL-SECRET');
+  assert.equal(result.state.pending.length, 0);
+  assert.equal(result.state.conflicts.at(-1).reason, 'permission_version_changed');
+  assert.equal(result.state.conflicts.at(-1).operation.payload.buy, undefined);
+  assert.equal(JSON.parse(result.state.snapshots.prod.p1).buy, undefined);
+  assert.equal(state.cursor, 81, 'reset must not mutate the input sync state');
+  assert.equal(db.prod[0].buy, 120, 'reset must not mutate the live database');
+});
