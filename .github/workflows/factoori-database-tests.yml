@@ -169,7 +169,7 @@ jobs:
           set -euo pipefail
           psql -v ON_ERROR_STOP=1 <<'SQL'
           create or replace function public.activate_license(text,text)
-          returns jsonb language sql security definer set search_path='' as $ select '{}'::jsonb $;
+          returns jsonb language sql security definer set search_path='' as 'select jsonb_build_object()';
           SQL
           for migration in 043_restrict_legacy_license_rpc.sql 044_web_legacy_collection_reads.sql 045_web_inventory_balance_rpc.sql 046_web_mobile_financial_inventory_bridge.sql 047_stock_bridge_warehouse_compatibility.sql 048_web_services_and_service_invoice_bridge.sql 049_legacy_string_collection_identity_fix.sql 050_document_item_sync_bridge.sql 051_service_invoice_numbering.sql; do
             echo "::group::Applying $migration"
