@@ -71,11 +71,22 @@ begin
     raise exception 'Premium business must not consume Free daily quota';
   end if;
 
-  -- Free accounts remain subject to the server-enforced limits.
+  -- Free accounts remain subject to the exact limits shown in the Android app:
+  -- 3 invoices/day, 2 items/invoice, 5 customers and 5 products.
   perform set_config('request.jwt.claim.sub',v_other::text,true);
   begin
     perform private.assert_feature_limit(v_other_business,'invoice.items.limit',3);
     raise exception 'Free business must retain the per-record limit';
+  exception when sqlstate '54000' then null;
+  end;
+  begin
+    perform private.assert_feature_limit(v_other_business,'customers.total_limit',6);
+    raise exception 'Free business must retain the five-customer limit';
+  exception when sqlstate '54000' then null;
+  end;
+  begin
+    perform private.assert_feature_limit(v_other_business,'products.total_limit',6);
+    raise exception 'Free business must retain the five-product limit';
   exception when sqlstate '54000' then null;
   end;
   begin
