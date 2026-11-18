@@ -485,7 +485,9 @@ test('permission-version reset redacts stale private cache and quarantines pendi
     versions: { prod: { p1: 3 } },
     snapshots: { prod: { p1: JSON.stringify({ id: 'p1', n: 'محصول', buy: 120 }) } },
     pending: [{ operation_id: 'pending-secret', collection: 'prod', legacy_id: 'p1',
-      operation_type: 'upsert', base_version: 3, payload: { id: 'p1', buy: 150, price: 200 } }]
+      operation_type: 'upsert', base_version: 3, payload: { id: 'p1', buy: 150, price: 200 } }],
+    conflicts: [{ remote_record: { collection: 'prod', payload: { id: 'p1', cost: 70 } } }],
+    rejected: [{ operation: { payload: { id: 'p1', profit: 50 } } }]
   };
   const result = applySyncPullPage(db, state, { reset_required: true });
   assert.equal(result.resetRequired, true);
@@ -500,6 +502,8 @@ test('permission-version reset redacts stale private cache and quarantines pendi
   assert.equal(result.state.pending.length, 0);
   assert.equal(result.state.conflicts.at(-1).reason, 'permission_version_changed');
   assert.equal(result.state.conflicts.at(-1).operation.payload.buy, undefined);
+  assert.equal(result.state.conflicts[0].remote_record.payload.cost, undefined);
+  assert.equal(result.state.rejected[0].operation.payload.profit, undefined);
   assert.equal(JSON.parse(result.state.snapshots.prod.p1).buy, undefined);
   assert.equal(state.cursor, 81, 'reset must not mutate the input sync state');
   assert.equal(db.prod[0].buy, 120, 'reset must not mutate the live database');
