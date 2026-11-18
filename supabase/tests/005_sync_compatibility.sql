@@ -62,5 +62,25 @@ begin
     =0 then
   raise exception 'Financial and stock mutation collections must remain blocked in generic sync';
  end if;
+ if not (
+   not private.can_sync_collection(gen_random_uuid(),'debt','write')
+   and not private.can_sync_collection(gen_random_uuid(),'returns','write')
+   and not private.can_sync_collection(gen_random_uuid(),'pay','write')
+   and not private.can_sync_collection(gen_random_uuid(),'creditors','write')
+   and not private.can_sync_collection(gen_random_uuid(),'purchases','write')
+   and not private.can_sync_collection(gen_random_uuid(),'supplierPayments','write')
+   and not private.can_sync_collection(gen_random_uuid(),'creditorPayments','write')
+   and not private.can_sync_collection(gen_random_uuid(),'expenses','write')
+   and not private.can_sync_collection(gen_random_uuid(),'otherincome','write')
+   and not private.can_sync_collection(gen_random_uuid(),'wastage','write')
+   and not private.can_sync_collection(gen_random_uuid(),'stockMoves','write')
+   and not private.can_sync_collection(gen_random_uuid(),'warehouseStocks','write')
+   and not private.can_sync_collection(gen_random_uuid(),'transfers','write')
+   and not private.can_sync_collection(gen_random_uuid(),'accounts','write')
+   and not private.can_sync_collection(gen_random_uuid(),'moneytransfers','write')
+   and not private.can_sync_collection(gen_random_uuid(),'opening','write')
+ ) then
+  raise exception 'A financial or stock mutation collection was enabled for generic sync';
+ end if;
 end $$;
 rollback;
