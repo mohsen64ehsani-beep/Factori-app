@@ -162,7 +162,7 @@ begin
   raise exception using errcode='22023',message='Transfer must contain between 1 and 100 items';
  end if;
  if exists(select 1 from jsonb_array_elements(p_items) e
-   group by e.value->>'product_id' having count(*)>1) then
+   group by nullif(e.value->>'product_id','')::uuid having count(*)>1) then
   raise exception using errcode='22023',message='Duplicate products must be combined into one transfer line';
  end if;
  -- Canonicalize the transfer lines before checking the idempotency key.
@@ -197,8 +197,8 @@ begin
   from jsonb_array_elements(p_items) e
   order by (e.value->>'product_id')::uuid
  loop
-  perform 1 from public.products p where p.business_id=p_business_id and p.id=v_product_id and p.is_active for update;
-  if not found then raise exception using errcode='22023',message='Transfer product is missing or inactive'; end if;
+  perform 1 from public.products p where p.business_id=p_business_id and p.id=v_product_id and p.is_active and p.track_inventory for update;
+  if not found then raise exception using errcode='22023',message='Transfer product is missing, inactive or does not track inventory'; end if;
  end loop;
 
  for v_item in select value from jsonb_array_elements(p_items) loop
