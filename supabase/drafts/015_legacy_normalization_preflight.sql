@@ -18,7 +18,7 @@ declare
   v_orphan_product bigint:=0;
   v_orphan_supplier bigint:=0;
   v_collections jsonb:='[]'::jsonb;
-  v_supported text[]:=array['cust','suppliers','prod','categories','services','warehouses','inv','serviceInv'];
+  v_supported text[]:=array['cust','suppliers','prod','categories','services','warehouses','inv','serviceInv','fiscal'];
   v_financial text[]:=array['pay','debt','creditors','creditorPayments','expenses','purchases',
     'supplierPayments','returns','wastage','stockMoves','warehouseStocks','transfers',
     'accounts','moneytransfers','opening','otherincome'];
