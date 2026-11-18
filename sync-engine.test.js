@@ -807,6 +807,8 @@ test('regained cost access restores private fields without overwriting local pub
   const reset = applySyncPullPage(db, state, {
     reset_required: true, readable_collections: ['prod'], cost_access: true
   });
+  assert.equal(reset.state.permissionResetCostAccess, true);
+  assert.equal(reset.state.permissionResetDirty.length, 1);
   const pulled = applySyncPullPage(reset.db, reset.state, {
     records: [{ collection: 'prod', legacy_id: 'p1', version: 3, revision: 3,
       change_type: 'upsert', deleted_at: null, payload: { id: 'p1', n: 'old', buy: 120 } }],
