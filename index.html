@@ -211,7 +211,7 @@ function activateBusinessLocalDatabase(nextId){
    catch(error){try{if(!localStorage.getItem(targetKey))localStorage.removeItem(LEGACY_ADOPTION_MARKER)}catch(_){}throw new Error('انتقال اطلاعات قدیمی ناموفق بود؛ نسخه اصلی اطلاعات حفظ شده است')}
   }
  }
- if(!next)next=JSON.parse(EMPTY_BUSINESS_DB_JSON);
+ if(!next){next=JSON.parse(EMPTY_BUSINESS_DB_JSON);try{localStorage.setItem(targetKey,JSON.stringify(next))}catch(e){throw new Error('ساخت فضای اطلاعات کسب‌وکار ناموفق بود')}}
  db=next;normalizeDemoCollections();localDbBusinessId=nextId;businessScopedMode=true;realDb=db;return true;
 }
 function clearLocalBusinessSelection(){
@@ -354,6 +354,8 @@ async function loadCloudBusinesses(){
  }
  if(cloudActiveBusinessId&&!demoMode){
   try{activateBusinessLocalDatabase(cloudActiveBusinessId)}catch(e){cloudActiveBusinessId='';try{localStorage.removeItem('factoori:active-business')}catch(_){}console.warn('[Factoori local business database]',e)}
+ }else if(!demoMode){
+  try{if(localDbBusinessId)clearLocalBusinessSelection();else{db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;businessScopedMode=true}}catch(e){console.warn('[Factoori empty cloud context]',e)}
  }
 }
 async function initCloudSession(){
