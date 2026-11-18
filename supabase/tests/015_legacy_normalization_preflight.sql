@@ -118,7 +118,8 @@ begin
     (v_clean_business,'prod','clean-product','{"id":"clean-product","n":"Clean Product"}'::jsonb),
     (v_clean_business,'categories','value:دسته تمیز','{"value":"دسته تمیز"}'::jsonb),
     (v_clean_business,'services','value:خدمت تمیز','{"value":"خدمت تمیز"}'::jsonb),
-    (v_clean_business,'suppliers','clean-supplier','{"id":"clean-supplier","name":"Clean Supplier"}'::jsonb);
+    (v_clean_business,'suppliers','clean-supplier','{"id":"clean-supplier","name":"Clean Supplier"}'::jsonb),
+    (v_clean_business,'fiscal','clean-period','{"id":"clean-period","title":"Period","from":"2025-01-01","to":"2025-12-31"}'::jsonb);
   v_report:=public.preview_legacy_normalization(v_clean_business);
   if (v_report->>'safe_to_import')::boolean is not true then
     raise exception 'Valid primitive categories and services must not block preflight: %',v_report;
