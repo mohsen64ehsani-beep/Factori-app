@@ -6,12 +6,14 @@ on:
       - work/factoori-shared-db-integration
     paths:
       - "sync-engine.js"
-      - "sync-engine.test.js"\n      - "sync-storage.js"
+      - "sync-engine.test.js"
+      - "sync-storage.js"
       - ".github/workflows/factoori-sync-engine-tests.yml"
   pull_request:
     paths:
       - "sync-engine.js"
       - "sync-engine.test.js"
+      - "sync-storage.js"
       - ".github/workflows/factoori-sync-engine-tests.yml"
   workflow_dispatch:
 
