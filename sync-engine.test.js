@@ -884,6 +884,7 @@ test('app wires guarded sync scheduling to the runtime and rejects stale results
   assert.match(html, /function scheduleBusinessSync\(delay=1100\)[\s\S]*?if\(demoMode\|\|!cloudSession\?\.user\?\.id\|\|!cloudSchemaReady\|\|!localDbBusinessId\)return/);
   assert.match(html, /localStorage\.setItem\(localDbBusinessId\?BUSINESS_DB_PREFIX\+localDbBusinessId:K,JSON\.stringify\(db\)\);dbRevision\+\+;scheduleBusinessSync\(\)/);
   assert.match(html, /localDbBusinessId===businessId&&syncGeneration===generation&&dbRevision===revision/);
+  assert.match(html, /await window\.FactooriSyncRuntime\.acknowledgeBusinessDatabaseApplied\?\./);
   assert.match(html, /cloudSyncNow:\(\)=>/);
   assert.match(runtime, /window\.FactooriSyncRuntime = Object\.freeze/);
   assert.match(runtime, /factoori-sync-runtime-ready/);
