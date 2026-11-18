@@ -1,4 +1,5 @@
 name: Build Android APK
+# Trigger dedicated 1.2.46 build
 # Factori 1.2.46: Capacitor 8 migration, Node 22 / Java 21, Android API 24+
 
 concurrency:
