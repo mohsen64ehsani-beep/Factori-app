@@ -26,6 +26,7 @@ begin
  values
   (v_business,'cust','reconcile-customer','{"id":"reconcile-customer","n":"Private customer name"}','{"secret":"never return"}',v_owner),
   (v_business,'prod','reconcile-product','{"id":"reconcile-product","n":"Product"}','{"buy":999}',v_owner),
+  (v_business,'suppliers','reconcile-supplier','{"id":"reconcile-supplier","name":"Supplier"}','{}',v_owner),
   (v_business,'pay','reconcile-payment','{"id":"reconcile-payment","amt":100}','{}',v_owner),
   (v_business,'bankAccounts','legacy-bank-account','{"id":"legacy-bank-account","name":"Legacy bank"}','{}',v_owner);
 
@@ -34,6 +35,10 @@ begin
  if (v_result->>'imported_customers')::integer<>1
   or (v_result->>'imported_products')::integer<>1 then
   raise exception 'Reconciliation fixture reference import failed: %',v_result;
+ end if;
+ v_result:=public.import_legacy_supplier_contacts(v_business,'a9000000-0000-4000-8000-000000000002');
+ if (v_result->>'imported_suppliers')::integer<>1 then
+  raise exception 'Supplier fixture import failed: %',v_result;
  end if;
  update private.business_state_records
  set payload_public=payload_public||'{"sell":2000}'::jsonb
@@ -59,6 +64,10 @@ begin
  if not exists(select 1 from jsonb_array_elements(v_result->'collections') as x(value)
    where value->>'collection'='prod' and (value->>'source_changed')::bigint=1) then
   raise exception 'Changed source fingerprint was not identified';
+ end if;
+ if not exists(select 1 from jsonb_array_elements(v_result->'collections') as x(value)
+   where value->>'collection'='suppliers' and (value->>'mapped_current')::bigint=1) then
+  raise exception 'Imported supplier contact must be included in reconciliation';
  end if;
 
  v_result:=public.reconcile_legacy_normalization(v_other_business);
