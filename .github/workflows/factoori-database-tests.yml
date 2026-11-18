@@ -98,7 +98,8 @@ jobs:
             012_member_reactivation.sql \
             014_legacy_normalized_mapping.sql \
             015_legacy_normalization_preflight.sql \
-            016_accounting_defaults.sql
+            016_accounting_defaults.sql \
+            017_customer_receipt_posting.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
@@ -159,7 +160,8 @@ jobs:
             013_account_bound_license_entitlements.sql \
             014_legacy_normalized_mapping.sql \
             015_legacy_normalization_preflight.sql \
-            016_accounting_defaults.sql
+            016_accounting_defaults.sql \
+            017_customer_receipt_posting.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
