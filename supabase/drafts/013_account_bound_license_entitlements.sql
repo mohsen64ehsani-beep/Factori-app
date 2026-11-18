@@ -10,12 +10,14 @@ create table if not exists private.factori_license_entitlements (
   business_id uuid not null references public.businesses(id) on delete restrict,
   purchaser_user_id uuid not null references auth.users(id) on delete restrict,
   claimed_at timestamptz not null default now(),
+  status text not null default 'active' check (status in ('active','superseded')),
   claim_source text not null default 'purchase_key'
     check (claim_source in ('purchase_key','support_migration')),
   created_at timestamptz not null default now(),
-  constraint factori_license_entitlements_license_uq unique (license_id),
-  constraint factori_license_entitlements_business_uq unique (business_id)
+  constraint factori_license_entitlements_license_uq unique (license_id)
 );
+create unique index if not exists factori_license_entitlements_one_active_business_uq
+  on private.factori_license_entitlements(business_id) where status='active';
 
 create table if not exists private.factori_license_entitlement_events (
   id bigint generated always as identity primary key,
@@ -107,9 +109,19 @@ begin
     raise exception using errcode='23505',message='License is already claimed by another account or business';
   end if;
 
+  -- Keep revoked entitlements in the audit history, but allow a replacement
+  -- purchase to become the business's single active perpetual entitlement.
+  update private.factori_license_entitlements e
+  set status='superseded'
+  from public.factori_license_keys k
+  where e.license_id=k.id and e.business_id=p_business_id
+    and e.status='active' and k.status='revoked';
+
   if exists (
     select 1 from private.factori_license_entitlements e
-    where e.business_id=p_business_id
+    join public.factori_license_keys k on k.id=e.license_id
+    where e.business_id=p_business_id and e.status='active'
+      and k.status in ('unused','active')
   ) then
     raise exception using errcode='23505',message='Business already has a perpetual license';
   end if;
@@ -159,6 +171,7 @@ begin
   join public.factori_license_keys k on k.id=e.license_id
   where e.business_id=p_business_id
     and e.purchaser_user_id=v_owner
+    and e.status='active'
     and k.status in ('unused','active')
   limit 1;
 
