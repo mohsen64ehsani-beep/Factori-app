@@ -401,7 +401,8 @@ const api = {
     };
     const [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
       challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe,
-      revokeDeviceProbe, journalPostProbe, stockTransferProbe] = await Promise.all([
+      revokeDeviceProbe, journalPostProbe, stockTransferProbe, memberPermissionsProbe,
+      memberRoleProbe, memberStatusProbe, memberPermissionProbe, clearMemberPermissionProbe] = await Promise.all([
       client.rpc('get_business_entitlements', { p_business_id: probeBusinessId }),
       // Empty name is intentionally invalid; the function must reject it without creating a row.
       client.rpc('create_business', { p_name: '' }),
@@ -443,11 +444,28 @@ const api = {
         p_business_id: probeBusinessId, p_from_warehouse_id: probeBusinessId,
         p_to_warehouse_id: probeBusinessId, p_transfer_date: '2000-01-01',
         p_note: null, p_items: [], p_idempotency_key: 'health-probe-stock'
+      }),
+      client.rpc('get_business_member_permissions', {
+        p_business_id: probeBusinessId, p_member_user_id: probeBusinessId
+      }),
+      client.rpc('update_business_member_role', {
+        p_business_id: probeBusinessId, p_member_user_id: probeBusinessId, p_role_code: 'invalid'
+      }),
+      client.rpc('set_business_member_status', {
+        p_business_id: probeBusinessId, p_member_user_id: probeBusinessId, p_status: 'invalid'
+      }),
+      client.rpc('set_business_member_permission_override', {
+        p_business_id: probeBusinessId, p_member_user_id: probeBusinessId,
+        p_permission_code: 'invalid', p_allowed: null, p_reason: null
+      }),
+      client.rpc('clear_business_member_permission_override', {
+        p_business_id: probeBusinessId, p_member_user_id: probeBusinessId, p_permission_code: 'invalid'
       })
     ]);
     const rpcResults = [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
       challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe,
-      revokeDeviceProbe, journalPostProbe, stockTransferProbe];
+      revokeDeviceProbe, journalPostProbe, stockTransferProbe, memberPermissionsProbe,
+      memberRoleProbe, memberStatusProbe, memberPermissionProbe, clearMemberPermissionProbe];
     // A transport failure has no Postgres/PostgREST code and must never be
     // interpreted as proof that the schema is deployed.
     const rpcReady = rpcResults.every(result => isSchemaProbeErrorReady(result.error));
