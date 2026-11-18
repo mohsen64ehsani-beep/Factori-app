@@ -93,7 +93,7 @@ The next work is completion of normalized transactional returns and remaining ch
 - add dry-run and write-phase tests for idempotency, cross-business isolation, permission denial, sensitive cost separation, orphan references, exact totals, and retry behavior;
 - test against isolated PostgreSQL and a real Supabase test environment when one is available.
 
-Migration 024 imports customers and products through an owner-authorized, fingerprinted RPC, excluding cost and quantity. Migration 025 imports primitive category/service names and warehouse metadata and links exact product category labels; it does not import warehouse quantities or stock movements. Migration 026 imports goods invoices and migration 027 imports service invoices as normalized drafts only; neither posts stock, receivables, journals or payments, and both exclude protected legacy cost snapshots. Financial records remain deferred. The bridge remains incomplete: full reconciliation, returns matching, and transactional financial/stock conversion remain outstanding.
+Migration 024 imports customers and products through an owner-authorized, fingerprinted RPC, excluding cost and quantity. Migration 025 imports primitive category/service names and warehouse metadata and links exact product category labels; it does not import warehouse quantities or stock movements. Migration 026 imports goods invoices and migration 027 imports service invoices as normalized drafts only; neither posts stock, receivables, journals or payments, and both exclude protected legacy cost snapshots. Migration 028 adds a read-only reconciliation/cutover gate. Financial records remain deferred. The bridge remains incomplete: financial/stock import and reconciliation, returns matching, and transactional financial/stock conversion remain outstanding. The new report is a count-based readiness gate, not a claim that cutover is safe.
 
 
 ## First legacy reference import (024)
@@ -116,3 +116,8 @@ The app's `inv` collection is imported only after customer, product and optional
 ## Legacy service invoice draft import (027)
 
 The app's `serviceInv` rows are imported as `service_sale` drafts after the customer and each primitive service-name reference are mapped. Item `cost`, `costTotal`, `costMode`, `bankAccountId` and separate initial `pay` records are not imported by this function. The importer preserves the service description and price/quantity snapshots, fingerprints the sanitized source, and treats source changes as conflicts. A user must review and post the draft through normalized operations; import itself creates no financial transaction, cost snapshot, journal or stock movement.
+
+
+## Reconciliation/cutover gate (028)
+
+The reconciliation RPC reports only per-collection counts and never exposes source payloads. It detects unmapped records, changed source fingerprints, explicit conflicts, orphaned normalized targets, deleted legacy rows and imported invoice drafts awaiting review. It separately lists the counts of deferred financial/stock collections. The gate is intentionally conservative: any deferred financial/stock row or unreviewed imported draft keeps `safe_to_cutover=false`. It is not a production readiness claim until all supported data has been reconciled and the real Supabase environment has been validated.
