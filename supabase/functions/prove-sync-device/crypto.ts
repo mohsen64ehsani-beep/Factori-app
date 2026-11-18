@@ -9,6 +9,16 @@ export function toBase64Url(bytes: ArrayBuffer): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
+export function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
+export function encodeText(value: string): ArrayBuffer {
+  return toArrayBuffer(new TextEncoder().encode(value));
+}
+
 export function toHex(bytes: ArrayBuffer): string {
   return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -19,7 +29,7 @@ export async function verifyP256Proof(jwk: JsonWebKey, message: string, signatur
   try {
     const publicKey = await crypto.subtle.importKey("jwk", jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
     return await crypto.subtle.verify(
-      { name: "ECDSA", hash: "SHA-256" }, publicKey, fromBase64Url(signature), new TextEncoder().encode(message),
+      { name: "ECDSA", hash: "SHA-256" }, publicKey, toArrayBuffer(fromBase64Url(signature)), encodeText(message),
     );
   } catch { return false; }
 }
