@@ -7,7 +7,7 @@ import {
   acknowledgeSyncResults,
   applySyncPullPage
 } from './sync-engine.js';
-import { saveLocalDatabaseCheckpoint, createLocalDatabaseSnapshot } from './sync-db-adapter.js';
+import { saveLocalDatabaseCheckpoint, loadLocalDatabaseCheckpoint, createLocalDatabaseSnapshot } from './sync-db-adapter.js';
 
 const activeRuns = new Set();
 
@@ -50,7 +50,10 @@ export async function runBusinessSync({
   activeRuns.add(businessId);
 
   let localDb = createLocalDatabaseSnapshot(database);
-  let state = syncState ? JSON.parse(JSON.stringify(syncState)) : createSyncState();
+  const savedCheckpoint = syncState ? null : await loadLocalDatabaseCheckpoint({ businessId, indexedDBImpl });
+  let state = syncState
+    ? JSON.parse(JSON.stringify(syncState))
+    : savedCheckpoint?.syncState ? JSON.parse(JSON.stringify(savedCheckpoint.syncState)) : createSyncState();
   let deviceId = '';
   let pushedOperations = 0;
   let pulledRecords = 0;
@@ -153,4 +156,12 @@ export async function runBusinessSync({
 
 export function isSyncPermissionVersionMismatch(error) {
   return isPermissionVersionMismatch(error);
+}
+
+if (typeof window !== 'undefined') {
+  window.FactooriSyncRuntime = Object.freeze({
+    runBusinessSync,
+    isSyncPermissionVersionMismatch
+  });
+  window.dispatchEvent(new Event('factoori-sync-runtime-ready'));
 }
