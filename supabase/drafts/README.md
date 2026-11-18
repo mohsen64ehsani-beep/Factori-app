@@ -50,6 +50,10 @@ The test scripts are:
 - `supabase/tests/010_transactional_posting.sql`
 - `supabase/tests/011_device_proof.sql`
 
+## Device proof deployment note
+
+Migration 009, the `prove-sync-device` Edge Function source, and the Android/Web client key-challenge helpers are implemented on this development branch. The function is configured with gateway JWT verification and also validates the user's access token itself. Its cryptographic helper has Deno unit tests and the Edge Function is type-checked in CI. **The Edge Function has not been deployed to the live Supabase project**, and migration 009 has not been applied there.
+
 ## Deliberately not included yet
 
 - Invoice numbering sequences and complete fiscal close/reopen controls
