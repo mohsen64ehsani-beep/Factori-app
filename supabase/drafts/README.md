@@ -44,6 +44,7 @@ The SQL source files remain under `supabase/drafts/` as the tested development s
 38. `037_web_catalog_crud.sql` — grants permission-checked authenticated create/update access to contacts, products and services for the web workspace; hard deletes remain disabled.
 39. `038_rls_initplan_optimization.sql` — changes three auth RLS predicates to scalar subselects to avoid per-row auth.uid() evaluation.
 40. `039_bidirectional_master_sync.sql` — bridges customer, supplier and product records both ways between normalized web tables and the Android legacy sync stream.
+41. `040_product_sync_fields.sql` — preserves SKU and inventory-tracking fields when product records cross the mobile/web bridge.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -62,7 +63,7 @@ The SQL source files remain under `supabase/drafts/` as the tested development s
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all forty draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all forty-two SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all forty-one draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all forty-three SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -112,6 +113,7 @@ The test scripts are:
 - `supabase/tests/037_web_catalog_crud.sql`
 - `supabase/tests/038_rls_initplan_optimization.sql`
 - `supabase/tests/039_bidirectional_master_sync.sql`
+- `supabase/tests/040_product_sync_fields.sql`
 
 ## Device proof deployment note
 
