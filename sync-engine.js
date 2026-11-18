@@ -68,6 +68,15 @@ function resetAfterPermissionVersionChange(db, state, response) {
   );
   nextState.tombstones = nextState.tombstones.filter(item => readable.has(item.collection));
   nextState.permissionResetDirty = nextState.permissionResetDirty.filter(item => readable.has(item.collection));
+  for (const operation of inaccessiblePending) {
+    nextState.conflicts.push({
+      operation_id: operation.operation_id,
+      collection: operation.collection,
+      legacy_id: operation.legacy_id,
+      reason: 'read_permission_revoked',
+      detected_at: Date.now()
+    });
+  }
 
   if (!costAccess) {
     // Historical conflict/rejection payloads and queued operations can hold
@@ -104,15 +113,6 @@ function resetAfterPermissionVersionChange(db, state, response) {
     // Keep pending operation IDs and payload fingerprints intact while access
     // remains valid; retries are idempotent even if the prior response was lost.
     nextState.pending = nextState.pending.filter(operation => readable.has(operation.collection));
-    for (const operation of inaccessiblePending) {
-      nextState.conflicts.push({
-        operation_id: operation.operation_id,
-        collection: operation.collection,
-        legacy_id: operation.legacy_id,
-        reason: 'read_permission_revoked',
-        detected_at: Date.now()
-      });
-    }
   }
 
   nextState.cursor = 0;
