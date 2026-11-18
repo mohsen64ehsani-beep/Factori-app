@@ -33,7 +33,7 @@ begin
   raise exception using errcode='42501',message='Business administration permission required';
  end if;
 
- foreach v_collection in array array['cust','suppliers','prod','categories','services','warehouses','inv','serviceInv'] loop
+ foreach v_collection in array array['cust','suppliers','prod','categories','services','warehouses','inv','serviceInv','fiscal'] loop
   select
    count(*) filter(where r.deleted_at is null),
    count(*) filter(where r.deleted_at is not null),
@@ -49,6 +49,7 @@ begin
       when 'warehouses' then exists(select 1 from public.warehouses x where x.business_id=p_business_id and x.id=m.normalized_id)
       when 'inv' then exists(select 1 from public.documents x where x.business_id=p_business_id and x.id=m.normalized_id)
       when 'serviceInv' then exists(select 1 from public.documents x where x.business_id=p_business_id and x.id=m.normalized_id)
+      when 'fiscal' then exists(select 1 from public.fiscal_periods x where x.business_id=p_business_id and x.id=m.normalized_id)
       else false end),
    count(*) filter(where r.deleted_at is null and m.import_status='mapped'
      and m.source_fingerprint is distinct from encode(extensions.digest(convert_to(r.payload_public::text,'UTF8'),'sha256'),'hex')),
@@ -63,6 +64,7 @@ begin
       when 'warehouses' then exists(select 1 from public.warehouses x where x.business_id=p_business_id and x.id=m.normalized_id)
       when 'inv' then exists(select 1 from public.documents x where x.business_id=p_business_id and x.id=m.normalized_id)
       when 'serviceInv' then exists(select 1 from public.documents x where x.business_id=p_business_id and x.id=m.normalized_id)
+      when 'fiscal' then exists(select 1 from public.fiscal_periods x where x.business_id=p_business_id and x.id=m.normalized_id)
       else false end))),
    count(*) filter(where r.deleted_at is null and m.import_status='needs_review')
   into v_total_active,v_deleted,v_unmapped,v_mapped,v_changed,v_conflicts,v_orphaned,v_needs_review
@@ -100,7 +102,7 @@ begin
   select r.collection,count(*) as total
   from private.business_state_records r
   where r.business_id=p_business_id and r.collection=any(array[
-   'bankAccounts','fiscal','duedates','smsHistory'
+   'bankAccounts','duedates','smsHistory'
   ]) and r.deleted_at is null
   group by r.collection
  ) x;
