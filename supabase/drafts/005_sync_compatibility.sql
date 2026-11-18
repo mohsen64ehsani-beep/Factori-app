@@ -190,7 +190,7 @@ begin
       when 'opening' then 'payments.read'
       when 'bankAccounts' then 'invoice.settings.read'
       when 'fiscal' then 'settings.read'
-      when 'advancedSettings' then 'settings.read'
+      when 'advancedSettings' then null
       when 'smsHistory' then 'settings.manage'
       else null end;
   elsif p_operation in ('write','delete') then
@@ -222,7 +222,7 @@ begin
       when 'opening' then null
       when 'bankAccounts' then 'settings.manage'
       when 'fiscal' then 'settings.manage'
-      when 'advancedSettings' then 'settings.manage'
+      when 'advancedSettings' then null
       when 'smsHistory' then 'settings.manage'
       else null end;
   else
