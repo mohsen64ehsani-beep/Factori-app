@@ -37,7 +37,7 @@ create index business_state_records_live_idx
   where deleted_at is null;
 create index if not exists record_revisions_business_cursor_idx
   on public.record_revisions(business_id,revision);
-create index sync_operations_record_idx
+create index if not exists sync_operations_record_idx
   on public.sync_operations(business_id,record_type,record_id,created_at desc);
 
 create or replace function private.strip_sensitive_json(p_value jsonb)
