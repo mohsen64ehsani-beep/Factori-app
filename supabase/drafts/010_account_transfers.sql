@@ -160,20 +160,20 @@ begin
  returning id into v_transfer_id;
 
  insert into public.financial_transactions(business_id,transaction_type,direction,amount,currency_code,
-   transaction_date,account_id,description,idempotency_key,created_by)
+   transaction_date,account_id,description,idempotency_key,source_legacy_id,created_by)
  values(p_business_id,'account_transfer_out','out',p_amount::numeric(20,0),v_from.currency_code,
    p_transfer_date,p_from_account_id,'انتقال به حساب دیگر: '||v_to.name,
-   p_idempotency_key||':out',v_user) returning id into v_out_id;
+   p_idempotency_key||':out','transfer:'||v_transfer_id::text||':out',v_user) returning id into v_out_id;
  insert into public.financial_transactions(business_id,transaction_type,direction,amount,currency_code,
-   transaction_date,account_id,description,idempotency_key,created_by)
+   transaction_date,account_id,description,idempotency_key,source_legacy_id,created_by)
  values(p_business_id,'account_transfer_in','in',p_amount::numeric(20,0),v_to.currency_code,
    p_transfer_date,p_to_account_id,'انتقال از حساب دیگر: '||v_from.name,
-   p_idempotency_key||':in',v_user) returning id into v_in_id;
+   p_idempotency_key||':in','transfer:'||v_transfer_id::text||':in',v_user) returning id into v_in_id;
 
  insert into public.journal_entries(business_id,entry_date,fiscal_period_id,source_type,source_id,
    description,status,idempotency_key,posted_at,posted_by,created_by)
  values(p_business_id,p_transfer_date,p_fiscal_period_id,'financial_transaction',v_transfer_id,
-   nullif(btrim(coalesce(p_note,'')),'انتقال بین حساب‌ها'),'posted',
+   coalesce(nullif(btrim(coalesce(p_note,'')),''),'انتقال بین حساب‌ها'),'posted',
    'account-transfer:'||p_idempotency_key,now(),v_user,v_user)
  returning id into v_journal_id;
  insert into public.journal_lines(business_id,journal_entry_id,account_id,debit,credit,description,line_order)
