@@ -720,6 +720,7 @@ test('business sync coordinator checkpoints pending IDs before push and persists
   const result = await runBusinessSync({
     businessId: 'business-1',
     database: { cust: [{ id: 'c1', n: 'مشتری' }] },
+    syncState: createSyncState(),
     api,
     createOperationId: () => 'operation-1',
     persistCheckpoint: async checkpoint => checkpoints.push({
