@@ -364,7 +364,7 @@ function scheduleBusinessSync(delay=1100){
 async function runScheduledBusinessSync(){
  if(syncRunning){syncPending=true;return}
  if(demoMode||!cloudSession?.user?.id||!cloudSchemaReady||!localDbBusinessId||!window.FactooriSyncRuntime)return;
- syncRunning=true;syncPending=false;syncStatus='syncing';syncError='';
+ syncRunning=true;syncPending=false;syncStatus='syncing';syncError='';render();
  const businessId=localDbBusinessId,generation=syncGeneration,revision=dbRevision;
  const snapshot=JSON.parse(JSON.stringify(db));
  try{
