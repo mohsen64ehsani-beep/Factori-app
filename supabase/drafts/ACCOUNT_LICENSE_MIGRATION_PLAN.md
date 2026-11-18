@@ -38,6 +38,8 @@ The deployed license activation function accepts a license key and device public
 
 The legacy `public.activate_license(text,text)` RPC is SECURITY DEFINER and executable by anon and authenticated. It is a compatibility-sensitive legacy surface and must not be changed until old-client usage and retirement strategy are established.
 
+A read-only status breakdown of the 11 modern `factori_license_keys` rows found 5 active (only 1 has `payment_verified_at` and an order link), 4 revoked, and 2 unused (both payment-verified/order-linked). The separate legacy `app_licenses` table has 3 unused rows. This means historical ownership cannot safely be inferred from `order_id` for every active license; grandfathering must support proof by the original license key and a controlled support path for exceptional records. No raw license keys or hashes were read.
+
 Security advisor findings currently include:
 - RLS enabled with no policies on the four license tables (INFO).
 - Legacy `public.activate_license(text,text)` SECURITY DEFINER executable by anon/authenticated (WARN).
