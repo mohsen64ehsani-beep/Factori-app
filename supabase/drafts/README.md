@@ -23,10 +23,11 @@ These files are **not production migrations**. They live under `supabase/drafts/
 - Added static regression assertions for sync-pull cursor progress and invoice quota coverage.
 - Wrapped migration 005 in a transaction so a failed apply cannot leave a partially created sync bridge.
 - Extended migration 006 to reject DELETE as well as UPDATE on posted/reversed journal headers.
+- Fixed the first PostgreSQL 17 integration failure: `stock_movements` now declares the composite unique key required by tenant-scoped inventory cost-layer foreign keys; migration 004 regression tests assert this key.
 
 ## Automated isolated PostgreSQL tests
 
-GitHub Actions workflow: `.github/workflows/factoori-sql-regression.yml`.
+GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
 The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all eight draft migrations in dependency order, then runs all eight SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
