@@ -18,6 +18,7 @@ begin
   raise exception 'Device proof RPC set is incomplete';
  end if;
  if has_function_privilege('authenticated','public.register_sync_device(uuid,text,text,jsonb)','EXECUTE')
+   or has_function_privilege('authenticated','private.register_sync_device(uuid,text,text,jsonb)','EXECUTE')
    or has_function_privilege('authenticated','private.sync_push(uuid,uuid,jsonb)','EXECUTE')
    or has_function_privilege('authenticated','private.sync_pull(uuid,uuid,bigint,integer)','EXECUTE') then
   raise exception 'Legacy registration or private sync implementation must not be directly executable';
