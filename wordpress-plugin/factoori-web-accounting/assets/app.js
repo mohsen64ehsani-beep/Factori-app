@@ -6,7 +6,7 @@
   const base = String(cfg.supabaseUrl || '').replace(/\/$/, '');
   const key = String(cfg.publishableKey || '');
   const storageKey = 'factoori_web_session_v1';
-  const state = {session:null,user:null,businesses:[],business:null,contacts:[],products:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],cheques:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},section:'dashboard',signup:false,busy:false};
+  const state = {session:null,user:null,businesses:[],business:null,contacts:[],products:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],cheques:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',signup:false,busy:false};
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => new Intl.NumberFormat('fa-IR').format(Number(v || 0));
   const dateFa = v => { try { return new Intl.DateTimeFormat('fa-IR').format(new Date(v+'T12:00:00')); } catch (_) { return v || '—'; } };
@@ -54,7 +54,7 @@
     state.business=selected;
     if(selected) await loadData(); else clearData();
   }
-  function clearData(){state.contacts=[];state.products=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.cheques=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};}
+  function clearData(){state.contacts=[];state.products=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.cheques=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
   async function loadData(){
     const b=state.business?.id;if(!b){clearData();return;}
     const f='business_id=eq.'+encodeURIComponent(b);
@@ -92,7 +92,7 @@
     root.innerHTML='<div class="fw-auth-wrap"><section class="fw-auth-card"><div class="fw-brand"><div class="fw-brand-mark">ف</div><div><b>فاکتوری</b><small>سیستم یکپارچه حسابداری</small></div></div><h1>'+(state.signup?'ساخت حساب کاربری':'خوش آمدید')+'</h1><p class="fw-sub">با همان حساب اپلیکیشن اندروید وارد شوید؛ اطلاعات در هر دو نسخه مشترک است.</p><form data-form="auth">'+(state.signup?'<div class="fw-field"><label>نام و نام خانوادگی</label><input name="name" autocomplete="name" required placeholder="نام شما"></div>':'')+'<div class="fw-field"><label>ایمیل</label><input name="email" type="email" autocomplete="email" required placeholder="name@example.com" dir="ltr"></div><div class="fw-field"><label>رمز عبور</label><input name="password" type="password" autocomplete="'+(state.signup?'new-password':'current-password')+'" minlength="8" required placeholder="حداقل ۸ کاراکتر" dir="ltr"></div><button class="fw-btn fw-full" type="submit">'+(state.signup?'ایجاد حساب':'ورود به حساب')+'</button></form><div class="fw-auth-toggle">'+(state.signup?'قبلاً حساب دارید؟':'حساب ندارید؟')+' <button class="fw-link" data-action="toggle-auth">'+(state.signup?'ورود':'ثبت‌نام')+'</button></div><div class="fw-auth-toggle">اطلاعات ورود اپلیکیشن و نسخه وب یکسان است.</div></section></div>';
   }
   function shell(content,title,subtitle='مدیریت یکپارچه کسب‌وکار شما'){
-    const nav=[['dashboard','▦','داشبورد'],['invoices','▤','فاکتورها'],['contacts','♙','اشخاص'],['products','◇','کالاها'],['finance','ت','دریافت و پرداخت'],['cheques','▣','چک‌ها'],['inventory','▧','انبار و موجودی']];
+    const nav=[['dashboard','▦','داشبورد'],['invoices','▤','فاکتورها'],['contacts','♙','اشخاص'],['products','◇','کالاها'],['finance','ت','دریافت و پرداخت'],['cheques','▣','چک‌ها'],['inventory','▧','انبار و موجودی'],['legacy','⇄','همگام‌سازی و ورود داده']];
     root.innerHTML='<div class="fw-layout"><aside class="fw-sidebar"><div class="fw-brand"><div class="fw-brand-mark">ف</div><div><b>فاکتوری</b><small>حسابداری آنلاین</small></div></div><div class="fw-business"><small>کسب‌وکار فعال</small><select id="fw-business">'+state.businesses.map(b=>'<option value="'+esc(b.id)+'" '+(b.id===state.business?.id?'selected':'')+'>'+esc(b.name)+'</option>').join('')+'</select></div><nav class="fw-nav">'+nav.map(n=>'<button data-section="'+n[0]+'" class="'+(state.section===n[0]?'active':'')+'"><i>'+n[1]+'</i>'+n[2]+'</button>').join('')+'</nav><div class="fw-side-bottom">'+(cfg.purchaseUrl?'<a class="fw-purchase" href="'+esc(cfg.purchaseUrl)+'" target="_blank" rel="noopener">★ ارتقا به نسخه حرفه‌ای</a>':'')+'<div class="fw-user">'+esc(state.user?.email||'')+'</div><button class="fw-btn ghost fw-full" data-action="logout">خروج از حساب</button></div></aside><main class="fw-main"><div class="fw-content"><header class="fw-topbar"><div><h1>'+title+'</h1><p>'+subtitle+'</p></div><div class="fw-top-actions">'+(cfg.purchaseUrl?'<a class="fw-purchase" href="'+esc(cfg.purchaseUrl)+'" target="_blank" rel="noopener">★ نسخه حرفه‌ای</a>':'')+'<button class="fw-btn ghost" data-action="refresh">↻ بروزرسانی</button></div></header>'+content+'</div></main></div>';
   }
   function table(rows,heads,empty){
@@ -151,10 +151,20 @@
     shell(form+openingForm+wastageForm+'<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>مانده موجودی</h2><p>بر اساس گردش‌های ثبت‌شده</p></div></div>'+table(rows,['کالا','انبار','موجودی'],'گردش انباری برای محاسبه موجودی ثبت نشده است.')+'</section><section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>آخرین گردش‌ها</h2></div></div>'+table(moves,['تاریخ','کالا','انبار','نوع گردش','مقدار'],'گردش انباری وجود ندارد.')+'</section>','انبار و موجودی','موجودی انبارها و گردش کالا');
   }
 
+
+  function legacy(){
+    const summary=(state.legacyPreview?.collections||[]).map(x=>'<tr><td>'+esc(x.collection)+'</td><td>'+money(x.active)+'</td><td>'+money(x.invalid_object_payloads||0)+'</td><td>'+money(x.payload_id_mismatches||0)+'</td></tr>');
+    const financial=(state.legacyReconciliation?.financial_collections_deferred||state.legacyImportResult?.reconciliation?.financial_collections_deferred||[]).map(x=>'<tr><td>'+esc(x.collection)+'</td><td>'+money(x.total)+'</td></tr>');
+    const safe=state.legacyPreview?.safe_to_import===true;
+    const importResult=state.legacyImportResult?'<section class="fw-card" style="margin-top:16px"><h2>نتیجه ورود داده</h2><pre>'+esc(JSON.stringify(state.legacyImportResult,null,2))+'</pre></section>':'';
+    const reconciliation=state.legacyReconciliation||state.legacyImportResult?.reconciliation;
+    shell('<section class="fw-card"><div class="fw-section-head"><div><h2>انتقال سوابق اپلیکیشن به حساب مشترک</h2><p>ابتدا بررسی فقط‌خواندنی اجرا می‌شود؛ سپس فقط اطلاعات پشتیبانی‌شده و بدون تعارض وارد جداول اصلی می‌شوند.</p></div></div><div class="fw-actions"><button class="fw-btn secondary" data-action="legacy-preview">بررسی و پیش‌نمایش داده‌ها</button><button class="fw-btn" data-action="legacy-import" '+(safe?'':'disabled')+'>ورود اطلاعات تأییدشده</button></div>'+(state.legacyPreview?'<p class="fw-sub">'+(safe?'پیش‌بررسی موفق است؛ داده‌های پشتیبانی‌شده آماده ورود هستند.':'ورود متوقف شد؛ ابتدا خطاها یا ارجاع‌های ناقص باید بررسی شوند.')+'</p>'+table(summary,['مجموعه','رکورد فعال','ساختار نامعتبر','شناسه ناسازگار'],'داده‌ای برای پیش‌نمایش وجود ندارد.'):'<div class="fw-empty">برای مشاهده وضعیت، پیش‌بررسی را اجرا کنید.</div>')+'</section>'+ (reconciliation?'<section class="fw-card" style="margin-top:16px"><h2>موارد مالی که هنوز به تبدیل حسابداری نیاز دارند</h2><p class="fw-sub">این سوابق حذف نمی‌شوند و فعلاً به‌صورت داده خام در نسخه وب قابل مشاهده‌اند؛ تا زمان نگاشت و تطبیق حسابداری، به دفتر مالی اصلی منتقل نمی‌شوند.</p>'+table(financial,['مجموعه قدیمی','تعداد رکورد'],'مورد مالی معوقی گزارش نشده است.')+'</section>':'')+importResult,'همگام‌سازی و ورود داده','ورود کنترل‌شده سوابق قبلی از اپلیکیشن به پایگاه داده مشترک');
+  }
+
   function render(){
     if(!state.user){authView();return;}
     if(!state.business){root.innerHTML='<div class="fw-auth-wrap"><section class="fw-auth-card"><div class="fw-brand"><div class="fw-brand-mark">ف</div><div><b>فاکتوری</b><small>حسابداری آنلاین</small></div></div><h1>ساخت کسب‌وکار</h1><p class="fw-sub">برای شروع، نام کسب‌وکار خود را وارد کنید.</p><form data-form="business"><div class="fw-field"><label>نام کسب‌وکار</label><input name="name" required minlength="2" maxlength="160"></div><button class="fw-btn fw-full" type="submit">ایجاد فضای حسابداری</button></form><button class="fw-link" data-action="logout" style="margin-top:16px">خروج از حساب</button></section></div>';return;}
-    ({dashboard,invoices,contacts,products,finance,cheques,inventory}[state.section]||dashboard)();
+    ({dashboard,invoices,contacts,products,finance,cheques,inventory,legacy}[state.section]||dashboard)();
   }
   async function withBusy(fn){
     if(state.busy)return;state.busy=true;root.classList.add('fw-busy');
@@ -169,6 +179,8 @@
     if(action==='toggle-auth'){state.signup=!state.signup;render();}
     if(action==='logout')withBusy(async()=>{try{await request('/auth/v1/logout',{method:'POST'});}catch(_){}saveSession(null);state.user=null;state.business=null;state.businesses=[];clearData();render();});
     if(action==='refresh')withBusy(async()=>{await loadBusinesses();render();toast('اطلاعات بروزرسانی شد.');});
+    if(action==='legacy-preview')withBusy(async()=>{const [preview,reconciliation]=await Promise.all([rpc('preview_legacy_normalization',{p_business_id:state.business.id}),rpc('reconcile_legacy_normalization',{p_business_id:state.business.id})]);state.legacyPreview=preview;state.legacyReconciliation=reconciliation;state.legacyImportResult=null;render();toast('پیش‌بررسی داده‌ها انجام شد.');});
+    if(action==='legacy-import')withBusy(async()=>{if(state.legacyPreview?.safe_to_import!==true)throw new Error('ابتدا پیش‌بررسی موفق و بدون تعارض اجرا کنید.');const result=await rpc('web_import_legacy_supported_data',{p_business_id:state.business.id,p_import_generation:crypto.randomUUID()});state.legacyImportResult=result;state.legacyPreview=result.preflight||state.legacyPreview;state.legacyReconciliation=result.reconciliation||null;await loadData();render();toast(result.imported?'ورود داده‌های پشتیبانی‌شده انجام شد.':'ورود داده به دلیل وضعیت پیش‌بررسی متوقف شد.');});
     if(action==='cheque-status')withBusy(async()=>{const cheque=state.cheques.find(x=>x.id===btn.dataset.id);if(!cheque)return;let account=null;if(btn.dataset.status==='cleared'){account=state.accounts.find(x=>x.is_default)||state.accounts[0];if(!account)throw new Error('برای تسویه چک ابتدا حساب مالی بسازید.');}if(!confirm('وضعیت چک تغییر کند؟ در صورت تسویه، سند مالی ثبت می‌شود.'))return;await rpc('transition_cheque',{p_business_id:state.business.id,p_cheque_id:cheque.id,p_to_status:btn.dataset.status,p_event_date:today(),p_financial_account_id:account?.id||null,p_note:'تغییر وضعیت از نسخه وب',p_idempotency_key:idempotency()});await loadData();render();toast('وضعیت چک به‌روزرسانی شد.');});
     if(action==='post-invoice')withBusy(async()=>{
       const doc=state.documents.find(x=>x.id===btn.dataset.id);if(!doc)return;
