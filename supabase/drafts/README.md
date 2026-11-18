@@ -15,7 +15,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 9. `008_transactional_posting.sql` — atomic balanced-journal posting and stock-transfer posting with permission checks, idempotency and row locking.
 10. `009_device_proof.sql` — P-256 challenge-response device verification, single-use nonces, device revocation and verified-device sync gate.
 11. `010_account_transfers.sql` — financial account mapping and atomic paired transfer records with a balanced journal entry.
-12. `013_account_bound_license_entitlements.sql` — authenticated account/business claim of verified perpetual licenses, idempotent same-owner claim, and server-derived Premium status. Requires the existing license-key schema.
+12. `013_account_bound_license_entitlements.sql` — authenticated account/business claim of verified perpetual licenses, idempotent same-owner claim, server-derived Premium status, and Premium-aware server quota bypass. Requires the existing license-key schema.
 
 ## Recent static-review fixes (2026-11-18)
 
