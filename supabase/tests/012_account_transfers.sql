@@ -34,5 +34,10 @@ begin
    or position('set status=''posted''' in v_fn)=0 then
   raise exception 'Account transfer permission, locking, currency or double-entry posting is missing';
  end if;
+ if position('Resolve completed retries' in v_fn)=0
+   or position('v_existing_currency' in v_fn)=0
+   or position('Source account is missing or inactive' in v_fn)<position('Resolve completed retries' in v_fn) then
+  raise exception 'Account transfer retries must resolve before mutable account validation';
+ end if;
 end $$;
 rollback;
