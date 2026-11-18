@@ -22,9 +22,12 @@ begin
  if position('262144' in v_def)=0 then
   raise exception 'Sync payload byte limit is missing';
  end if;
+ select pg_get_functiondef('private.sync_pull(uuid,uuid,bigint,integer)'::regprocedure) into v_def;
  if position('reset_required' in v_def)=0 or position('permission_version' in v_def)=0 then
   raise exception 'Permission-change reset protocol is missing';
  end if;
+
+ select pg_get_functiondef('private.sync_push(uuid,uuid,jsonb)'::regprocedure) into v_def;
  if position('document_sync_accepts_drafts_only' in v_def)=0 then
   raise exception 'Draft-only document status guard is missing';
  end if;
