@@ -342,6 +342,50 @@ function weekChart(){const byDay=new Map(),todayKey=dateKey(today()),base=new Da
 function creditorRows(){return db.creditors.slice().reverse().map(c=>{const b=creditorBalance(c.id);return `<div class="creditor-card" data-s="${esc(c.name+' '+(c.note||''))}"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(c.name)}</b><b style="color:${b>0?"var(--dg)":"var(--ok)"}">${money(b)}</b></div><small>${dstr(c.dt)} · ${esc(c.note||"بستانکار")}</small><div class="ac creditor-actions"><button data-a="creditorhistory" data-id="${c.id}">مشاهده</button><button data-a="editcreditor" data-id="${c.id}">ویرایش</button><button class="dg" data-a="deletecreditor" data-id="${c.id}">حذف</button><button data-a="newcreditorpayment" data-id="${c.id}">ثبت پرداخت</button></div></div>`}).join("")||'<p class="em">هنوز بستانکاری ثبت نشده است.</p>'}
 /* ---- views ---- */
 
+function cancelBusinessSync(){
+ if(syncTimer){clearTimeout(syncTimer);syncTimer=null}
+ syncPending=false;syncStatus='idle';syncError='';
+}
+function syncStatusText(){
+ if(syncStatus==='syncing')return 'در حال همگام‌سازی اطلاعات…';
+ if(syncStatus==='synced')return 'اطلاعات این کسب‌وکار به‌روز است';
+ if(syncStatus==='partial')return 'همگام‌سازی ادامه دارد…';
+ if(syncStatus==='pending')return 'تغییرات جدید در صف همگام‌سازی هستند';
+ if(syncStatus==='error')return 'خطا در همگام‌سازی: '+(syncError||'خطای نامشخص');
+ return 'همگام‌سازی ابری آماده است';
+}
+function scheduleBusinessSync(delay=1100){
+ if(demoMode||!cloudSession?.user?.id||!cloudSchemaReady||!localDbBusinessId)return;
+ syncPending=true;
+ if(!window.FactooriSyncRuntime)return;
+ if(syncTimer)clearTimeout(syncTimer);
+ syncTimer=setTimeout(()=>{syncTimer=null;runScheduledBusinessSync()},Math.max(0,Number(delay)||0));
+}
+async function runScheduledBusinessSync(){
+ if(syncRunning){syncPending=true;return}
+ if(demoMode||!cloudSession?.user?.id||!cloudSchemaReady||!localDbBusinessId||!window.FactooriSyncRuntime)return;
+ syncRunning=true;syncPending=false;syncStatus='syncing';syncError='';
+ const businessId=localDbBusinessId,generation=syncGeneration,revision=dbRevision;
+ const snapshot=JSON.parse(JSON.stringify(db));
+ try{
+  const result=await window.FactooriSyncRuntime.runBusinessSync({businessId,database:snapshot,api:window.FactooriCloud});
+  if(localDbBusinessId===businessId&&syncGeneration===generation&&dbRevision===revision){
+   db=result.database;realDb=db;dbRevision++;
+   try{localStorage.setItem(BUSINESS_DB_PREFIX+businessId,JSON.stringify(db))}
+   catch(e){syncStatus='error';syncError='ذخیره نسخه همگام‌شده در حافظه دستگاه ناموفق بود'}
+   if(syncStatus!=='error')syncStatus=result.hasMore?'partial':'synced';
+   if(result.hasMore)syncPending=true;
+   render();
+  }else if(syncGeneration===generation){
+   syncStatus='pending';syncPending=true;
+  }
+ }catch(error){
+  if(syncGeneration===generation){syncStatus='error';syncError=error?.message||'خطای ارتباط';console.warn('[Factoori business sync]',error);render()}
+ }finally{
+  syncRunning=false;
+  if(syncPending&&localDbBusinessId&&cloudSchemaReady&&!demoMode)scheduleBusinessSync(syncStatus==='partial'?100:500);
+ }
+}
 function cloudAccountCard(){
  const api=window.FactooriCloud;
  if(!api)return `<div class="c"><h2>حساب مشترک فاکتوری</h2><p class="page-note">ماژول اتصال حساب هنوز بارگذاری نشده است.</p></div>`;
