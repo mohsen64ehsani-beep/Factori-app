@@ -36,6 +36,11 @@ begin
    or position('private.sync_pull' in v_fn)=0 then
   raise exception 'sync_pull does not require verified device proof';
  end if;
+ v_fn:=pg_get_functiondef('public.create_sync_device_challenge(uuid,uuid)'::regprocedure);
+ if position('for update of d' in lower(v_fn))=0 or position('v_recent_count>=10' in v_fn)=0
+   or position('interval ''10 minutes''' in v_fn)=0 then
+  raise exception 'Device challenge rate limit or serialization lock is missing';
+ end if;
  v_fn:=pg_get_functiondef('public.finalize_sync_device_proof(uuid,uuid,uuid,uuid,text)'::regprocedure);
  if position('consumed_at is null' in v_fn)=0 or position('expires_at<=now()' in v_fn)=0
    or position('for update' in lower(v_fn))=0 then
