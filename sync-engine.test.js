@@ -118,13 +118,13 @@ test('object-shaped advanced settings remain local and are not flattened or over
     advancedSettings: { warehouses: true, sms: { apiKey: 'local-secret' } },
     cust: [{ id: 'c1', n: 'local' }]
   };
-  const prepared = prepareSyncOperations(db, createSyncState(), ids);
+  const prepared = prepareSyncOperations({ advancedSettings: db.advancedSettings }, createSyncState(), ids);
   assert.equal(prepared.operations.some(op => op.collection === 'advancedSettings'), false);
-  const pulled = applyPulledRecords(db, prepared.state, [
-    { collection: 'cust', legacy_id: 'c1', version: 1, payload: { id: 'c1', n: 'remote' } },
+  const pulled = applyPulledRecords(db, createSyncState(), [
+    { collection: 'cust', legacy_id: 'c2', version: 1, payload: { id: 'c2', n: 'remote' } },
     { collection: 'advancedSettings', legacy_id: 'settings', version: 1, payload: { warehouses: false } }
   ]);
   assert.deepEqual(pulled.db.advancedSettings, db.advancedSettings);
-  assert.equal(pulled.db.cust[0].n, 'remote');
+  assert.equal(pulled.db.cust.find(x => x.id === 'c2').n, 'remote');
 });
 
