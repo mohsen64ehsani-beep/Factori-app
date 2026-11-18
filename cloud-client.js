@@ -475,7 +475,10 @@ const api = {
     // malformed input. A 404/relay error means device proof is not ready on this project.
     const proofProbe = await client.functions.invoke('prove-sync-device', { body: {} });
     const proofStatus = proofProbe.error?.context?.status;
-    return !proofProbe.error || proofStatus === 400;
+    if (proofProbe.error && proofStatus !== 400) return false;
+    const memberManagementProbe = await client.functions.invoke('manage-business-members', { body: {} });
+    const memberManagementStatus = memberManagementProbe.error?.context?.status;
+    return !memberManagementProbe.error || memberManagementStatus === 400;
   }
 };
 
