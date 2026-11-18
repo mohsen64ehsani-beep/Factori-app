@@ -113,3 +113,18 @@ test('SQL pull envelope is validated and cursor advances only after successful m
   }));
 });
 
+test('object-shaped advanced settings remain local and are not flattened or overwritten by pull', () => {
+  const db = {
+    advancedSettings: { warehouses: true, sms: { apiKey: 'local-secret' } },
+    cust: [{ id: 'c1', n: 'local' }]
+  };
+  const prepared = prepareSyncOperations(db, createSyncState(), ids);
+  assert.equal(prepared.operations.some(op => op.collection === 'advancedSettings'), false);
+  const pulled = applyPulledRecords(db, prepared.state, [
+    { collection: 'cust', legacy_id: 'c1', version: 1, payload: { id: 'c1', n: 'remote' } },
+    { collection: 'advancedSettings', legacy_id: 'settings', version: 1, payload: { warehouses: false } }
+  ]);
+  assert.deepEqual(pulled.db.advancedSettings, db.advancedSettings);
+  assert.equal(pulled.db.cust[0].n, 'remote');
+});
+
