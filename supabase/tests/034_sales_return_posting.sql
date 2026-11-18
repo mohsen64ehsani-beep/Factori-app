@@ -49,7 +49,7 @@ begin
   business_id,document_type,contact_id,warehouse_id,document_date,status,
   subtotal,discount_amount,taxable_amount,tax_amount,total_amount,notes
  ) values(
-  v_business,'purchase',v_supplier,current_date,current_date,'draft',
+  v_business,'purchase',v_supplier,v_warehouse,current_date,'draft',
   400,0,400,0,400,'Purchase for return test'
  ) returning id into v_purchase_doc;
  insert into public.document_items(
