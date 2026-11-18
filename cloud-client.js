@@ -247,6 +247,32 @@ const api = {
       p_idempotency_key: payload.idempotencyKey
     }));
   },
+  async setFinancialAccountLedgerMap(payload) {
+    if (!payload?.businessId || !payload?.financialAccountId || !payload?.chartAccountId) {
+      throw new Error('اتصال حساب مالی به سرفصل حسابداری کامل نیست.');
+    }
+    return unwrap(await client.rpc('set_financial_account_ledger_map', {
+      p_business_id: payload.businessId,
+      p_financial_account_id: payload.financialAccountId,
+      p_chart_account_id: payload.chartAccountId
+    }));
+  },
+  async postAccountTransfer(payload) {
+    if (!payload?.businessId || !payload?.fromAccountId || !payload?.toAccountId
+      || !payload?.amount || !payload?.transferDate || !payload?.idempotencyKey) {
+      throw new Error('اطلاعات انتقال بین حساب‌ها کامل نیست.');
+    }
+    return unwrap(await client.rpc('post_account_transfer', {
+      p_business_id: payload.businessId,
+      p_from_account_id: payload.fromAccountId,
+      p_to_account_id: payload.toAccountId,
+      p_amount: payload.amount,
+      p_transfer_date: payload.transferDate,
+      p_note: payload.note || null,
+      p_idempotency_key: payload.idempotencyKey,
+      p_fiscal_period_id: payload.fiscalPeriodId || null
+    }));
+  },
   async postStockTransfer(payload) {
     if (!payload?.businessId || !payload?.fromWarehouseId || !payload?.toWarehouseId
       || !payload?.transferDate || !payload?.idempotencyKey || !Array.isArray(payload?.items)) {
@@ -286,7 +312,7 @@ const api = {
       y: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
     };
     const [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
-      challengeProbe, pushProbe, pullProbe] = await Promise.all([
+      challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe] = await Promise.all([
       client.rpc('get_business_entitlements', { p_business_id: probeBusinessId }),
       // Empty name is intentionally invalid; the function must reject it without creating a row.
       client.rpc('create_business', { p_name: '' }),
@@ -306,10 +332,17 @@ const api = {
       client.rpc('sync_push', { p_business_id: probeBusinessId, p_device_id: probeBusinessId, p_operations: [] }),
       client.rpc('sync_pull', {
         p_business_id: probeBusinessId, p_device_id: probeBusinessId, p_since_revision: 0, p_limit: 1
+      }),
+      client.rpc('set_financial_account_ledger_map', {
+        p_business_id: probeBusinessId, p_financial_account_id: probeBusinessId, p_chart_account_id: probeBusinessId
+      }),
+      client.rpc('post_account_transfer', {
+        p_business_id: probeBusinessId, p_from_account_id: probeBusinessId, p_to_account_id: probeBusinessId,
+        p_amount: 1, p_transfer_date: '2000-01-01', p_note: null, p_idempotency_key: 'health-probe-001'
       })
     ]);
     const rpcReady = [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
-      challengeProbe, pushProbe, pullProbe].every(result => result.error?.code !== 'PGRST202');
+      challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe].every(result => result.error?.code !== 'PGRST202');
     if (!rpcReady) return false;
 
     // A 400 response for an empty body means the function is deployed and correctly rejects
