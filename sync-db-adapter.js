@@ -25,13 +25,15 @@ export async function saveLocalDatabaseCheckpoint({
   businessId,
   database,
   syncState,
+  baseDatabase = database,
   indexedDBImpl
 }) {
   if (typeof businessId !== 'string' || !businessId.trim()) {
     throw new Error('An explicitly selected business is required');
   }
   const snapshot = createLocalDatabaseSnapshot(database);
-  await commitSyncCheckpoint(businessId, snapshot, syncState, indexedDBImpl);
+  const baseline = createLocalDatabaseSnapshot(baseDatabase);
+  await commitSyncCheckpoint(businessId, snapshot, syncState, indexedDBImpl, baseline);
   return { saved: true, businessId, snapshot };
 }
 
@@ -44,6 +46,7 @@ export async function loadLocalDatabaseCheckpoint({ businessId, indexedDBImpl })
   return {
     businessId,
     database: createLocalDatabaseSnapshot(checkpoint.db),
+    baseDatabase: createLocalDatabaseSnapshot(checkpoint.baseDb || checkpoint.db),
     syncState: checkpoint.syncState
   };
 }
@@ -98,4 +101,15 @@ export function mergeLocalChangesOntoCheckpoint({ localDatabase, baseDatabase, c
     }
   }
   return createLocalDatabaseSnapshot(merged);
+}
+
+
+export async function acknowledgeLocalDatabaseApplied({ businessId, database, syncState, indexedDBImpl }) {
+  return saveLocalDatabaseCheckpoint({
+    businessId,
+    database,
+    baseDatabase: database,
+    syncState,
+    indexedDBImpl
+  });
 }
