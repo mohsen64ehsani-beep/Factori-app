@@ -408,9 +408,14 @@ const api = {
         p_note: null, p_items: [], p_idempotency_key: 'health-probe-stock'
       })
     ]);
-    const rpcReady = [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
+    const rpcResults = [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
       challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe,
-      revokeDeviceProbe, journalPostProbe, stockTransferProbe].every(result => result.error?.code !== 'PGRST202');
+      revokeDeviceProbe, journalPostProbe, stockTransferProbe];
+    // A transport failure has no Postgres/PostgREST code and must never be
+    // interpreted as proof that the schema is deployed.
+    const rpcReady = rpcResults.every(result =>
+      !result.error || (!!result.error.code && result.error.code !== 'PGRST202')
+    );
     if (!rpcReady) return false;
 
     // A 400 response for an empty body means the function is deployed and correctly rejects
