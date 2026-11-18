@@ -60,6 +60,7 @@ The test scripts are:
 - `supabase/tests/012_account_transfers.sql`
 - `supabase/tests/012_member_reactivation.sql`
 - `supabase/tests/013_account_bound_license_entitlements.sql`
+- `supabase/tests/014_legacy_normalization_preflight.sql`
 
 ## Device proof deployment note
 
@@ -73,7 +74,7 @@ Migration 009, the `prove-sync-device` Edge Function source, and the Android/Web
 - Owner transfer, account deletion/retention and owner recovery
 - Verified subscription upgrades, downgrades, grace periods and paid-plan entitlements
 - Full multi-device sync runtime tests and normalized financial sync operations
-- Legacy `db:v2` import/reconciliation and migration id mapping
+- Legacy `db:v2` normalized writes, repeatable import mapping and transactional financial/stock reconciliation (014 currently adds only a read-only preflight audit)
 - Private cheque-image storage and SMS retention policy
 
 ## Release gate
@@ -84,3 +85,8 @@ Do not move these drafts into `supabase/migrations/` or run them against the liv
 3. cross-business RLS, permission matrix, concurrency, idempotency and data reconciliation tests pass;
 4. rollback/restore plan and a complete migration package are prepared; and
 5. the user explicitly approves production execution.
+
+
+## Legacy normalization preflight (014)
+
+Migration 014 adds `public.preview_legacy_normalization(uuid)`, a read-only owner/admin preflight over the compatibility store. It reports collection counts, tombstones, malformed/mismatched legacy IDs, and orphan customer/product references in invoices. It does not expose payload values, read protected payloads, write normalized tables, post documents, or change inventory. Financial and stock collections remain explicitly deferred. The RPC requires `business.settings.manage`; anon/public execution is revoked. This is an audit gate, not an importer or proof of normalized synchronization.
