@@ -598,7 +598,7 @@ test('local permission-reset redaction keys exactly match SQL private payload ke
 test('cloud account switch isolates data and membership lookup failures preserve active local data', async () => {
   const { readFile } = await import('node:fs/promises');
   const source = await readFile(new URL('./index.html', import.meta.url), 'utf8');
-  assert.match(source, /if\(accountChanged\)\{\s*cloudBusinesses=\[\];cloudActiveBusinessId='';\s*try\{localStorage\.removeItem\('factoori:active-business'\)\}catch\(e\)\{\}\s*try\{isolateLocalDataForCloudSession\(\)\}\s*catch\(e\)\{cloudSession=null;cloudSchemaReady=false;throw e\}/);
+  assert.match(source, /if\(accountChanged\)\{\s*cloudBusinesses=\[\];cloudActiveBusinessId='';licenseActive=false;\s*try\{localStorage\.removeItem\('factoori:active-business'\)\}catch\(e\)\{\}\s*try\{isolateLocalDataForCloudSession\(\)\}\s*catch\(e\)\{cloudSession=null;cloudSchemaReady=false;throw e\}/);
   assert.match(source, /catch\(error\)\{\s*\/\/ A failed membership request is not proof that the user has no businesses\.[\s\S]*?throw error;\s*\}/);
   assert.doesNotMatch(source, /catch\(error\)\{\s*cloudBusinesses=\[\];cloudActiveBusinessId='';[\s\S]*?resetCloudBusinessContext\(\)/);
   assert.match(source, /function isolateLocalDataForCloudSession\(\)[\s\S]*?localDbBusinessId='';[\s\S]*?businessScopedMode=true;db=JSON\.parse\(EMPTY_BUSINESS_DB_JSON\)/);
