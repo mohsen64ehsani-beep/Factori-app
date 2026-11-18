@@ -22,7 +22,7 @@ begin
  if position('Only the owner can change an administrator role' in pg_get_functiondef('public.update_business_member_role(uuid,uuid,text)'::regprocedure))=0 then
   raise exception 'Administrator role change restriction is missing';
  end if;
- if position('Only the owner can suspend or remove an administrator' in pg_get_functiondef('public.set_business_member_status(uuid,uuid,text)'::regprocedure))=0 then
+ if position('Only the owner can change an administrator status' in pg_get_functiondef('public.set_business_member_status(uuid,uuid,text)'::regprocedure))=0 then
   raise exception 'Administrator suspension restriction is missing';
  end if;
  if position('Only the owner can assign administrator role' in pg_get_functiondef('public.update_business_member_role(uuid,uuid,text)'::regprocedure))=0 then
