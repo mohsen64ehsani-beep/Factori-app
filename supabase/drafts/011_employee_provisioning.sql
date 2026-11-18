@@ -64,7 +64,7 @@ create or replace function public.provision_business_member(
   p_permission_overrides jsonb default '[]'::jsonb
 )
 returns boolean language plpgsql security definer set search_path=''
-as $
+as $$
 declare v_item jsonb; v_code text; v_allowed boolean;
 begin
   if coalesce(current_setting('request.jwt.claim.role',true),'')<>'service_role' then
@@ -95,7 +95,7 @@ begin
   );
   return true;
 end;
-$;
+$$
 
 revoke all on function public.provision_business_member(uuid,uuid,text,uuid,jsonb) from public,anon,authenticated;
 grant execute on function public.provision_business_member(uuid,uuid,text,uuid,jsonb) to service_role;
