@@ -791,3 +791,28 @@ test('business sync coordinator recovers from permission-version mismatch before
   assert.equal(result.syncState.cursor, 3);
   assert.ok(checkpoints.length >= 6);
 });
+
+
+test('regained cost access restores private fields without overwriting local public edits', async () => {
+  const { applySyncPullPage } = await import('./sync-engine.js');
+  const db = { prod: [{ id: 'p1', n: 'local edit' }] };
+  const state = {
+    ...createSyncState(),
+    cursor: 0,
+    versions: { prod: { p1: 2 } },
+    snapshots: { prod: { p1: '{"id":"p1","n":"old"}' } },
+    permissionResetDirty: [{ collection: 'prod', legacy_id: 'p1' }],
+    permissionResetCostAccess: false
+  };
+  const pulled = applySyncPullPage(db, state, {
+    records: [{ collection: 'prod', legacy_id: 'p1', version: 3, revision: 3,
+      change_type: 'upsert', deleted_at: null, payload: { id: 'p1', n: 'old', buy: 120 } }],
+    next_cursor: 3, has_more: false, reset_required: false
+  });
+  assert.equal(pulled.db.prod[0].n, 'local edit');
+  assert.equal(pulled.db.prod[0].buy, 120, 'private data is restored from the server after access is granted');
+  assert.equal(pulled.state.versions.prod.p1, 3);
+  const retry = prepareSyncOperations(pulled.db, pulled.state, ids);
+  assert.equal(retry.operations[0].base_version, 3);
+  assert.equal(retry.operations[0].payload.buy, 120);
+});
