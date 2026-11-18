@@ -17,6 +17,7 @@ declare
  v_payload jsonb;
  v_legacy_id text;
  v_name text;
+ v_name_limit integer;
  v_address text;
  v_fingerprint text;
  v_map private.legacy_normalized_record_map%rowtype;
@@ -67,7 +68,12 @@ begin
 
   if v_row.collection in ('categories','services') then
    v_name:=nullif(btrim(v_payload->>'value'),'');
-   if v_name is null or length(v_name)>case when v_row.collection='categories' then 120 else 200 end
+   if v_row.collection='categories' then
+    v_name_limit:=120;
+   else
+    v_name_limit:=200;
+   end if;
+   if v_name is null or length(v_name)>v_name_limit
      or ('value:'||v_name) is distinct from v_legacy_id then
     v_invalid:=v_invalid+1; continue;
    end if;
