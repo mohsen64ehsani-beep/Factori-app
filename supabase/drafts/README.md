@@ -22,6 +22,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 16. `015_legacy_normalization_preflight.sql` — read-only audit RPC for legacy collection quality and orphan references.
 17. `016_accounting_defaults.sql` — tenant-scoped default chart of accounts, default cash account, and financial-account ledger mapping for new and existing businesses.
 18. `017_customer_receipt_posting.sql` — atomic customer receipt, optional posted-invoice allocation, customer advance accounting, contact ledger, and balanced journal posting.
+19. `018_simple_financial_posting.sql` — atomic supplier payments, expense payments, and other income with contact ledger where applicable and balanced journal posting.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -40,7 +41,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all eighteen draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all nineteen draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty-one SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -68,6 +69,7 @@ The test scripts are:
 - `supabase/tests/015_legacy_normalization_preflight.sql`
 - `supabase/tests/016_accounting_defaults.sql`
 - `supabase/tests/017_customer_receipt_posting.sql`
+- `supabase/tests/018_simple_financial_posting.sql`
 
 ## Device proof deployment note
 
@@ -78,7 +80,7 @@ Migration 009, the `prove-sync-device` Edge Function source, and the Android/Web
 - Invoice numbering sequences and complete fiscal close/reopen controls
 - Journal reversal RPC, cheque lifecycle posting/assignment, normalized invoice-to-ledger posting and purchase/expense/receipt RPCs
 - Full inventory adjustment/purchase/sale posting RPCs and materialized inventory balance projections
-- Supplier payment, expense, purchase, refund, cheque lifecycle, and invoice posting RPCs (customer receipt posting is implemented in 017)
+- Purchase, refund, cheque lifecycle, and invoice posting RPCs (customer receipts are implemented in 017; supplier payments, expense payments and other income are implemented in 018)
 - Owner transfer, account deletion/retention and owner recovery
 - Verified subscription upgrades, downgrades, grace periods and paid-plan entitlements
 - Full multi-device sync runtime tests and normalized financial sync operations
@@ -113,3 +115,8 @@ Migration 016 seeds a minimal system chart of accounts for every business, creat
 ## Customer receipt posting (017)
 
 Migration 017 adds `public.post_customer_receipt(...)`. It requires `payments.create`, validates a same-business active customer and a mapped same-currency financial account, serializes idempotency keys, optionally allocates part or all of the receipt to a posted sales document, and atomically creates the financial transaction, allocation, customer ledger credit, and balanced posted journal. Unallocated amounts are credited to the customer-advances liability account (2200), not incorrectly booked as receivables. A repeated identical request returns the original transaction; reusing the key with changed data fails. Test 017 covers partial allocation, advances, balanced journal, customer ledger, idempotency and cross-business denial.
+
+
+## Simple financial posting (018)
+
+Migration 018 adds `public.post_simple_financial_transaction(...)` for the controlled transaction types `supplier_payment`, `expense_payment`, and `other_income`. It derives the direction and counterpart ledger account server-side (2000, 6000, or 7000), validates contact type for supplier payments, requires the correct permission, validates the mapped same-currency cash/bank account, and atomically writes the financial transaction and a balanced posted journal. Supplier payments also write a debit to the supplier contact ledger. Arbitrary chart-account selection is not accepted from the client. Test 018 covers all three types, idempotent replay, changed-payload rejection, journal balance, supplier ledger and tenant isolation.
