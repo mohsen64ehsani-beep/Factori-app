@@ -16,6 +16,53 @@ export const SYNC_READ_COLLECTIONS = Object.freeze([
 const WRITE_SET = new Set(SYNC_WRITE_COLLECTIONS);
 const READ_SET = new Set(SYNC_READ_COLLECTIONS);
 
+const SENSITIVE_LOCAL_KEYS = new Set([
+  'buy','b','cost','costTotal','cost_total','unitCostAtReturn','unit_cost_at_return',
+  'unit_cost','unitCost','buyPrice','purchasePrice','costPrice','cost_price','total_cost',
+  'last_purchase_cost','average_cost','averageCost','avgCost','average_unit_cost','inventory_value',
+  'profit','profitAmount','margin','marginAmount','purchase_cost','cost_snapshot','unit_cost_snapshot'
+]);
+
+function stripSensitiveLocalValue(value) {
+  if (Array.isArray(value)) return value.map(stripSensitiveLocalValue);
+  if (!value || typeof value !== 'object') return value;
+  const result = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (!SENSITIVE_LOCAL_KEYS.has(key)) result[key] = stripSensitiveLocalValue(item);
+  }
+  return result;
+}
+
+function resetAfterPermissionVersionChange(db, state) {
+  const nextDb = { ...db };
+  for (const collection of SYNC_READ_COLLECTIONS) {
+    if (Array.isArray(db[collection])) nextDb[collection] = stripSensitiveLocalValue(db[collection]);
+  }
+  const nextState = ensureState(state);
+  // Pending payloads may contain data captured under the previous permission
+  // set. Quarantine sanitized copies; local records remain in nextDb and can
+  // be re-enqueued against their last acknowledged snapshot.
+  nextState.conflicts.push(...nextState.pending.map(operation => ({
+    operation: stripSensitiveLocalValue(operation),
+    reason: 'permission_version_changed',
+    detected_at: Date.now()
+  })));
+  nextState.pending = [];
+  for (const collection of Object.keys(nextState.snapshots)) {
+    for (const [legacyId, fingerprint] of Object.entries(nextState.snapshots[collection] || {})) {
+      try {
+        nextState.snapshots[collection][legacyId] = stableStringify(
+          stripSensitiveLocalValue(JSON.parse(fingerprint))
+        );
+      } catch {
+        delete nextState.snapshots[collection][legacyId];
+      }
+    }
+  }
+  nextState.cursor = 0;
+  return { db: nextDb, state: nextState };
+}
+
 export function createSyncState() {
   return { cursor: 0, versions: {}, snapshots: {}, pending: [], conflicts: [], rejected: [], tombstones: [] };
 }
@@ -212,7 +259,8 @@ export function applySyncPullPage(db, state, response) {
     throw new Error('invalid sync pull response');
   }
   if (response.reset_required === true) {
-    return { db, state: ensureState(state), resetRequired: true, hasMore: true };
+    const reset = resetAfterPermissionVersionChange(db, state);
+    return { db: reset.db, state: reset.state, resetRequired: true, hasMore: true };
   }
   if (!Array.isArray(response.records)) throw new Error('sync pull response records must be an array');
   if (typeof response.has_more !== 'boolean') throw new Error('sync pull response has_more must be boolean');
