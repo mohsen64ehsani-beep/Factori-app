@@ -91,6 +91,20 @@ begin
     raise exception 'Revoked license must not grant Premium';
   end if;
 
+  -- A replacement verified license can be claimed after revocation; history remains.
+  v_result := public.claim_factori_license(v_other_key,v_business);
+  if not coalesce((v_result->>'ok')::boolean,false) then
+    raise exception 'Replacement license claim should succeed';
+  end if;
+  v_result := public.get_business_entitlements(v_business);
+  if v_result->>'plan_status'<>'premium' then
+    raise exception 'Replacement license should restore Premium';
+  end if;
+  if (select count(*) from private.factori_license_entitlements
+      where business_id=v_business and status='superseded')<>1 then
+    raise exception 'Revoked entitlement history must be preserved as superseded';
+  end if;
+
   -- Invalid/unverified keys cannot be claimed.
   insert into public.factori_license_keys(id,key_hash,status)
   values ('30000000-0000-4000-8000-000000000003',
