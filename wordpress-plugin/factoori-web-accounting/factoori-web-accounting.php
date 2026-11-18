@@ -41,6 +41,8 @@ add_action('admin_menu', function () {
 function factoori_web_settings_page() {
     if (!current_user_can('manage_options')) { return; }
     $s = factoori_web_settings();
+    $page_id = absint(get_option('factoori_web_page_id', 0));
+    $page_url = $page_id ? get_permalink($page_id) : '';
     ?>
     <div class="wrap">
       <h1>Factoori Web Accounting</h1>
@@ -85,3 +87,26 @@ add_filter('template_include', function ($template) {
     }
     return $template;
 }, 99);
+
+function factoori_web_activate() {
+    $page = get_page_by_path('factoori-accounting');
+    if ($page instanceof WP_Post) {
+        if (has_shortcode($page->post_content, 'factoori_web_accounting')) {
+            update_option('factoori_web_page_id', $page->ID);
+        }
+        return;
+    }
+    $page_id = wp_insert_post(array(
+        'post_type' => 'page',
+        'post_status' => 'publish',
+        'post_title' => 'حسابداری آنلاین فاکتوری',
+        'post_name' => 'factoori-accounting',
+        'post_content' => '[factoori_web_accounting]',
+        'comment_status' => 'closed',
+        'ping_status' => 'closed',
+    ), true);
+    if (!is_wp_error($page_id) && $page_id) {
+        update_option('factoori_web_page_id', (int) $page_id);
+    }
+}
+register_activation_hook(__FILE__, 'factoori_web_activate');
