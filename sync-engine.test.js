@@ -198,3 +198,23 @@ test('IndexedDB checkpoint transactions attach completion handlers before comple
   await clearSyncCheckpoint('business-1', indexedDBImpl);
   assert.equal(await loadSyncCheckpoint('business-1', indexedDBImpl), null);
 });
+
+
+test('db:v2 adapter creates detached JSON snapshots without mutating the live database', async () => {
+  const { createLocalDatabaseSnapshot, saveLocalDatabaseCheckpoint, loadLocalDatabaseCheckpoint } = await import('./sync-db-adapter.js');
+  const live = {
+    cust: [{ id: 'c1', n: 'Customer' }],
+    advancedSettings: { sms: { apiKey: 'device-local-secret' } }
+  };
+  const snapshot = createLocalDatabaseSnapshot(live);
+  assert.deepEqual(snapshot, live);
+  assert.notEqual(snapshot, live);
+  assert.notEqual(snapshot.cust, live.cust);
+  snapshot.cust[0].n = 'changed snapshot';
+  assert.equal(live.cust[0].n, 'Customer');
+  await assert.rejects(() => saveLocalDatabaseCheckpoint({
+    businessId: '', database: live, syncState: createSyncState()
+  }), /explicitly selected business/);
+  await assert.rejects(() => loadLocalDatabaseCheckpoint({ businessId: '' }), /explicitly selected business/);
+  assert.throws(() => createLocalDatabaseSnapshot(null), /must be an object/);
+});
