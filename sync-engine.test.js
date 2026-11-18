@@ -423,3 +423,11 @@ test('cloud readiness fails closed when RPC probes have transport errors', async
   assert.match(source, /!result\.error\s*\|\|\s*\(!!result\.error\.code\s*&&\s*result\.error\.code\s*!==\s*'PGRST202'\)/);
   assert.match(source, /transport failure has no Postgres\/PostgREST code/i);
 });
+
+
+test('cloud startup always clears stale selection when schema readiness is false', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  assert.match(source, /cloudSchemaReady=await api\.getClientHealth\(\);await loadCloudBusinesses\(\)/);
+  assert.match(source, /if\(!api\|\|!cloudSession\?\.user\?\.id\|\|!cloudSchemaReady\)\{\s*cloudBusinesses=\[\];\s*cloudActiveBusinessId='';\s*try\{localStorage\.removeItem\('factoori:active-business'\)/);
+});
