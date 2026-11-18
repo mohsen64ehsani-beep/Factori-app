@@ -58,7 +58,8 @@ test('pull applies remote records, preserves dirty local records, and handles to
     { collection: 'prod', legacy_id: 'p1', version: 1, payload: { id: 'p1', n: 'remote product' } }
   ]);
   assert.equal(db.cust[0].n, 'dirty');
-  assert.equal(db.cust.length, 1);
+  assert.equal(db.cust.length, 2, 'pull merge must not mutate the caller\'s local database');
+  assert.equal(stateWithPending.pending.length, 1, 'input sync state must remain immutable');
   assert.equal(db.prod[0].n, 'remote product');
   assert.equal(state.conflicts.length, 1);
 });
