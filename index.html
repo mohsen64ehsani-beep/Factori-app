@@ -385,7 +385,11 @@ async function initCloudSession(){
   cloudSession=session;
   try{
    if(session){
-    if(!previousSession||previousSession.user?.id!==session.user?.id)isolateLocalDataForCloudSession();
+    const accountChanged=!previousSession||previousSession.user?.id!==session.user?.id;
+    if(accountChanged){
+     isolateLocalDataForCloudSession();
+     cloudSchemaReady=await api.getClientHealth();
+    }
     await loadCloudBusinesses();
    }else if(previousSession){
     restoreLocalDataAfterCloudSession(true);
