@@ -82,7 +82,7 @@ begin
 
  v_fingerprint:=md5(jsonb_build_array(p_business_id,p_entry_date,coalesce(p_description,''),p_fiscal_period_id,v_canonical_lines)::text);
  perform pg_advisory_xact_lock(hashtextextended(p_business_id::text||':journal:'||p_idempotency_key,0));
- select je.id,md5(jsonb_build_array(je.business_id,je.entry_date,coalesce(je.description,''),je.fiscal_period_id,
+ select je.id,md5(jsonb_build_array(je.business_id,je.entry_date,nullif(btrim(coalesce(je.description,'')),''),je.fiscal_period_id,
    coalesce((select jsonb_agg(jsonb_build_object('account_id',jl.account_id,'contact_id',jl.contact_id,
      'debit',jl.debit,'credit',jl.credit,'description',jl.description) order by jl.line_order)
      from public.journal_lines jl where jl.business_id=je.business_id and jl.journal_entry_id=je.id),'[]'::jsonb)))
@@ -143,6 +143,7 @@ declare
  v_existing_fingerprint text;
  v_existing_id uuid;
  v_item_count integer;
+ v_canonical_items jsonb:='[]'::jsonb;
 begin
  if v_user is null then raise exception using errcode='28000',message='Authentication required'; end if;
  if not private.has_business_permission(p_business_id,'inventory.adjust') then
@@ -164,10 +165,21 @@ begin
    group by e.value->>'product_id' having count(*)>1) then
   raise exception using errcode='22023',message='Duplicate products must be combined into one transfer line';
  end if;
- v_fingerprint:=md5(jsonb_build_array(p_business_id,p_from_warehouse_id,p_to_warehouse_id,p_transfer_date,coalesce(p_note,''),p_items)::text);
+ -- Canonicalize the transfer lines before checking the idempotency key.
+ for v_item in select value from jsonb_array_elements(p_items) loop
+  if jsonb_typeof(v_item)<>'object' then raise exception using errcode='22023',message='Transfer line must be an object'; end if;
+  v_product_id:=nullif(v_item->>'product_id','')::uuid;
+  v_qty:=coalesce((v_item->>'quantity')::numeric,0);
+  if v_product_id is null or v_qty<=0 or v_qty>1000000000 then
+   raise exception using errcode='22023',message='Invalid transfer product or quantity';
+  end if;
+  v_canonical_items:=v_canonical_items||jsonb_build_array(jsonb_build_object('product_id',v_product_id,'quantity',v_qty));
+ end loop;
+ v_fingerprint:=md5(jsonb_build_array(p_business_id,p_from_warehouse_id,p_to_warehouse_id,p_transfer_date,
+   nullif(btrim(coalesce(p_note,'')),''),v_canonical_items)::text);
  perform pg_advisory_xact_lock(hashtextextended(p_business_id::text||':transfer:'||p_idempotency_key,0));
  select st.id,md5(jsonb_build_array(st.business_id,st.from_warehouse_id,st.to_warehouse_id,st.transfer_date,
-   coalesce(st.note,''),coalesce((select jsonb_agg(jsonb_build_object('product_id',si.product_id,'quantity',si.quantity) order by si.line_order)
+   nullif(btrim(coalesce(st.note,'')),''),coalesce((select jsonb_agg(jsonb_build_object('product_id',si.product_id,'quantity',si.quantity) order by si.line_order)
      from public.stock_transfer_items si where si.business_id=st.business_id and si.transfer_id=st.id),'[]'::jsonb)))
  into v_existing_id,v_existing_fingerprint
  from public.stock_transfers st
