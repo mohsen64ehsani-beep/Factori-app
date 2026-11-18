@@ -905,3 +905,30 @@ test('business sync lock is released when checkpoint initialization fails', asyn
   await assert.rejects(runBusinessSync(options), /IndexedDB unavailable in test/);
   await assert.rejects(runBusinessSync(options), /IndexedDB unavailable in test/);
 });
+
+
+test('checkpoint recovery restores pulled records and overlays only local edits made during the interrupted run', async () => {
+  const { mergeLocalChangesOntoCheckpoint } = await import('./sync-db-adapter.js');
+  const baseDatabase = {
+    cust: [{ id: 'c1', n: 'old' }, { id: 'c2', n: 'to be deleted' }],
+    prod: [{ id: 'p1', n: 'unchanged' }],
+    advancedSettings: { sms: { apiKey: 'OLD-LOCAL' } }
+  };
+  const localDatabase = {
+    cust: [{ id: 'c1', n: 'edited while sync ran' }],
+    prod: [{ id: 'p1', n: 'unchanged' }],
+    advancedSettings: { sms: { apiKey: 'NEW-LOCAL' } }
+  };
+  const checkpointDatabase = {
+    cust: [{ id: 'c1', n: 'remote update' }, { id: 'c2', n: 'to be deleted' }, { id: 'c3', n: 'remote new' }],
+    prod: [{ id: 'p1', n: 'remote unchanged' }],
+    advancedSettings: { sms: { apiKey: 'OLD-LOCAL' } }
+  };
+  const merged = mergeLocalChangesOntoCheckpoint({ localDatabase, baseDatabase, checkpointDatabase });
+  assert.deepEqual(merged.cust, [
+    { id: 'c1', n: 'edited while sync ran' },
+    { id: 'c3', n: 'remote new' }
+  ]);
+  assert.deepEqual(merged.prod, [{ id: 'p1', n: 'remote unchanged' }]);
+  assert.equal(merged.advancedSettings.sms.apiKey, 'NEW-LOCAL');
+});
