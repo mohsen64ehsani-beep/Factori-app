@@ -134,4 +134,4 @@ jobs:
       - name: Test P-256 device proof and replay rejection
         run: deno test supabase/functions/prove-sync-device/crypto_test.ts
       - name: Type-check proof Edge Function
-        run: deno check supabase/functions/prove-sync-device/index.ts
+        run: deno check --node-modules-dir=auto supabase/functions/prove-sync-device/index.ts
