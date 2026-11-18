@@ -162,7 +162,7 @@ begin
   exception when numeric_value_out_of_range or invalid_text_representation then
    v_invalid:=v_invalid+1; continue;
   end;
-  if v_discount<0 or v_tax_rate<0 or v_tax_rate>100 then
+  if v_discount<0 or v_discount>999999999999999999 or v_tax_rate<0 or v_tax_rate>100 then
    v_invalid:=v_invalid+1; continue;
   end if;
 
@@ -188,7 +188,7 @@ begin
    exception when numeric_value_out_of_range or invalid_text_representation then
     v_valid:=false; exit;
    end;
-   if v_quantity<=0 or v_quantity>1000000000 or v_price<0 then
+   if v_quantity<=0 or v_quantity>1000000000 or v_price<0 or v_price>999999999999999999 then
     v_valid:=false; exit;
    end if;
    select m.normalized_id,p.name,p.unit_name into v_product_id,v_product_name,v_unit_name
