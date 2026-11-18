@@ -30,6 +30,7 @@ declare
  v_existing_fingerprint text;
  v_existing_id uuid;
  v_period record;
+ v_canonical_lines jsonb:='[]'::jsonb;
 begin
  if v_user is null then raise exception using errcode='28000',message='Authentication required'; end if;
  if not private.has_business_permission(p_business_id,'accounting.journal.post') then
@@ -49,23 +50,7 @@ begin
   end if;
  end if;
 
- v_fingerprint:=md5(jsonb_build_array(p_business_id,p_entry_date,coalesce(p_description,''),p_fiscal_period_id,p_lines)::text);
- perform pg_advisory_xact_lock(hashtextextended(p_business_id::text||':journal:'||p_idempotency_key,0));
- select id,request_fingerprint into v_existing_id,v_existing_fingerprint
- from (
-  select je.id,md5(jsonb_build_array(je.business_id,je.entry_date,coalesce(je.description,''),je.fiscal_period_id,
-    coalesce((select jsonb_agg(jsonb_build_object('account_id',jl.account_id,'contact_id',jl.contact_id,'debit',jl.debit,'credit',jl.credit,'description',jl.description) order by jl.line_order)
-      from public.journal_lines jl where jl.business_id=je.business_id and jl.journal_entry_id=je.id),'[]'::jsonb)) as request_fingerprint
-  from public.journal_entries je
-  where je.business_id=p_business_id and je.idempotency_key=p_idempotency_key
- ) existing;
- if v_existing_id is not null then
-  if v_existing_fingerprint is distinct from v_fingerprint then
-   raise exception using errcode='23505',message='Idempotency key reused with different journal data';
-  end if;
-  return v_existing_id;
- end if;
-
+ -- Idempotency is checked after validating and normalizing the submitted lines.
  for v_line in select value from jsonb_array_elements(p_lines) loop
   if jsonb_typeof(v_line)<>'object' then raise exception using errcode='22023',message='Journal line must be an object'; end if;
   v_account_id:=nullif(v_line->>'account_id','')::uuid;
@@ -87,9 +72,28 @@ begin
   v_debit_total:=v_debit_total+v_debit;
   v_credit_total:=v_credit_total+v_credit;
   v_line_count:=v_line_count+1;
+  v_canonical_lines:=v_canonical_lines||jsonb_build_array(jsonb_build_object(
+    'account_id',v_account_id,'contact_id',v_contact_id,'debit',v_debit,'credit',v_credit,
+    'description',nullif(btrim(coalesce(v_line->>'description','')),'')));
  end loop;
  if v_line_count<2 or v_debit_total<=0 or v_debit_total<>v_credit_total then
   raise exception using errcode='23514',message='Journal entry is not balanced';
+ end if;
+
+ v_fingerprint:=md5(jsonb_build_array(p_business_id,p_entry_date,coalesce(p_description,''),p_fiscal_period_id,v_canonical_lines)::text);
+ perform pg_advisory_xact_lock(hashtextextended(p_business_id::text||':journal:'||p_idempotency_key,0));
+ select je.id,md5(jsonb_build_array(je.business_id,je.entry_date,coalesce(je.description,''),je.fiscal_period_id,
+   coalesce((select jsonb_agg(jsonb_build_object('account_id',jl.account_id,'contact_id',jl.contact_id,
+     'debit',jl.debit,'credit',jl.credit,'description',jl.description) order by jl.line_order)
+     from public.journal_lines jl where jl.business_id=je.business_id and jl.journal_entry_id=je.id),'[]'::jsonb)))
+ into v_existing_id,v_existing_fingerprint
+ from public.journal_entries je
+ where je.business_id=p_business_id and je.idempotency_key=p_idempotency_key;
+ if v_existing_id is not null then
+  if v_existing_fingerprint is distinct from v_fingerprint then
+   raise exception using errcode='23505',message='Idempotency key reused with different journal data';
+  end if;
+  return v_existing_id;
  end if;
 
  insert into public.journal_entries(business_id,entry_date,fiscal_period_id,source_type,description,
