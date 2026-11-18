@@ -38,8 +38,8 @@ begin
  insert into public.contacts(business_id,contact_type,name,legacy_id)
  values(v_business,'supplier','Return supplier','return-supplier')
  returning id into v_supplier;
- insert into public.warehouses(business_id,name,is_default,is_active,legacy_id)
- values(v_business,'Main warehouse',true,true,'return-main-warehouse')
+ insert into public.warehouses(business_id,name,is_default,is_active)
+ values(v_business,'Main warehouse',true,true)
  returning id into v_warehouse;
  insert into public.products(business_id,name,unit_name,track_inventory,is_active,legacy_id)
  values(v_business,'Return product','عدد',true,true,'return-product')
