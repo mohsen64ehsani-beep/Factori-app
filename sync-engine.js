@@ -269,10 +269,9 @@ export function applyPulledRecords(db, state, records) {
   for (const collection of SYNC_READ_COLLECTIONS) {
     nextDb[collection] = Array.isArray(db[collection]) ? db[collection].map(clone) : [];
   }
-  const dirty = new Set([
-    ...nextState.pending.map(op => op.collection + ':' + op.legacy_id),
-    ...nextState.permissionResetDirty.map(marker => marker.collection + ':' + marker.legacy_id)
-  ]);
+  const pendingDirty = new Set(nextState.pending.map(op => op.collection + ':' + op.legacy_id));
+  const resetDirty = new Set(nextState.permissionResetDirty.map(marker => marker.collection + ':' + marker.legacy_id));
+  const dirty = new Set([...pendingDirty, ...resetDirty]);
   for (const collection of SYNC_READ_COLLECTIONS) {
     if (!Array.isArray(nextDb[collection])) nextDb[collection] = [];
   }
@@ -281,11 +280,37 @@ export function applyPulledRecords(db, state, records) {
     const legacyId = String(record?.legacy_id ?? '');
     if (!READ_SET.has(collection) || !legacyId) continue;
     const key = collection + ':' + legacyId;
+    const rows = nextDb[collection];
+    const index = rows.findIndex(row => String(
+      row && typeof row === 'object' && row.id !== undefined ? row.id :
+      (typeof row === 'string' || typeof row === 'number') ? 'value:' + row : ''
+    ) === legacyId);
     if (dirty.has(key)) {
+      if (resetDirty.has(key) && !pendingDirty.has(key) && !record.deleted_at && record.change_type !== 'delete'
+        && record.payload && typeof record.payload === 'object' && !Array.isArray(record.payload)) {
+        const localRecord = index >= 0 ? normalizeLocalRecord(collection, rows[index]) : null;
+        const remotePayload = clone(record.payload);
+        const remoteFingerprint = stableStringify(remotePayload);
+        if (localRecord && stableStringify(stripSensitiveLocalValue(localRecord.payload)) === remoteFingerprint) {
+          nextState.snapshots[collection] ||= {};
+          nextState.snapshots[collection][legacyId] = remoteFingerprint;
+          nextState.versions[collection] ||= {};
+          nextState.versions[collection][legacyId] = Number(record.version) || 0;
+          nextState.permissionResetDirty = nextState.permissionResetDirty.filter(
+            marker => !(marker.collection === collection && String(marker.legacy_id) === legacyId)
+          );
+          continue;
+        }
+        const previousFingerprint = nextState.snapshots[collection]?.[legacyId];
+        if (previousFingerprint && previousFingerprint === remoteFingerprint) {
+          nextState.versions[collection] ||= {};
+          nextState.versions[collection][legacyId] = Number(record.version) || 0;
+          continue;
+        }
+      }
       nextState.conflicts.push({ remote_record: clone(record), reason: 'local_pending_change' });
       continue;
     }
-    const rows = nextDb[collection];
     const index = rows.findIndex(row => String(
       row && typeof row === 'object' && row.id !== undefined ? row.id :
       (typeof row === 'string' || typeof row === 'number') ? 'value:' + row : ''
