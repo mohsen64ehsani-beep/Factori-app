@@ -504,3 +504,20 @@ test('permission-version reset redacts stale private cache and quarantines pendi
   assert.equal(state.cursor, 81, 'reset must not mutate the input sync state');
   assert.equal(db.prod[0].buy, 120, 'reset must not mutate the live database');
 });
+
+
+test('local sync collection allowlists exactly match SQL read and write permissions', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { SYNC_READ_COLLECTIONS, SYNC_WRITE_COLLECTIONS } = await import('./sync-engine.js');
+  const sql = await readFile(new URL('./supabase/drafts/005_sync_compatibility.sql', import.meta.url), 'utf8');
+  const readStart = sql.indexOf("if p_operation='read' then");
+  const writeStart = sql.indexOf("elsif p_operation in ('write','delete') then");
+  const writeEnd = sql.indexOf("else\n    return false;", writeStart);
+  assert.ok(readStart >= 0 && writeStart > readStart && writeEnd > writeStart);
+  const readSection = sql.slice(readStart, writeStart);
+  const writeSection = sql.slice(writeStart, writeEnd);
+  const sqlRead = [...readSection.matchAll(/when '([^']+)' then '([^']+)'/g)].map(match => match[1]).sort();
+  const sqlWrite = [...writeSection.matchAll(/when '([^']+)' then '([^']+)'/g)].map(match => match[1]).sort();
+  assert.deepEqual([...SYNC_READ_COLLECTIONS].sort(), sqlRead);
+  assert.deepEqual([...SYNC_WRITE_COLLECTIONS].sort(), sqlWrite);
+});
