@@ -16,12 +16,13 @@ export const SYNC_READ_COLLECTIONS = Object.freeze([
 const WRITE_SET = new Set(SYNC_WRITE_COLLECTIONS);
 const READ_SET = new Set(SYNC_READ_COLLECTIONS);
 
-const SENSITIVE_LOCAL_KEYS = new Set([
+export const SYNC_SENSITIVE_FIELDS = Object.freeze([
   'buy','b','cost','costTotal','cost_total','unitCostAtReturn','unit_cost_at_return',
   'unit_cost','unitCost','buyPrice','purchasePrice','costPrice','cost_price','total_cost',
   'last_purchase_cost','average_cost','averageCost','avgCost','average_unit_cost','inventory_value',
   'profit','profitAmount','margin','marginAmount','purchase_cost','cost_snapshot','unit_cost_snapshot'
 ]);
+const SENSITIVE_LOCAL_KEYS = new Set(SYNC_SENSITIVE_FIELDS);
 
 function stripSensitiveLocalValue(value) {
   if (Array.isArray(value)) return value.map(stripSensitiveLocalValue);
