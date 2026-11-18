@@ -290,8 +290,8 @@ begin
   insert into public.journal_lines(
     business_id,journal_entry_id,account_id,contact_id,debit,credit,description,line_order
   ) values (
-    p_business_id,v_payable_account_id,v_doc.contact_id,0,v_doc.total_amount,'بدهی به تأمین‌کننده',
-    case when v_doc.tax_amount>0 then 3 else 2 end
+    p_business_id,v_journal_id,v_payable_account_id,v_doc.contact_id,0,v_doc.total_amount,
+    'بدهی به تأمین‌کننده',case when v_doc.tax_amount>0 then 3 else 2 end
   );
 
   update public.journal_entries
