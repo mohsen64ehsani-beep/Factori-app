@@ -628,3 +628,15 @@ test('permission reset without access metadata clears shared collections fail-cl
   assert.deepEqual(result.db.cust, []);
   assert.deepEqual(result.db.prod, []);
 });
+
+
+test('SQL permission reset returns the readable collection and cost-access snapshot', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const sql = await readFile(new URL('./supabase/drafts/005_sync_compatibility.sql', import.meta.url), 'utf8');
+  const pull = sql.slice(sql.indexOf('create or replace function private.sync_pull'));
+  const reset = pull.slice(pull.indexOf('if v_device.permission_version<>v_member_permission_version then'),
+    pull.indexOf('v_cost_allowed:=(select private.has_business_permission'));
+  assert.match(reset, /'readable_collections'/);
+  assert.match(reset, /'cost_access'/);
+  assert.match(reset, /private\.can_sync_collection\(p_business_id,c\.collection,'read'\)/);
+});
