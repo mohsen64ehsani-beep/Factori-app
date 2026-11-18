@@ -122,12 +122,15 @@ begin
  from public.financial_transactions ft
  where ft.business_id=p_business_id and ft.id=v_cheque.related_transaction_id
  for update;
- if not found or v_original_tx.status<>'posted' or v_original_tx.amount<>v_cheque.amount
-  or v_original_tx.contact_id<>v_cheque.contact_id
+ if not found then
+  raise exception using errcode='55000',message='Original cheque settlement transaction is missing';
+ end if;
+ if v_original_tx.status<>'posted' or v_original_tx.amount<>v_cheque.amount
+  or v_original_tx.contact_id is distinct from v_cheque.contact_id
   or v_original_tx.account_id is null
   or (v_cheque.cheque_direction='received' and v_original_tx.transaction_type<>'customer_receipt')
   or (v_cheque.cheque_direction='issued' and v_original_tx.transaction_type<>'supplier_payment') then
-  raise exception using errcode='55000',message='Original cheque settlement transaction is missing or inconsistent';
+  raise exception using errcode='55000',message='Original cheque settlement transaction is inconsistent';
  end if;
 
  select je.id into v_original_journal_id
