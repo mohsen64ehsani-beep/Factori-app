@@ -15,6 +15,8 @@ declare
  v_financial_total bigint:=0;
  v_draft_documents bigint:=0;
  v_problem_count bigint:=0;
+ v_other jsonb:='[]'::jsonb;
+ v_other_total bigint:=0;
  v_total_active bigint:=0;
  v_mapped bigint:=0;
  v_unmapped bigint:=0;
@@ -31,7 +33,7 @@ begin
   raise exception using errcode='42501',message='Business administration permission required';
  end if;
 
- foreach v_collection in array array['cust','prod','categories','services','warehouses','inv','serviceInv'] loop
+ foreach v_collection in array array['cust','suppliers','prod','categories','services','warehouses','inv','serviceInv'] loop
   select
    count(*) filter(where r.deleted_at is null),
    count(*) filter(where r.deleted_at is not null),
@@ -89,6 +91,18 @@ begin
   group by r.collection
  ) x;
 
+ select coalesce(jsonb_agg(jsonb_build_object('collection',x.collection,'total',x.total) order by x.collection),'[]'::jsonb),
+  coalesce(sum(x.total),0)
+ into v_other,v_other_total
+ from (
+  select r.collection,count(*) as total
+  from private.business_state_records r
+  where r.business_id=p_business_id and r.collection=any(array[
+   'bankAccounts','fiscal','duedates','smsHistory'
+  ]) and r.deleted_at is null
+  group by r.collection
+ ) x;
+
  select count(*) into v_draft_documents
  from private.legacy_normalized_record_map m
  join public.documents d on d.business_id=m.business_id and d.id=m.normalized_id
@@ -99,9 +113,10 @@ begin
   'business_id',p_business_id,'mode','read_only_reconciliation',
   'collections',v_collections,'financial_collections_deferred',v_financial,
   'deferred_financial_records',v_financial_total,
+  'other_collections_deferred',v_other,'deferred_other_records',v_other_total,
   'draft_documents_pending_review',v_draft_documents,
   'unresolved_source_or_mapping_rows',v_problem_count,
-  'safe_to_cutover',v_problem_count=0 and v_financial_total=0 and v_draft_documents=0
+  'safe_to_cutover',v_problem_count=0 and v_financial_total=0 and v_other_total=0 and v_draft_documents=0
  );
 end;
 $$;
