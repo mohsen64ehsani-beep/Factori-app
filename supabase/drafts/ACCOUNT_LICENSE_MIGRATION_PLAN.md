@@ -69,7 +69,7 @@ The draft review documents explicitly record blockers:
 - paid-plan entitlement enforcement is a placeholder;
 - several accounting, payment, purchase, expense, cheque and inventory workflows still need normalized transactional RPCs.
 
-The current app-side free limits (3 invoices/day, 5 customers, 5 products, 2 items/invoice) do not match the draft database quota defaults (3 invoices/day, 50 customers, 50 products, 10 items/invoice). These must be reconciled before quotas are authoritative.
+The current app-side free limits (3 invoices/day, 5 customers, 5 products, 2 items/invoice) do not match the draft database quota defaults (3 invoices/day, 50 customers, 50 products, 10 items/invoice). These must be reconciled before quotas are authoritative. Draft 013 now ensures a valid Premium entitlement bypasses server-side Free quota checks, but the actual Free thresholds still need product approval and alignment.
 
 The existing isolated PostgreSQL 17 CI validates SQL draft application and regression assertions, but its own README correctly states that it is not a full Supabase/Auth/Edge Function emulator and does not prove production readiness.
 
@@ -101,9 +101,10 @@ Draft migration `013_account_bound_license_entitlements.sql` and regression test
 - makes repeated claims by the same owner/business idempotent and prevents a different account/business from taking the key;
 - keeps entitlement history when a license is revoked and permits a replacement purchase to become the new active business entitlement;
 - derives Premium server-side from the business owner and non-revoked entitlement; employees receive the business plan through active membership, but cannot claim licenses;
+- makes the server-side per-record and daily Free quota functions bypass limits only while the business has a valid Premium entitlement; revocation restores Free enforcement and replacement licenses preserve history;
 - stores entitlement rows in the private schema and exposes no direct table access.
 
-`cloud-client.js` now has a `claimLicense(businessId, licenseKey)` RPC wrapper. The cloud readiness probe is being extended to verify that this RPC is deployed. This is only an API foundation: the existing license-entry UI and `license-client.js` still use device-bound activation, and Premium gating has not yet been switched to account/business entitlements. Do not treat the new account-license flow as live until the client UI, session/business refresh, offline policy and old-client compatibility are completed and tested.
+`cloud-client.js` now has a `claimLicense(businessId, licenseKey)` RPC wrapper. The cloud readiness probe is being extended to verify that this RPC is deployed. The app now uses the selected business entitlement for Premium gating after an account has been used on that installation; it persists an account-license mode marker so logout does not fall back to a handset token. The license-entry UI routes signed-in users through `claimLicense`, while accounts that have never entered account mode retain the old device-activation path for compatibility. This client integration passed the local sync/static regression workflow, but has not been exercised against a deployed Supabase staging project. Offline entitlement caching, server enforcement for every premium-only operation, legacy `app_licenses` recovery, and old-client compatibility remain open.
 
 CI creates a disposable license-schema fixture matching the existing production table shape; it does not read or modify production license data. The migration and test remain under `supabase/drafts/` and `supabase/tests/`.
 
