@@ -50,6 +50,8 @@ The SQL source files remain under `supabase/drafts/` as the tested development s
 44. `043_restrict_legacy_license_rpc.sql` — removes direct anon/authenticated execution of the legacy license RPC; the signed Edge Function retains service-role access.
 45. `044_web_legacy_collection_reads.sql` — adds permission-checked access to Android legacy collections for the web workspace.
 46. `045_web_inventory_balance_rpc.sql` — exposes complete product/warehouse balances aggregated from all stock movements.
+47. `046_web_mobile_financial_inventory_bridge.sql` — mirrors web-created receipts, supplier payments, expenses, other income, cheques and stock movements into the Android sync collections; adds a guarded import wrapper for supported historical records.
+48. `047_stock_bridge_warehouse_compatibility.sql` — fixes the stock bridge to use the normalized warehouse UUID because the warehouses table has no legacy ID.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -68,7 +70,7 @@ The SQL source files remain under `supabase/drafts/` as the tested development s
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all forty-five draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all forty-eight SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all forty-seven draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all fifty SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -124,6 +126,8 @@ The test scripts are:
 - `supabase/tests/043_restrict_legacy_license_rpc.sql`
 - `supabase/tests/044_web_legacy_collection_reads.sql`
 - `supabase/tests/045_web_inventory_balance_rpc.sql`
+- `supabase/tests/046_web_mobile_financial_inventory_bridge.sql`
+- `supabase/tests/047_stock_bridge_warehouse_compatibility.sql`
 
 ## Device proof deployment note
 
@@ -299,3 +303,8 @@ The Android license client calls the signed `activate-license` Edge Function, wh
 ## Web legacy data and inventory (044–045)
 
 The web workspace can request Android legacy collections through a permission-checked allowlisted RPC, keeping private cost fields behind the catalog cost permission. Inventory balances are calculated from the complete stock movement history by a separate permission-checked RPC; the UI no longer needs to infer current stock from a truncated recent-movement list.
+
+
+## Web-to-Android financial and inventory bridge (046–047)
+
+New web customer receipts, supplier payments, expenses and other income are published into their Android legacy collections. Received cheques are mirrored into the app's cheque receipt collection and status changes follow the normalized cheque lifecycle. Stock movements are mirrored with before/after balances and update the app-side product quantity snapshot. Supported historical customer, supplier, catalog, warehouse, fiscal-period and invoice draft records can be imported only after the read-only preflight passes. Financial legacy collections remain visible and explicitly deferred from normalized cutover until a dedicated audited mapping is available.
