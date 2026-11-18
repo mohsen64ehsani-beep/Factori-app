@@ -156,7 +156,7 @@ test('IndexedDB checkpoint transactions attach completion handlers before comple
   const rows = new Map();
   const makeRequest = (result) => {
     const request = { result, error: null, onsuccess: null, onerror: null };
-    queueMicrotask(() => request.onsuccess?.());
+    setTimeout(() => request.onsuccess?.(), 0);
     return request;
   };
   const indexedDBImpl = {
@@ -173,10 +173,10 @@ test('IndexedDB checkpoint transactions attach completion handlers before comple
               return {
                 get(key) {
                   const request = { result: rows.get(key) ?? null, error: null, onsuccess: null, onerror: null };
-                  queueMicrotask(() => { request.onsuccess?.(); tx.oncomplete?.(); });
+                  setTimeout(() => { request.onsuccess?.(); tx.oncomplete?.(); }, 0);
                   return request;
                 },
-                put(value) { rows.set(value.businessId, value); queueMicrotask(() => tx.oncomplete?.()); },
+                put(value) { rows.set(value.businessId, value); setTimeout(() => tx.oncomplete?.(), 0); },
                 delete(key) { rows.delete(key); queueMicrotask(() => tx.oncomplete?.()); }
               };
             }
@@ -185,7 +185,7 @@ test('IndexedDB checkpoint transactions attach completion handlers before comple
         }
       };
       request.result = db;
-      queueMicrotask(() => request.onsuccess?.());
+      setTimeout(() => request.onsuccess?.(), 0);
       return request;
     }
   };
