@@ -68,7 +68,7 @@ The mapping ledger must be business-scoped and inaccessible to `anon`. Client wr
 2. **Reference data:** import categories, contacts, warehouses, services, and products. Resolve dependencies before child records. Protect product costs separately.
 3. **Draft documents:** import goods/service invoices as drafts only. Validate every customer, product/service, warehouse, date, quantity, amount, discount, tax, and item count. Keep original legacy identifiers in the mapping ledger.
 4. **Reconciliation:** compare source and normalized counts/totals per business; detect unmapped rows, duplicate numbers, mismatched totals, and orphan references. Produce a report before any posting.
-5. **Dedicated transactional operations:** payments, receipts, cheques, purchases, returns, expenses, debts, supplier balances, account transfers, and stock movements require dedicated idempotent RPCs and journal/stock tests. They must not be replayed as generic upserts.
+5. **Dedicated transactional operations:** payments, receipts, cheques, purchases, opening stock, returns, expenses, debts, supplier balances, account transfers, and stock movements require dedicated idempotent RPCs and journal/stock tests. Purchase posting is in 019, goods-sale posting in 020, FIFO warehouse transfer in 021, and valued opening stock in 022; returns and remaining lifecycle operations are still pending. They must not be replayed as generic upserts.
 6. **Cutover:** retain the legacy source and a recoverable export until the owner explicitly approves a tested cutover. No automatic deletion or destructive replacement.
 
 ## Explicitly unsupported until separately designed
@@ -79,13 +79,13 @@ Do not import these as normalized financial or inventory facts yet: `pay`, `debt
 
 - Migration 014 now creates the private business-scoped legacy identity map. It stores a source fingerprint and target identity, not the source payload.
 - Migration 015 now adds `preview_legacy_normalization(uuid)`, a read-only owner/admin audit RPC. It counts supported collection rows, tombstones, malformed payload objects, missing/mismatched payload IDs, and orphan customer/product references in goods invoices. It reports deferred financial collections and never writes normalized records.
-- CI runs all 16 draft migrations and 18 SQL tests on disposable PostgreSQL 17 with a minimal Auth compatibility shim. The preflight test includes runtime fixtures for orphan detection, read-only behavior, and tenant isolation. This is not a complete Supabase Auth/JWT/Edge Functions environment.
+- CI runs the current ordered draft migrations and SQL regression suite on disposable PostgreSQL 17 with a minimal Auth compatibility shim. The preflight test includes runtime fixtures for orphan detection, read-only behavior, and tenant isolation. This is not a complete Supabase Auth/JWT/Edge Functions environment.
 - The active app source audit confirms the customer, product, goods-invoice, service-catalog, and service-invoice shapes described above. Service costs and invoice cost fields are sensitive. Initial service-invoice receipts are separate `pay` records.
 - `warehouses`, categories, product category IDs, complete service catalog reconciliation, and every edit/delete/tombstone path still need focused audit before importing those records.
 
 ## Next implementation gate
 
-The next work is an importer design and implementation—not another mapping migration. Before any import RPC is added:
+The next work is completion of normalized transactional inventory/returns and then the importer design—not another mapping migration. Before any import RPC is added:
 
 - finish the source audit for warehouses, category references, product edits, service costs, invoice edits/deletes, and all related tombstone behavior;
 - inspect the complete normalized table constraints, RLS policies, and transactional RPC signatures for contacts, products, services, warehouses, and draft documents;
