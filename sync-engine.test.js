@@ -78,6 +78,18 @@ test('explicit tombstones delete only records with a known remote version', () =
   assert.equal(operations[0].base_version, 3);
 });
 
+
+test('tombstone helper only records explicitly deleted remotely-known records', async () => {
+  const { createSyncTombstone } = await import('./sync-engine.js');
+  const initial = { ...createSyncState(), versions: { cust: { c1: 4 } } };
+  const next = createSyncTombstone('cust', 'c1', initial);
+  assert.equal(next.tombstones.length, 1);
+  assert.equal(next.tombstones[0].legacy_id, 'c1');
+  assert.equal(initial.tombstones.length, 0);
+  assert.equal(createSyncTombstone('cust', 'unknown', initial).tombstones.length, 0);
+  assert.throws(() => createSyncTombstone('pay', 'p1', initial));
+});
+
 test('cursor cannot move backwards or exceed safe integer precision', () => {
   const state = advanceSyncCursor(createSyncState(), 9);
   assert.equal(state.cursor, 9);
