@@ -42,6 +42,7 @@ begin
      and m.source_fingerprint=encode(extensions.digest(convert_to(r.payload_public::text,'UTF8'),'sha256'),'hex')
      and case r.collection
       when 'cust' then exists(select 1 from public.contacts x where x.business_id=p_business_id and x.id=m.normalized_id)
+      when 'suppliers' then exists(select 1 from public.contacts x where x.business_id=p_business_id and x.id=m.normalized_id and x.contact_type in ('supplier','both'))
       when 'prod' then exists(select 1 from public.products x where x.business_id=p_business_id and x.id=m.normalized_id)
       when 'categories' then exists(select 1 from public.product_categories x where x.business_id=p_business_id and x.id=m.normalized_id)
       when 'services' then exists(select 1 from public.services x where x.business_id=p_business_id and x.id=m.normalized_id)
@@ -55,6 +56,7 @@ begin
    count(*) filter(where r.deleted_at is null and (
      m.import_status='orphaned' or (m.import_status='mapped' and not case r.collection
       when 'cust' then exists(select 1 from public.contacts x where x.business_id=p_business_id and x.id=m.normalized_id)
+      when 'suppliers' then exists(select 1 from public.contacts x where x.business_id=p_business_id and x.id=m.normalized_id and x.contact_type in ('supplier','both'))
       when 'prod' then exists(select 1 from public.products x where x.business_id=p_business_id and x.id=m.normalized_id)
       when 'categories' then exists(select 1 from public.product_categories x where x.business_id=p_business_id and x.id=m.normalized_id)
       when 'services' then exists(select 1 from public.services x where x.business_id=p_business_id and x.id=m.normalized_id)
