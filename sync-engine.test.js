@@ -563,3 +563,13 @@ test('local permission-reset redaction keys exactly match SQL private payload ke
   const sqlFields = [...sql.slice(start, end).matchAll(/'([^']+)'/g)].map(match => match[1]).sort();
   assert.deepEqual([...SYNC_SENSITIVE_FIELDS].sort(), sqlFields);
 });
+
+
+test('cloud account switch and membership failures fail closed before rendering business data', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  assert.match(source, /if\(accountChanged\)\{\s*cloudBusinesses=\[\];cloudActiveBusinessId='';\s*try\{localStorage\.removeItem\('factoori:active-business'\)\}catch\(e\)\{\}\s*isolateLocalDataForCloudSession\(\)/);
+  assert.match(source, /catch\(error\)\{\s*cloudBusinesses=\[\];cloudActiveBusinessId='';\s*try\{localStorage\.removeItem\('factoori:active-business'\)\}catch\(e\)\{\}\s*if\(!demoMode\)resetCloudBusinessContext\(\)/);
+  assert.match(source, /function isolateLocalDataForCloudSession\(\)[\s\S]*?localDbBusinessId='';[\s\S]*?businessScopedMode=true;db=JSON\.parse\(EMPTY_BUSINESS_DB_JSON\)/);
+  assert.match(source, /function resetCloudBusinessContext\(\)[\s\S]*?localDbBusinessId='';businessScopedMode=true;db=JSON\.parse\(EMPTY_BUSINESS_DB_JSON\)/);
+});
