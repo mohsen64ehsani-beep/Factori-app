@@ -640,4 +640,10 @@ test('SQL permission reset returns the readable collection and cost-access snaps
   assert.match(reset, /'readable_collections'/);
   assert.match(reset, /'cost_access'/);
   assert.match(reset, /private\.can_sync_collection\(p_business_id,c\.collection,'read'\)/);
+  const { SYNC_READ_COLLECTIONS } = await import('./sync-engine.js');
+  const arrayStart = reset.indexOf('unnest(array[');
+  const arrayEnd = reset.indexOf(']) as c(collection)', arrayStart);
+  assert.ok(arrayStart >= 0 && arrayEnd > arrayStart);
+  const resetCollections = [...reset.slice(arrayStart, arrayEnd).matchAll(/'([^']+)'/g)].map(match => match[1]).sort();
+  assert.deepEqual(resetCollections, [...SYNC_READ_COLLECTIONS].sort());
 });
