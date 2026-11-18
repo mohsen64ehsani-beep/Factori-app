@@ -1,6 +1,6 @@
-# Shared database migration drafts
+# Shared database migration source and deployment status
 
-These files are **not production migrations**. They live under `supabase/drafts/` intentionally and have not been applied to the live Supabase project.
+The SQL source files remain under `supabase/drafts/` as the tested development sequence. On 2026-11-18, all 37 database changes (001–036, including 004a) were applied successfully to the live Factoori Supabase project. Matching, timestamped copies are recorded under `supabase/migrations/` so the GitHub branch tracks the production migration history. The two earlier license migrations remain the pre-existing production baseline.
 
 ## Draft order
 
@@ -125,7 +125,7 @@ Migration 009, the `prove-sync-device` Edge Function source, and the Android/Web
 
 ## Release gate
 
-Do not move these drafts into `supabase/migrations/` or run them against the live project until:
+Do not re-apply the already-deployed sequence. For future database changes, create a new migration and validate it in CI before production deployment. The existing production sequence was applied after explicit project-owner authorization. Remaining release gates are:
 1. schema dependencies and exact RPC signatures are reconciled;
 2. the isolated PostgreSQL 17 workflow passes and its limitations are addressed with Supabase-specific verification;
 3. cross-business RLS, permission matrix, concurrency, idempotency and data reconciliation tests pass;
