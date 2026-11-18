@@ -1,6 +1,6 @@
 # Shared database migration source and deployment status
 
-The SQL source files remain under `supabase/drafts/` as the tested development sequence. On 2026-11-18, all 37 database changes (001–036, including 004a) were applied successfully to the live Factoori Supabase project. Matching, timestamped copies are recorded under `supabase/migrations/` so the GitHub branch tracks the production migration history. The two earlier license migrations remain the pre-existing production baseline.
+The SQL source files remain under `supabase/drafts/` as the tested development sequence. On 2026-11-18, all current database changes through migration 051 (including 004a and the later web/mobile bridge migrations) were applied successfully to the live Factoori Supabase project. Matching, timestamped copies are recorded under `supabase/migrations/` so the GitHub branch tracks the production migration history. The two earlier license migrations remain the pre-existing production baseline.
 
 ## Draft order
 
@@ -308,3 +308,8 @@ The web workspace can request Android legacy collections through a permission-ch
 ## Web-to-Android financial and inventory bridge (046–047)
 
 New web customer receipts, supplier payments, expenses and other income are published into their Android legacy collections. Received cheques are mirrored into the app's cheque receipt collection and status changes follow the normalized cheque lifecycle. Stock movements are mirrored with before/after balances and update the app-side product quantity snapshot. Supported historical customer, supplier, catalog, warehouse, fiscal-period and invoice draft records can be imported only after the read-only preflight passes. Financial legacy collections remain visible and explicitly deferred from normalized cutover until a dedicated audited mapping is available.
+
+
+## Web service catalog and service invoices (048–051)
+
+The web workspace can create and update service catalog entries in the same string-value collection used by Android. Service-sale drafts are published to the Android `serviceInv` collection with their complete line items after item insertion, and receive the same numeric invoice sequence as goods sales. The item-level trigger also ensures goods invoices are mirrored only after their full line set exists.
