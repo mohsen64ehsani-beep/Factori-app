@@ -30,6 +30,7 @@ begin
     (p_business_id,'1200','موجودی کالا','asset',true,true,true),
     (p_business_id,'2000','حساب‌های پرداختنی اشخاص','liability',true,true,true),
     (p_business_id,'2100','مالیات و عوارض پرداختنی','liability',true,true,true),
+    (p_business_id,'2200','پیش‌دریافت از مشتریان','liability',true,true,true),
     (p_business_id,'3000','سرمایه مالک','equity',true,true,true),
     (p_business_id,'4000','درآمد فروش کالا','income',true,true,true),
     (p_business_id,'4100','درآمد خدمات','income',true,true,true),
