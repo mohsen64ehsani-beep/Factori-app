@@ -386,3 +386,19 @@ test('startup resolver never attaches legacy db:v2 to a business without explici
   assert.equal(isolated.status, 'loaded');
   assert.equal(isolated.database.cust[0].id, 'biz-b-only');
 });
+
+
+test('sync adapter creates detached JSON snapshots and requires an explicit business scope', async () => {
+  const { createLocalDatabaseSnapshot, saveLocalDatabaseCheckpoint, loadLocalDatabaseCheckpoint } =
+    await import('./sync-db-adapter.js');
+  const source = { cust: [{ id: 'c1', name: 'Before' }], advancedSettings: { sms: { apiKey: 'local-only' } } };
+  const snapshot = createLocalDatabaseSnapshot(source);
+  source.cust[0].name = 'After';
+  assert.equal(snapshot.cust[0].name, 'Before');
+  assert.equal(snapshot.advancedSettings.sms.apiKey, 'local-only');
+  assert.throws(() => createLocalDatabaseSnapshot([]), /database must be an object/);
+  await assert.rejects(() => saveLocalDatabaseCheckpoint({
+    businessId: '', database: snapshot, syncState: createSyncState()
+  }), /explicitly selected business/);
+  await assert.rejects(() => loadLocalDatabaseCheckpoint({ businessId: '' }), /explicitly selected business/);
+});
