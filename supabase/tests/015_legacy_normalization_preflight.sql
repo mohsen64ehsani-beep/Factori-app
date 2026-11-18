@@ -74,7 +74,9 @@ begin
     (v_business,'prod','prod-1','{"id":"prod-1","n":"Product"}'::jsonb),
     (v_business,'inv','inv-1','{"id":"inv-1","cid":"missing-customer","items":[{"pid":"missing-product"}]}'::jsonb),
     (v_business,'categories','value:دسته اصلی','{"value":"دسته اصلی"}'::jsonb),
-    (v_business,'services','value:نصب','{"value":"نصب"}'::jsonb)
+    (v_business,'services','value:نصب','{"value":"نصب"}'::jsonb),
+    (v_business,'suppliers','supplier-1','{"id":"supplier-1","name":"Supplier"}'::jsonb),
+    (v_business,'purchases','purchase-1','{"id":"purchase-1","supplierId":"missing-supplier"}'::jsonb)
   on conflict(business_id,collection,legacy_id) do update
     set payload_public=excluded.payload_public,deleted_at=null;
 
@@ -87,6 +89,7 @@ begin
   if v_report->>'mode'<>'read_only_preflight'
     or (v_report->>'orphan_invoice_customers')::bigint<>1
     or (v_report->>'orphan_invoice_products')::bigint<>1
+    or (v_report->>'orphan_purchase_suppliers')::bigint<>1
     or (v_report->>'safe_to_import')::boolean is not false then
     raise exception 'Preflight did not report expected orphan references: %',v_report;
   end if;
@@ -113,7 +116,8 @@ begin
     (v_clean_business,'cust','clean-customer','{"id":"clean-customer","n":"Clean Customer"}'::jsonb),
     (v_clean_business,'prod','clean-product','{"id":"clean-product","n":"Clean Product"}'::jsonb),
     (v_clean_business,'categories','value:دسته تمیز','{"value":"دسته تمیز"}'::jsonb),
-    (v_clean_business,'services','value:خدمت تمیز','{"value":"خدمت تمیز"}'::jsonb);
+    (v_clean_business,'services','value:خدمت تمیز','{"value":"خدمت تمیز"}'::jsonb),
+    (v_clean_business,'suppliers','clean-supplier','{"id":"clean-supplier","name":"Clean Supplier"}'::jsonb);
   v_report:=public.preview_legacy_normalization(v_clean_business);
   if (v_report->>'safe_to_import')::boolean is not true then
     raise exception 'Valid primitive categories and services must not block preflight: %',v_report;
@@ -129,7 +133,8 @@ begin
   if (select coalesce(sum((value->>'total')::bigint),0)
       from jsonb_array_elements(v_report->'collections'))<>0
     or (v_report->>'orphan_invoice_customers')::bigint<>0
-    or (v_report->>'orphan_invoice_products')::bigint<>0 then
+    or (v_report->>'orphan_invoice_products')::bigint<>0
+    or (v_report->>'orphan_purchase_suppliers')::bigint<>0 then
     raise exception 'Preflight leaked legacy records across business boundaries';
   end if;
 end;
