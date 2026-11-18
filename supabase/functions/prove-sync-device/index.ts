@@ -40,6 +40,7 @@ Deno.serve(async (req) => {
   let body: { challenge_id?: string; nonce?: string; signature?: string };
   try { body = await req.json(); } catch { return json(400, { error: "invalid_json" }); }
   if (!body.challenge_id || !body.nonce || !body.signature) return json(400, { error: "missing_proof_fields" });
+  if (!/^[A-Za-z0-9_-]{86}$/.test(body.signature)) return json(400, { error: "invalid_signature_format" });
   if (!/^[0-9a-f-]{36}$/i.test(body.challenge_id) || !/^[0-9a-f]{64}$/i.test(body.nonce)) {
     return json(400, { error: "invalid_challenge_format" });
   }
