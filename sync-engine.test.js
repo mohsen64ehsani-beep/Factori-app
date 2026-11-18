@@ -507,6 +507,22 @@ test('permission-version reset redacts stale private cache and quarantines pendi
   assert.equal(JSON.parse(result.state.snapshots.prod.p1).buy, undefined);
   assert.equal(state.cursor, 81, 'reset must not mutate the input sync state');
   assert.equal(db.prod[0].buy, 120, 'reset must not mutate the live database');
+
+  const unsynced = applySyncPullPage(
+    { prod: [{ id: 'p2', name: 'edited locally', buy: 30 }] },
+    {
+      ...createSyncState(),
+      versions: { prod: { p2: 1 } },
+      snapshots: { prod: { p2: JSON.stringify({ buy: 20, id: 'p2', name: 'old name' }) } },
+      pending: [{ operation_id: 'pending-public-edit', collection: 'prod', legacy_id: 'p2',
+        operation_type: 'upsert', base_version: 1,
+        payload: { id: 'p2', name: 'edited locally', buy: 30 } }]
+    },
+    { reset_required: true }
+  );
+  const retry = prepareSyncOperations(unsynced.db, unsynced.state, ids);
+  assert.equal(retry.operations.length, 1, 'public edits must remain eligible for retry after permission reset');
+  assert.deepEqual(retry.operations[0].payload, { id: 'p2', name: 'edited locally' });
 });
 
 
