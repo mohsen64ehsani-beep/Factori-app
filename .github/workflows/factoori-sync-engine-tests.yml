@@ -10,12 +10,16 @@ on:
       - "sync-storage.js"
       - "sync-db-adapter.js"
       - "cloud-client.js"
+      - "index.html"
       - ".github/workflows/factoori-sync-engine-tests.yml"
   pull_request:
     paths:
       - "sync-engine.js"
       - "sync-engine.test.js"
       - "sync-storage.js"
+      - "sync-db-adapter.js"
+      - "cloud-client.js"
+      - "index.html"
       - ".github/workflows/factoori-sync-engine-tests.yml"
   workflow_dispatch:
 
