@@ -17,6 +17,11 @@ begin
    or to_regprocedure('public.revoke_sync_device(uuid,uuid)') is null then
   raise exception 'Device proof RPC set is incomplete';
  end if;
+ if has_function_privilege('authenticated','public.register_sync_device(uuid,text,text,jsonb)','EXECUTE')
+   or has_function_privilege('authenticated','private.sync_push(uuid,uuid,jsonb)','EXECUTE')
+   or has_function_privilege('authenticated','private.sync_pull(uuid,uuid,bigint,integer)','EXECUTE') then
+  raise exception 'Legacy registration or private sync implementation must not be directly executable';
+ end if;
  if has_function_privilege('authenticated','public.finalize_sync_device_proof(uuid,uuid,uuid,uuid,text)','EXECUTE')
    or not has_function_privilege('service_role','public.finalize_sync_device_proof(uuid,uuid,uuid,uuid,text)','EXECUTE') then
   raise exception 'Only service_role may finalize proof after Edge Function verification';
