@@ -452,7 +452,7 @@ test('cloud client RPC argument names exist in the checked-in SQL contracts', as
     let depth = 0, end = -1, quote = '';
     for (let i = start; i < client.length; i++) {
       const ch = client[i];
-      if (quote) { if (ch === quote && client[i - 1] !== '\\\\') quote = ''; continue; }
+      if (quote) { if (ch === quote && client[i - 1] !== '\\') quote = ''; continue; }
       if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
       if (ch === '{') depth++;
       if (ch === '}' && --depth === 0) { end = i; break; }
