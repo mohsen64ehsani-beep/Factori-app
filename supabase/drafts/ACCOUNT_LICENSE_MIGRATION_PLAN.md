@@ -92,6 +92,21 @@ The existing isolated PostgreSQL 17 CI validates SQL draft application and regre
 - Existing paid users must be grandfathered through a controlled claim/migration flow. Do not auto-assign historical licenses to whichever account happens to sign in on a device, because that would allow account hijacking of old device entitlements.
 - Keep the legacy activation endpoint working for old APKs during a defined compatibility window. Do not revoke or rewrite old activations until account claims and customer support recovery have been validated.
 
+## Account-license implementation slice added on the development branch
+
+Draft migration `013_account_bound_license_entitlements.sql` and regression test `013_account_bound_license_entitlements.sql` now exist. The draft:
+- accepts a plaintext purchase key only through an authenticated RPC and hashes it server-side using the same SHA-256/trim convention as the existing activation Edge Function;
+- allows a new unused key only when payment verification exists, or a previously activated key when an activation record exists (legacy key-possession claim);
+- requires the caller to be the active owner of the selected business;
+- makes repeated claims by the same owner/business idempotent and prevents a different account/business from taking the key;
+- keeps entitlement history when a license is revoked and permits a replacement purchase to become the new active business entitlement;
+- derives Premium server-side from the business owner and non-revoked entitlement; employees receive the business plan through active membership, but cannot claim licenses;
+- stores entitlement rows in the private schema and exposes no direct table access.
+
+`cloud-client.js` now has a `claimLicense(businessId, licenseKey)` RPC wrapper. The cloud readiness probe is being extended to verify that this RPC is deployed. This is only an API foundation: the existing license-entry UI and `license-client.js` still use device-bound activation, and Premium gating has not yet been switched to account/business entitlements. Do not treat the new account-license flow as live until the client UI, session/business refresh, offline policy and old-client compatibility are completed and tested.
+
+CI creates a disposable license-schema fixture matching the existing production table shape; it does not read or modify production license data. The migration and test remain under `supabase/drafts/` and `supabase/tests/`.
+
 ## Required work before production
 
 1. Reconcile the full SQL draft sequence, dependencies, grants, RLS policies and RPC signatures against the current Supabase project.
