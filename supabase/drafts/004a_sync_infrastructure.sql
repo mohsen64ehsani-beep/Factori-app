@@ -140,9 +140,9 @@ begin
  insert into public.business_feature_limits(business_id,feature_code,limit_value,period_type)
  values
   (new.id,'invoices.daily_limit',3,'daily'),
-  (new.id,'invoice.items.limit',10,'per_record'),
-  (new.id,'customers.total_limit',50,'lifetime'),
-  (new.id,'products.total_limit',50,'lifetime'),
+  (new.id,'invoice.items.limit',2,'per_record'),
+  (new.id,'customers.total_limit',5,'lifetime'),
+  (new.id,'products.total_limit',5,'lifetime'),
   (new.id,'services.total_limit',50,'lifetime'),
   (new.id,'warehouses.total_limit',1,'lifetime')
  on conflict(business_id,feature_code) do nothing;
@@ -158,9 +158,9 @@ select b.id,x.feature_code,x.limit_value,x.period_type
 from public.businesses b
 cross join (values
  ('invoices.daily_limit',3,'daily'),
- ('invoice.items.limit',10,'per_record'),
- ('customers.total_limit',50,'lifetime'),
- ('products.total_limit',50,'lifetime'),
+ ('invoice.items.limit',2,'per_record'),
+ ('customers.total_limit',5,'lifetime'),
+ ('products.total_limit',5,'lifetime'),
  ('services.total_limit',50,'lifetime'),
  ('warehouses.total_limit',1,'lifetime')
 ) as x(feature_code,limit_value,period_type)
