@@ -74,7 +74,7 @@ begin
   -- Free accounts remain subject to the server-enforced limits.
   perform set_config('request.jwt.claim.sub',v_other::text,true);
   begin
-    perform private.assert_feature_limit(v_other_business,'invoice.items.limit',11);
+    perform private.assert_feature_limit(v_other_business,'invoice.items.limit',3);
     raise exception 'Free business must retain the per-record limit';
   exception when sqlstate '54000' then null;
   end;
