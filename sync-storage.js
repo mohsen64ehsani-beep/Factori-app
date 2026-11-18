@@ -1,6 +1,6 @@
 // Durable, per-business sync checkpoint storage.
-// The business database and sync metadata are committed in one IndexedDB
-// transaction so a cursor can never be persisted without its matching merge.
+// A detached business database checkpoint and its sync metadata are committed
+// in one IndexedDB transaction. The live db:v2 store is not yet migrated.
 const DB_NAME = 'factoori-sync-state-v1';
 const DB_VERSION = 1;
 const STORE_NAME = 'checkpoints';
