@@ -42,6 +42,7 @@ The SQL source files remain under `supabase/drafts/` as the tested development s
 36. `035_customer_refund_posting.sql` — pays cash refunds against posted sales returns within customer credit.
 37. `036_purchase_return_posting.sql` — posts invoice-linked goods purchase returns from the original FIFO layer and caps supplier cash refunds.
 38. `037_web_catalog_crud.sql` — grants permission-checked authenticated create/update access to contacts, products and services for the web workspace; hard deletes remain disabled.
+39. `038_rls_initplan_optimization.sql` — changes three auth RLS predicates to scalar subselects to avoid per-row auth.uid() evaluation.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -60,7 +61,7 @@ The SQL source files remain under `supabase/drafts/` as the tested development s
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all thirty-eight draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all forty SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all thirty-nine draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all forty-one SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -108,6 +109,7 @@ The test scripts are:
 - `supabase/tests/035_customer_refund_posting.sql`
 - `supabase/tests/036_purchase_return_posting.sql`
 - `supabase/tests/037_web_catalog_crud.sql`
+- `supabase/tests/038_rls_initplan_optimization.sql`
 
 ## Device proof deployment note
 
@@ -258,3 +260,8 @@ Migration 036 adds `public.post_purchase_return(...)` and `public.post_supplier_
 ## WordPress web accounting workspace (0.1.0)
 
 The companion plugin source is in `wordpress-plugin/factoori-web-accounting/`. It provides a dedicated full-screen shortcode page, shared Supabase Auth login/registration, business selection/creation, contact and product management, sales draft creation, and supported document posting through validated RPCs. The browser uses only the Supabase Publishable key; service-role credentials are never embedded. The plugin package workflow is `.github/workflows/build-factoori-web-plugin.yml`.
+
+
+## RLS performance follow-up (038)
+
+Migration 038 updates the self-profile and membership read policies to use scalar `select auth.uid()` expressions. The live performance advisor no longer reports the corresponding three `auth_rls_initplan` warnings after this migration.
