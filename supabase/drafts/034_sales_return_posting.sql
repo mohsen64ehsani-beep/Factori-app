@@ -123,6 +123,7 @@ declare
  v_stock_movement_id uuid;
  v_alloc record;
  v_previous_allocated numeric(20,4);
+ v_previous_allocated_cost numeric(20,0);
  v_available numeric(20,4);
  v_remaining numeric(20,4);
  v_take numeric(20,4);
@@ -293,6 +294,7 @@ begin
    raise exception using errcode='23514',message='Calculated return amounts are invalid';
   end if;
 
+  v_original_movement_id:=null;
   select sm.id into v_original_movement_id
   from public.stock_movements sm
   where sm.business_id=p_business_id and sm.document_id=p_original_document_id
@@ -331,13 +333,14 @@ begin
    for update of ica
   loop
    exit when v_remaining<=0;
-   select coalesce(sum(sca.quantity),0) into v_previous_allocated
+   select coalesce(sum(sca.quantity),0),coalesce(sum(sca.total_cost),0)
+   into v_previous_allocated,v_previous_allocated_cost
    from private.sales_return_cost_allocations sca
    where sca.business_id=p_business_id and sca.original_cost_allocation_id=v_alloc.id;
    v_available:=v_alloc.quantity-v_previous_allocated;
    if v_available<=0 then continue; end if;
    v_take:=least(v_remaining,v_available);
-   v_cost_total:=round(v_take*v_alloc.unit_cost);
+   v_cost_total:=round((v_previous_allocated+v_take)*v_alloc.unit_cost)-v_previous_allocated_cost;
    insert into public.inventory_cost_layers(
     business_id,product_id,warehouse_id,source_movement_id,
     quantity_in,quantity_remaining,unit_cost,acquired_at
