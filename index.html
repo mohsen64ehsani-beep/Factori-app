@@ -222,10 +222,13 @@ function clearLocalBusinessSelection(){
  cancelBusinessSync();localDbBusinessId='';businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;syncGeneration++;dbRevision++;
 }
 function resetCloudBusinessContext(){
- try{clearLocalBusinessSelection()}
+ try{clearLocalBusinessSelection();return true}
  catch(e){
   console.warn('[Factoori clear cloud business context]',e);
-  cancelBusinessSync();localDbBusinessId='';businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;syncGeneration++;dbRevision++;
+  // Do not discard the only in-memory copy when localStorage is full. Drop
+  // the cloud session so the retained local business cannot sync under an
+  // account whose membership could not be confirmed.
+  cloudSession=null;cloudSchemaReady=false;cancelBusinessSync();return false;
  }
 }
 function isolateLocalDataForCloudSession(){
@@ -454,7 +457,7 @@ async function initCloudSession(){
  try{
   const initialSession=await api.getSession();
   if(initialSession){
-   isolateLocalDataForCloudSession();
+   if(cloudSession?.user?.id!==initialSession.user?.id)isolateLocalDataForCloudSession();
    cloudSession=initialSession;
    cloudSchemaReady=await api.getClientHealth();
    await loadCloudBusinesses();
