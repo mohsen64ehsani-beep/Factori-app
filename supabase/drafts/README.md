@@ -89,4 +89,9 @@ Do not move these drafts into `supabase/migrations/` or run them against the liv
 
 ## Legacy normalization preflight (014)
 
-Migration 014 adds `public.preview_legacy_normalization(uuid)`, a read-only owner/admin preflight over the compatibility store. It reports collection counts, tombstones, malformed/mismatched legacy IDs, and orphan customer/product references in invoices. It does not expose payload values, read protected payloads, write normalized tables, post documents, or change inventory. Financial and stock collections remain explicitly deferred. The RPC requires `business.settings.manage`; anon/public execution is revoked. This is an audit gate, not an importer or proof of normalized synchronization.
+Migration 015 adds `public.preview_legacy_normalization(uuid)`, a read-only owner/admin preflight over the compatibility store. It reports collection counts, tombstones, malformed/mismatched legacy IDs, and orphan customer/product references in invoices. It does not expose payload values, read protected payloads, write normalized tables, post documents, or change inventory. Financial and stock collections remain explicitly deferred. The RPC requires `business.settings.manage`; anon/public execution is revoked. This is an audit gate, not an importer or proof of normalized synchronization.
+
+
+## Legacy identity map (014)
+
+Migration 014 creates the private `legacy_normalized_record_map` table. It binds a business-scoped legacy collection and ID to one normalized target UUID, stores a SHA-256 source fingerprint and import state, and intentionally stores no source payload. RLS is enabled and all direct client-role privileges are revoked. It is only an identity foundation; no records are imported by this migration.
