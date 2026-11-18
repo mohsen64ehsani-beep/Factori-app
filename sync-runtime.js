@@ -7,7 +7,7 @@ import {
   acknowledgeSyncResults,
   applySyncPullPage
 } from './sync-engine.js';
-import { saveLocalDatabaseCheckpoint, loadLocalDatabaseCheckpoint, createLocalDatabaseSnapshot } from './sync-db-adapter.js';
+import { saveLocalDatabaseCheckpoint, loadLocalDatabaseCheckpoint, createLocalDatabaseSnapshot, mergeLocalChangesOntoCheckpoint, acknowledgeLocalDatabaseApplied } from './sync-db-adapter.js';
 
 const activeRuns = new Set();
 
@@ -50,10 +50,19 @@ export async function runBusinessSync({
   activeRuns.add(businessId);
 
   let localDb;
+  let baseDatabase;
   let state;
   try {
     localDb = createLocalDatabaseSnapshot(database);
     const savedCheckpoint = syncState ? null : await loadLocalDatabaseCheckpoint({ businessId, indexedDBImpl });
+    if (savedCheckpoint?.database && savedCheckpoint?.baseDatabase) {
+      localDb = mergeLocalChangesOntoCheckpoint({
+        localDatabase: localDb,
+        baseDatabase: savedCheckpoint.baseDatabase,
+        checkpointDatabase: savedCheckpoint.database
+      });
+    }
+    baseDatabase = createLocalDatabaseSnapshot(localDb);
     state = syncState
       ? JSON.parse(JSON.stringify(syncState))
       : savedCheckpoint?.syncState ? JSON.parse(JSON.stringify(savedCheckpoint.syncState)) : createSyncState();
@@ -71,7 +80,7 @@ export async function runBusinessSync({
   let hasMore = false;
 
   const persist = async () => {
-    const args = { businessId, database: localDb, syncState: state };
+    const args = { businessId, database: localDb, baseDatabase, syncState: state };
     if (persistCheckpoint) await persistCheckpoint(args);
     else await saveLocalDatabaseCheckpoint({ ...args, indexedDBImpl });
   };
@@ -170,7 +179,13 @@ export function isSyncPermissionVersionMismatch(error) {
 if (typeof window !== 'undefined') {
   window.FactooriSyncRuntime = Object.freeze({
     runBusinessSync,
-    isSyncPermissionVersionMismatch
+    isSyncPermissionVersionMismatch,
+    acknowledgeBusinessDatabaseApplied
   });
   window.dispatchEvent(new Event('factoori-sync-runtime-ready'));
+}
+
+
+export async function acknowledgeBusinessDatabaseApplied({ businessId, database, syncState, indexedDBImpl }) {
+  return acknowledgeLocalDatabaseApplied({ businessId, database, syncState, indexedDBImpl });
 }
