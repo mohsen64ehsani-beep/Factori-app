@@ -7,6 +7,7 @@ on:
     paths:
       - "supabase/drafts/**"
       - "supabase/tests/**"
+      - "supabase/functions/prove-sync-device/**"
       - ".github/workflows/factoori-database-tests.yml"
   pull_request:
     paths:
@@ -121,3 +122,15 @@ jobs:
           set -euo pipefail
           psql -v ON_ERROR_STOP=1 -c "select count(*) as public_tables from information_schema.tables where table_schema='public' and table_type='BASE TABLE';"
           psql -v ON_ERROR_STOP=1 -c "select count(*) as security_definer_functions from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and p.prosecdef;"
+
+  device-proof-crypto-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Test P-256 device proof and replay rejection
+        run: deno test supabase/functions/prove-sync-device/crypto_test.ts
+      - name: Type-check proof Edge Function
+        run: deno check supabase/functions/prove-sync-device/index.ts
