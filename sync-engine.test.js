@@ -422,6 +422,22 @@ test('cloud readiness probe covers every RPC used by the shared cloud client', a
 });
 
 
+test('Premium entitlement follows the signed-in account and selected business, not the handset token', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const app = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const cloud = await readFile(new URL('./cloud-client.js', import.meta.url), 'utf8');
+  assert.match(app, /accountLicenseMode=false/);
+  assert.match(app, /factoori:account-license-mode/);
+  assert.match(app, /window\.FactooriCloud\.getEntitlements\(cloudActiveBusinessId\)/);
+  assert.match(app, /active=entitlement\?\.is_premium===true&&entitlement\?\.plan_status==='premium'/);
+  assert.match(app, /window\.FactooriCloud\.claimLicense\(cloudActiveBusinessId,code\)/);
+  assert.match(app, /else if\(accountLicenseMode\)/);
+  assert.match(app, /await refreshLicenseStatus\(false\);render\(\);if\(id\)scheduleBusinessSync/);
+  assert.match(cloud, /async claimLicense\(businessId, licenseKey\)/);
+  assert.match(cloud, /client\.rpc\('claim_factori_license'/);
+});
+
+
 test('cloud readiness distinguishes schema errors from transport failures', async () => {
   const { isSchemaProbeErrorReady } = await import('./cloud-health.js');
   assert.equal(isSchemaProbeErrorReady(null), true);
