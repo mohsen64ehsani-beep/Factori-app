@@ -49,11 +49,20 @@ export async function runBusinessSync({
   const resetLimit = Math.min(5, Math.max(0, Number(maxPermissionResets) || 0));
   activeRuns.add(businessId);
 
-  let localDb = createLocalDatabaseSnapshot(database);
-  const savedCheckpoint = syncState ? null : await loadLocalDatabaseCheckpoint({ businessId, indexedDBImpl });
-  let state = syncState
-    ? JSON.parse(JSON.stringify(syncState))
-    : savedCheckpoint?.syncState ? JSON.parse(JSON.stringify(savedCheckpoint.syncState)) : createSyncState();
+  let localDb;
+  let state;
+  try {
+    localDb = createLocalDatabaseSnapshot(database);
+    const savedCheckpoint = syncState ? null : await loadLocalDatabaseCheckpoint({ businessId, indexedDBImpl });
+    state = syncState
+      ? JSON.parse(JSON.stringify(syncState))
+      : savedCheckpoint?.syncState ? JSON.parse(JSON.stringify(savedCheckpoint.syncState)) : createSyncState();
+  } catch (error) {
+    // Initialization also belongs to the run lock's lifetime. Otherwise an
+    // IndexedDB failure permanently blocks subsequent retries for this business.
+    activeRuns.delete(businessId);
+    throw error;
+  }
   let deviceId = '';
   let pushedOperations = 0;
   let pulledRecords = 0;
