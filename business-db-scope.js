@@ -69,14 +69,31 @@ export function adoptLegacyDatabaseForBusiness({
   if (legacy == null) {
     return { adopted: false, reason: 'legacy_database_missing', key };
   }
-  // Validate before writing. The original db:v2 key is intentionally retained
-  // as a recovery copy; this operation never deletes or rewrites it.
+  // Validate before writing. Keep a durable "pending" claim first so a second
+  // tab cannot assign the same legacy data to another business during adoption.
+  // A crash may leave a pending marker (fail-closed); the legacy source remains
+  // untouched and can be recovered manually. localStorage has no transactions.
   const parsed = parseDatabase(legacy);
-  target.setItem(key, JSON.stringify(parsed));
-  target.setItem(LEGACY_ADOPTION_MARKER, JSON.stringify({
+  const claim = {
     businessId: businessId.trim(),
     adoptedAt: new Date().toISOString(),
-    source: LEGACY_DATABASE_KEY
+    source: LEGACY_DATABASE_KEY,
+    state: 'pending'
+  };
+  target.setItem(LEGACY_ADOPTION_MARKER, JSON.stringify(claim));
+  try {
+    target.setItem(key, JSON.stringify(parsed));
+  } catch (error) {
+    // Roll back the claim only when storage explicitly supports removal.
+    // If rollback itself fails, leave the claim in place to prevent data leakage.
+    try {
+      if (typeof target.removeItem === 'function') target.removeItem(LEGACY_ADOPTION_MARKER);
+    } catch (_) {}
+    throw error;
+  }
+  target.setItem(LEGACY_ADOPTION_MARKER, JSON.stringify({
+    ...claim,
+    state: 'committed'
   }));
   return { adopted: true, key, database: parsed };
 }
