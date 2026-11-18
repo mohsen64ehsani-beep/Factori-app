@@ -371,8 +371,12 @@ async function runScheduledBusinessSync(){
   const result=await window.FactooriSyncRuntime.runBusinessSync({businessId,database:snapshot,api:window.FactooriCloud});
   if(localDbBusinessId===businessId&&syncGeneration===generation&&dbRevision===revision){
    db=result.database;realDb=db;dbRevision++;
-   try{localStorage.setItem(BUSINESS_DB_PREFIX+businessId,JSON.stringify(db))}
-   catch(e){syncStatus='error';syncError='ذخیره نسخه همگام‌شده در حافظه دستگاه ناموفق بود'}
+   try{
+    localStorage.setItem(BUSINESS_DB_PREFIX+businessId,JSON.stringify(db));
+    window.FactooriSyncRuntime.acknowledgeBusinessDatabaseApplied?.({
+     businessId,database:db,syncState:result.syncState
+    }).catch(error=>console.warn('[Factoori sync checkpoint baseline]',error));
+   }catch(e){syncStatus='error';syncError='ذخیره نسخه همگام‌شده در حافظه دستگاه ناموفق بود'}
    if(syncStatus!=='error')syncStatus=result.hasMore?'partial':'synced';
    if(result.hasMore)syncPending=true;
    render();
