@@ -173,7 +173,11 @@ jobs:
             018_simple_financial_posting.sql \
             019_purchase_document_posting.sql \
             020_goods_sale_posting.sql \
-            021_fifo_warehouse_transfers.sql
+            021_fifo_warehouse_transfers.sql \
+            022_inventory_opening_posting.sql \
+            023_inventory_wastage_posting.sql \
+            024_legacy_reference_import.sql \
+            025_legacy_catalog_warehouse_import.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
