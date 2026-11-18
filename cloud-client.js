@@ -363,7 +363,8 @@ const api = {
       y: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
     };
     const [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
-      challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe] = await Promise.all([
+      challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe,
+      revokeDeviceProbe, journalPostProbe, stockTransferProbe] = await Promise.all([
       client.rpc('get_business_entitlements', { p_business_id: probeBusinessId }),
       // Empty name is intentionally invalid; the function must reject it without creating a row.
       client.rpc('create_business', { p_name: '' }),
@@ -390,10 +391,26 @@ const api = {
       client.rpc('post_account_transfer', {
         p_business_id: probeBusinessId, p_from_account_id: probeBusinessId, p_to_account_id: probeBusinessId,
         p_amount: 1, p_transfer_date: '2000-01-01', p_note: null, p_idempotency_key: 'health-probe-001'
+      }),
+      // These are called by device management and transactional accounting/inventory flows.
+      // The nonexistent business must fail authorization, not report a missing RPC.
+      client.rpc('revoke_sync_device', {
+        p_business_id: probeBusinessId, p_device_id: probeBusinessId
+      }),
+      client.rpc('post_journal_entry', {
+        p_business_id: probeBusinessId, p_entry_date: '2000-01-01',
+        p_description: null, p_fiscal_period_id: null, p_lines: [],
+        p_idempotency_key: 'health-probe-journal'
+      }),
+      client.rpc('post_stock_transfer', {
+        p_business_id: probeBusinessId, p_from_warehouse_id: probeBusinessId,
+        p_to_warehouse_id: probeBusinessId, p_transfer_date: '2000-01-01',
+        p_note: null, p_items: [], p_idempotency_key: 'health-probe-stock'
       })
     ]);
     const rpcReady = [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
-      challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe].every(result => result.error?.code !== 'PGRST202');
+      challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe,
+      revokeDeviceProbe, journalPostProbe, stockTransferProbe].every(result => result.error?.code !== 'PGRST202');
     if (!rpcReady) return false;
 
     // A 400 response for an empty body means the function is deployed and correctly rejects
