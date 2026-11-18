@@ -17,6 +17,8 @@ begin
  if v_payload is null or v_payload->>'id'<>v_document::text then raise exception 'Web invoice draft was not mirrored to mobile sync'; end if;
  if coalesce(v_payload->>'no','') !~ '^[0-9]+$' then raise exception 'Web invoice did not receive a mobile-compatible number'; end if;
  if jsonb_array_length(coalesce(v_payload->'items','[]'::jsonb))<>1 then raise exception 'Mobile invoice line items were not mirrored'; end if;
+ if v_payload #> '{items,0,b}' is not null then raise exception 'Sensitive unit cost leaked into the public mobile invoice payload'; end if;
+ if not exists(select 1 from public.record_revisions rr join private.business_state_records r on r.id=rr.record_id where rr.business_id=v_business and rr.record_type='inv' and r.legacy_id=v_document::text) then raise exception 'Invoice revision was not published to the sync cursor'; end if;
  if jsonb_array_length(public.web_list_legacy_invoices(v_business))<>1 then raise exception 'Web invoice list RPC did not return mirrored invoice'; end if;
  insert into private.business_state_records(business_id,collection,legacy_id,payload_public,updated_by)
  values(v_business,'inv','mobile-invoice-041','{"id":"mobile-invoice-041","no":41,"dt":"2026-11-18","cid":"legacy-contact","items":[{"pid":"legacy-product","n":"Mobile Invoice Item","q":1,"p":4100}],"ds":0,"tx":0}'::jsonb,v_user);
