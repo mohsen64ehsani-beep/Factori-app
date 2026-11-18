@@ -140,6 +140,9 @@ export function applyPulledRecords(db, state, records) {
   if (!db || typeof db !== 'object' || !Array.isArray(records)) throw new Error('invalid pull target or records');
   const nextState = ensureState(state);
   const nextDb = { ...db };
+  for (const collection of SYNC_READ_COLLECTIONS) {
+    nextDb[collection] = Array.isArray(db[collection]) ? db[collection].map(clone) : [];
+  }
   const dirty = new Set(nextState.pending.map(op => op.collection + ':' + op.legacy_id));
   for (const collection of SYNC_READ_COLLECTIONS) {
     if (!Array.isArray(nextDb[collection])) nextDb[collection] = [];
