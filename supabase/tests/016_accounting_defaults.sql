@@ -31,8 +31,8 @@ begin
 
   select count(*) into v_count from public.chart_of_accounts
   where business_id=v_business_a and is_system and code in
-    ('1000','1010','1020','1030','1100','1200','2000','2100','2200','3000','4000','4100','5000','5100','6000','7000');
-  if v_count<>16 then raise exception 'Expected 16 default chart accounts, got %',v_count; end if;
+    ('1000','1010','1020','1030','1100','1200','1300','2000','2100','2200','3000','4000','4100','5000','5100','6000','7000');
+  if v_count<>17 then raise exception 'Expected 17 default chart accounts, got %',v_count; end if;
 
   if not exists(
     select 1 from public.financial_account_ledger_map m
