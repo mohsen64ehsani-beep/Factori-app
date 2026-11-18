@@ -177,7 +177,9 @@ begin
 
   else
    select w.id into v_target_id from public.warehouses w
-   where w.business_id=p_business_id and w.id::text=v_legacy_id;
+   where w.business_id=p_business_id and w.name=v_name
+     and coalesce(w.address,'')=coalesce(v_address,'')
+   order by w.created_at,w.id limit 1;
    if v_target_id is not null then
     insert into private.legacy_normalized_record_map(
      business_id,legacy_collection,legacy_id,target_table,normalized_id,
@@ -190,8 +192,8 @@ begin
     select 1 from public.warehouses w where w.business_id=p_business_id and w.is_default and w.is_active
    );
    begin
-    insert into public.warehouses(id,business_id,name,address,is_default)
-    values(v_legacy_id::uuid,p_business_id,v_name,v_address,v_is_default)
+    insert into public.warehouses(business_id,name,address,is_default)
+    values(p_business_id,v_name,v_address,v_is_default)
     returning id into v_target_id;
    exception when unique_violation then
     v_conflicts:=v_conflicts+1; continue;
