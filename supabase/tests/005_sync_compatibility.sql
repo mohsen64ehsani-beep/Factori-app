@@ -50,6 +50,9 @@ begin
  end if;
 
  select pg_get_functiondef('private.can_sync_collection(uuid,text,text)'::regprocedure) into v_def;
+ if (length(v_def)-length(replace(v_def,'when ''advancedSettings'' then null','')))/length('when ''advancedSettings'' then null') < 2 then
+  raise exception 'Object-shaped advanced settings must stay out of generic sync until a secret-safe schema exists';
+ end if;
  if position('when ''pay'' then null' in v_def)=0
   or position('when ''purchases'' then null' in v_def)=0
   or position('when ''stockMoves'' then null' in v_def)
