@@ -93,7 +93,7 @@ The next work is completion of normalized transactional returns and remaining ch
 - add dry-run and write-phase tests for idempotency, cross-business isolation, permission denial, sensitive cost separation, orphan references, exact totals, and retry behavior;
 - test against isolated PostgreSQL and a real Supabase test environment when one is available.
 
-Migration 024 imports customers and products through an owner-authorized, fingerprinted RPC, excluding cost and quantity. Migration 025 imports primitive category/service names and warehouse metadata and links exact product category labels; it does not import warehouse quantities or stock movements. Migration 026 imports goods invoices as normalized drafts only; it does not post stock, receivables, journals or payments, and it excludes protected legacy cost snapshots. Service invoices and financial records remain deferred. The bridge remains incomplete: service-invoice import, full reconciliation, returns matching, and transactional financial/stock conversion remain outstanding.
+Migration 024 imports customers and products through an owner-authorized, fingerprinted RPC, excluding cost and quantity. Migration 025 imports primitive category/service names and warehouse metadata and links exact product category labels; it does not import warehouse quantities or stock movements. Migration 026 imports goods invoices and migration 027 imports service invoices as normalized drafts only; neither posts stock, receivables, journals or payments, and both exclude protected legacy cost snapshots. Financial records remain deferred. The bridge remains incomplete: full reconciliation, returns matching, and transactional financial/stock conversion remain outstanding.
 
 
 ## First legacy reference import (024)
@@ -111,3 +111,8 @@ The legacy `returns` records contain date, customer ID, product ID, warehouse ID
 ## Legacy goods invoice draft import (026)
 
 The app's `inv` collection is imported only after customer, product and optional warehouse references have mapped successfully. Each goods invoice becomes a normalized `goods_sale` document in `draft` status through `create_document_draft`; the importer preserves the legacy invoice number and item description snapshots. It never reads `payload_private`, so item `b` cost values are excluded. It also ignores `bankAccountId` and does not replay the separate `pay` collection. A legacy invoice must be posted through the ordinary normalized goods-sale posting RPC after a user reviews it; draft import creates no stock movement, FIFO allocation, contact-ledger entry, financial transaction or journal. Changed source rows are conflicts and do not overwrite the draft.
+
+
+## Legacy service invoice draft import (027)
+
+The app's `serviceInv` rows are imported as `service_sale` drafts after the customer and each primitive service-name reference are mapped. Item `cost`, `costTotal`, `costMode`, `bankAccountId` and separate initial `pay` records are not imported by this function. The importer preserves the service description and price/quantity snapshots, fingerprints the sanitized source, and treats source changes as conflicts. A user must review and post the draft through normalized operations; import itself creates no financial transaction, cost snapshot, journal or stock movement.
