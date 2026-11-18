@@ -1018,3 +1018,28 @@ test('employee management is wired to a server-side provisioning function', asyn
   assert.match(edge, /provision_business_member/);
   assert.match(migration, /role_code in \('owner','admin','accountant','sales','viewer','warehouse'\)/);
 });
+
+
+test('client and server keep financial and stock mutations out of generic sync', async () => {
+  const { SYNC_WRITE_COLLECTIONS } = await import('./sync-engine.js');
+  const { readFile } = await import('node:fs/promises');
+  const sql = await readFile(new URL('./supabase/drafts/005_sync_compatibility.sql', import.meta.url), 'utf8');
+  const start = sql.indexOf('create or replace function private.can_sync_collection');
+  const end = sql.indexOf('create or replace function private.register_sync_device', start);
+  assert.ok(start >= 0 && end > start, 'server collection permission function must exist');
+  const permissions = sql.slice(start, end);
+  const blocked = [
+    'debt','returns','pay','creditors','purchases','supplierPayments','creditorPayments',
+    'expenses','otherincome','wastage','stockMoves','warehouseStocks','transfers',
+    'accounts','moneytransfers','opening'
+  ];
+  for (const collection of blocked) {
+    assert.ok(!SYNC_WRITE_COLLECTIONS.includes(collection), collection + ' must not be client write-enabled');
+    assert.match(permissions, new RegExp("when '" + collection + "' then null"),
+      collection + ' must remain blocked by server authorization');
+  }
+  for (const collection of ['cust','suppliers','duedates','prod','services','categories','inv','serviceInv','warehouses','bankAccounts','fiscal','smsHistory']) {
+    assert.ok(SYNC_WRITE_COLLECTIONS.includes(collection), collection + ' is an explicitly enabled safe/draft sync collection');
+    assert.match(permissions, new RegExp("when '" + collection + "' then '"));
+  }
+});
