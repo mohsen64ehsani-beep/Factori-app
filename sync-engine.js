@@ -34,6 +34,31 @@ function stripSensitiveLocalValue(value) {
   return result;
 }
 
+function mergeSensitiveLocalFields(localValue, remoteValue) {
+  if (Array.isArray(localValue) && Array.isArray(remoteValue)) {
+    return localValue.map((item, index) => mergeSensitiveLocalFields(item, remoteValue[index]));
+  }
+  if (!localValue || typeof localValue !== 'object' || Array.isArray(localValue)
+    || !remoteValue || typeof remoteValue !== 'object' || Array.isArray(remoteValue)) {
+    return localValue;
+  }
+  const merged = { ...localValue };
+  for (const key of Object.keys(merged)) {
+    if (SENSITIVE_LOCAL_KEYS.has(key)) {
+      if (Object.prototype.hasOwnProperty.call(remoteValue, key)) merged[key] = clone(remoteValue[key]);
+      else delete merged[key];
+    } else if (Object.prototype.hasOwnProperty.call(remoteValue, key)) {
+      merged[key] = mergeSensitiveLocalFields(merged[key], remoteValue[key]);
+    }
+  }
+  for (const [key, value] of Object.entries(remoteValue)) {
+    if (SENSITIVE_LOCAL_KEYS.has(key) && !Object.prototype.hasOwnProperty.call(merged, key)) {
+      merged[key] = clone(value);
+    }
+  }
+  return merged;
+}
+
 function resetAfterPermissionVersionChange(db, state, response) {
   const nextState = ensureState(state);
   // Missing permission metadata is treated as no access: older or incomplete
@@ -42,6 +67,7 @@ function resetAfterPermissionVersionChange(db, state, response) {
     ? response.readable_collections.filter(name => READ_SET.has(name))
     : []);
   const costAccess = response?.cost_access === true;
+  nextState.permissionResetCostAccess = costAccess;
   const nextDb = { ...db };
 
   for (const collection of SYNC_READ_COLLECTIONS) {
@@ -288,10 +314,14 @@ export function applyPulledRecords(db, state, records) {
     if (dirty.has(key)) {
       if (resetDirty.has(key) && !pendingDirty.has(key) && !record.deleted_at && record.change_type !== 'delete'
         && record.payload && typeof record.payload === 'object' && !Array.isArray(record.payload)) {
+        if (index >= 0 && nextState.permissionResetCostAccess === true) {
+          rows[index] = mergeSensitiveLocalFields(rows[index], record.payload);
+        }
         const localRecord = index >= 0 ? normalizeLocalRecord(collection, rows[index]) : null;
         const remotePayload = clone(record.payload);
         const remoteFingerprint = stableStringify(remotePayload);
-        if (localRecord && stableStringify(stripSensitiveLocalValue(localRecord.payload)) === remoteFingerprint) {
+        const remotePublicFingerprint = stableStringify(stripSensitiveLocalValue(remotePayload));
+        if (localRecord && stableStringify(stripSensitiveLocalValue(localRecord.payload)) === remotePublicFingerprint) {
           nextState.snapshots[collection] ||= {};
           nextState.snapshots[collection][legacyId] = remoteFingerprint;
           nextState.versions[collection] ||= {};
@@ -302,7 +332,15 @@ export function applyPulledRecords(db, state, records) {
           continue;
         }
         const previousFingerprint = nextState.snapshots[collection]?.[legacyId];
-        if (previousFingerprint && previousFingerprint === remoteFingerprint) {
+        let previousPublicFingerprint = previousFingerprint || '';
+        try {
+          if (previousFingerprint) previousPublicFingerprint = stableStringify(
+            stripSensitiveLocalValue(JSON.parse(previousFingerprint))
+          );
+        } catch {}
+        if (previousPublicFingerprint && previousPublicFingerprint === remotePublicFingerprint) {
+          nextState.snapshots[collection] ||= {};
+          nextState.snapshots[collection][legacyId] = remoteFingerprint;
           nextState.versions[collection] ||= {};
           nextState.versions[collection][legacyId] = Number(record.version) || 0;
           continue;
