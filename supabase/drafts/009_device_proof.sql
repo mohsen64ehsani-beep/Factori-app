@@ -180,7 +180,7 @@ begin
 end;
 $$;
 
-create or replace function public.sync_pull(p_business_id uuid,p_device_id uuid,p_since_revision bigint,p_limit integer default 200)
+create or replace function public.sync_pull(p_business_id uuid,p_device_id uuid,p_since_revision bigint default 0,p_limit integer default 200)
 returns jsonb language plpgsql security definer set search_path=''
 as $$
 begin
