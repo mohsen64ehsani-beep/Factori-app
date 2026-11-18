@@ -25,6 +25,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 19. `018_simple_financial_posting.sql` — atomic supplier payments, expense payments, and other income with contact ledger where applicable and balanced journal posting.
 20. `019_purchase_document_posting.sql` — atomic purchase-document posting with warehouse stock movements, FIFO cost layers, protected cost snapshots, supplier ledger, and balanced journal.
 21. `020_goods_sale_posting.sql` — atomic goods-sale posting with FIFO layer consumption, cost allocations, customer ledger, revenue/tax/COGS/inventory journal and idempotency.
+22. `021_fifo_warehouse_transfers.sql` — replaces quantity-only stock transfers with FIFO-layer movement and preserved cost provenance.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -43,7 +44,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all twenty-one draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty-three SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all twenty-two draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty-four SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -74,6 +75,7 @@ The test scripts are:
 - `supabase/tests/018_simple_financial_posting.sql`
 - `supabase/tests/019_purchase_document_posting.sql`
 - `supabase/tests/020_goods_sale_posting.sql`
+- `supabase/tests/021_fifo_warehouse_transfers.sql`
 
 ## Device proof deployment note
 
@@ -84,7 +86,7 @@ Migration 009, the `prove-sync-device` Edge Function source, and the Android/Web
 - Invoice numbering sequences and complete fiscal close/reopen controls
 - Journal reversal RPC, cheque lifecycle posting/assignment, normalized invoice-to-ledger posting and purchase/expense/receipt RPCs
 - Full inventory adjustment/purchase/sale posting RPCs and materialized inventory balance projections
-- Sales returns, purchase returns, refunds, cheque lifecycle, opening-stock layer provisioning, and FIFO-layer transfers between warehouses (purchase posting is in 019 and goods-sale posting is in 020)
+- Sales returns, purchase returns, refunds, cheque lifecycle, and opening-stock layer provisioning (purchase posting is in 019, goods-sale posting in 020, and FIFO-layer warehouse transfers in 021)
 - Owner transfer, account deletion/retention and owner recovery
 - Verified subscription upgrades, downgrades, grace periods and paid-plan entitlements
 - Full multi-device sync runtime tests and normalized financial sync operations
@@ -134,3 +136,8 @@ Migration 019 adds `public.post_purchase_document(uuid,uuid,text)` and a private
 ## Goods-sale posting (020)
 
 Migration 020 adds `public.post_goods_sale_document(uuid,uuid,text)`. It validates a draft goods-sale document and its exact header/line/tax totals, locks products and FIFO layers, consumes stock from the selected warehouse, writes stock movements and cost allocations, stores protected item cost snapshots, and atomically posts receivable, sales revenue, output tax, COGS and inventory journal lines plus the customer ledger debit. It fails closed when FIFO layers are insufficient; it does not fabricate cost from a product's current display price. Goods transferred between warehouses or brought in through opening balances still need FIFO-layer provisioning before they can be sold. Test 020 covers a purchase-to-sale lifecycle, FIFO consumption, journal balance, customer ledger, idempotency and tenant isolation.
+
+
+## FIFO warehouse transfers (021)
+
+Migration 021 replaces the earlier quantity-only `post_stock_transfer` implementation. It requires both movement balance and FIFO layer balance to cover the transfer, locks products and warehouses, consumes source layers in FIFO order, records transfer-out cost allocations, and creates destination layers that preserve original unit cost and acquisition timestamp. This prevents a transfer from creating stock that cannot later be costed on sale. It fails closed when legacy/adjustment stock has no reconciled FIFO layer. Test 021 posts a purchase, transfers part of its FIFO layer, and sells from the destination warehouse at the preserved cost.
