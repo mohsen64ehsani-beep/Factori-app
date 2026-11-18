@@ -194,9 +194,11 @@ test('IndexedDB checkpoint transactions attach completion handlers before comple
   };
   const snapshot = { cust: [{ id: 'c1', n: 'A' }] };
   const state = createSyncState();
-  await commitSyncCheckpoint('business-1', snapshot, state, indexedDBImpl);
+  const baseSnapshot = { cust: [{ id: 'c1', n: 'Before remote pull' }] };
+  await commitSyncCheckpoint('business-1', snapshot, state, indexedDBImpl, baseSnapshot);
   const loaded = await loadSyncCheckpoint('business-1', indexedDBImpl);
   assert.deepEqual(loaded.db, snapshot);
+  assert.deepEqual(loaded.baseDb, baseSnapshot);
   assert.equal(loaded.syncState.cursor, 0);
   await clearSyncCheckpoint('business-1', indexedDBImpl);
   assert.equal(await loadSyncCheckpoint('business-1', indexedDBImpl), null);
