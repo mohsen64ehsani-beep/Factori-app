@@ -35,7 +35,7 @@ create index business_state_records_sync_idx
 create index business_state_records_live_idx
   on private.business_state_records(business_id,collection,legacy_id)
   where deleted_at is null;
-create index record_revisions_business_cursor_idx
+create index if not exists record_revisions_business_cursor_idx
   on public.record_revisions(business_id,revision);
 create index sync_operations_record_idx
   on public.sync_operations(business_id,record_type,record_id,created_at desc);
