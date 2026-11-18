@@ -7,6 +7,10 @@ alter table public.sync_devices
   add column if not exists verified_at timestamptz,
   add column if not exists proof_version integer not null default 0 check(proof_version>=0);
 
+create unique index if not exists sync_devices_active_key_uidx
+ on public.sync_devices(business_id,user_id,device_key_thumbprint)
+ where status='active' and device_key_thumbprint is not null;
+
 create table if not exists public.sync_device_challenges (
  id uuid primary key default gen_random_uuid(),
  business_id uuid not null,
@@ -67,9 +71,14 @@ begin
  ) values (
    p_business_id,v_user_id,v_permission_version,left(coalesce(p_device_name,'Factoori device'),120),
    p_platform,p_device_public_key,v_thumbprint,null,1,'active',now()
- ) returning id into v_device_id;
+ ) on conflict(business_id,user_id,device_key_thumbprint)
+   where status='active' and device_key_thumbprint is not null
+   do update set device_name=excluded.device_name,platform=excluded.platform,
+     permission_version=excluded.permission_version,proof_version=1,last_seen_at=now()
+ returning id into v_device_id;
  insert into public.sync_cursors(business_id,device_id,last_revision,last_synced_at)
- values(p_business_id,v_device_id,0,null);
+ values(p_business_id,v_device_id,0,null)
+ on conflict(business_id,device_id) do nothing;
  return v_device_id;
 end;
 $$;
