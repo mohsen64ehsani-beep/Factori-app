@@ -380,7 +380,7 @@ async function loadCloudBusinesses(){
  if(cloudActiveBusinessId&&!demoMode){
   try{activateBusinessLocalDatabase(cloudActiveBusinessId)}catch(e){cloudActiveBusinessId='';try{localStorage.removeItem('factoori:active-business')}catch(_){}resetCloudBusinessContext();console.warn('[Factoori local business database]',e)}
  }else if(!demoMode){
-  try{if(localDbBusinessId)clearLocalBusinessSelection();else{db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;businessScopedMode=true}}catch(e){console.warn('[Factoori empty cloud context]',e)}
+  resetCloudBusinessContext();
  }
 }
 function restoreLocalDataAfterCloudSession(saveCurrentBusiness=true){
