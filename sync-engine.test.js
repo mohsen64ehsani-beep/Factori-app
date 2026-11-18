@@ -407,11 +407,11 @@ test('sync adapter creates detached JSON snapshots and requires an explicit busi
 test('cloud readiness probe covers every RPC used by the shared cloud client', async () => {
   const { readFile } = await import('node:fs/promises');
   const source = await readFile(new URL('./cloud-client.js', import.meta.url), 'utf8');
-  const used = [...new Set([...source.matchAll(/client\\.rpc\\('([^']+)'/g)].map(match => match[1]))];
+  const used = [...new Set([...source.matchAll(/client\.rpc\('([^']+)'/g)].map(match => match[1]))];
   const healthStart = source.indexOf('async getClientHealth');
   assert.notEqual(healthStart, -1, 'cloud readiness probe must exist');
   const healthSource = source.slice(healthStart);
-  const checked = new Set([...healthSource.matchAll(/client\\.rpc\\('([^']+)'/g)].map(match => match[1]));
+  const checked = new Set([...healthSource.matchAll(/client\.rpc\('([^']+)'/g)].map(match => match[1]));
   assert.deepEqual(used.filter(name => !checked.has(name)), [],
     'every RPC used by the app must be checked before enabling shared cloud features');
 });
