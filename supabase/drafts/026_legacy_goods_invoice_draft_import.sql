@@ -97,7 +97,7 @@ begin
     continue;
    end if;
    if not exists(select 1 from public.documents d
-     where d.business_id=p_business_id and d.id=v_map.normalized_id and d.status='draft') then
+     where d.business_id=p_business_id and d.id=v_map.normalized_id) then
     update private.legacy_normalized_record_map
     set import_status='orphaned',note_code='missing_reference',last_seen_at=now()
     where business_id=p_business_id and id=v_map.id;
