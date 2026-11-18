@@ -193,6 +193,9 @@ begin
 end;
 $$;
 
+revoke all on function public.register_sync_device(uuid,text,text,jsonb) from public,anon,authenticated;
+revoke all on function private.sync_push(uuid,uuid,jsonb) from public,anon,authenticated;
+revoke all on function private.sync_pull(uuid,uuid,bigint,integer) from public,anon,authenticated;
 revoke all on function public.register_sync_device_secure(uuid,text,text,jsonb) from public,anon;
 revoke all on function public.create_sync_device_challenge(uuid,uuid) from public,anon;
 revoke all on function public.finalize_sync_device_proof(uuid,uuid,uuid,uuid,text) from public,anon,authenticated;
