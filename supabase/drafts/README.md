@@ -30,6 +30,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 24. `023_inventory_wastage_posting.sql` — posts wastage as FIFO stock consumption, cost allocations and an expense/inventory write-off journal.
 25. `024_legacy_reference_import.sql` — owner-authorized, fingerprinted import of legacy customers and products only; excludes sensitive cost, stock quantities, documents and financial data.
 26. `025_legacy_catalog_warehouse_import.sql` — imports legacy category labels, service names and warehouses with stable mapping; never imports warehouse quantities or stock movements.
+27. `026_legacy_goods_invoice_draft_import.sql` — imports legacy goods invoices as normalized drafts only; excludes posting, stock, payments, journals and protected legacy cost snapshots.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -48,7 +49,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all twenty-six draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty-eight SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all twenty-seven draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty-nine SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -84,6 +85,7 @@ The test scripts are:
 - `supabase/tests/023_inventory_wastage_posting.sql`
 - `supabase/tests/024_legacy_reference_import.sql`
 - `supabase/tests/025_legacy_catalog_warehouse_import.sql`
+- `supabase/tests/026_legacy_goods_invoice_draft_import.sql`
 
 ## Device proof deployment note
 
@@ -169,3 +171,8 @@ Migration 024 adds `public.import_legacy_reference_data(uuid,uuid)`, a business-
 ## Legacy catalog and warehouse import (025)
 
 Migration 025 adds `public.import_legacy_catalog_and_warehouses(uuid,uuid)`. It normalizes the app's primitive category/service strings using their sync identity `value:<text>`, and imports warehouse objects using their legacy string IDs mapped to newly generated normalized UUIDs. The first active legacy warehouse becomes the default only when the business has no active default. Products are linked to a category only by an exact label match and only when their normalized category is still unset. Repeated imports are no-ops; changed rows are flagged as conflicts; ambiguous existing warehouse matches are not silently linked. No warehouse stock quantities, stock movements, FIFO layers, product costs, or financial data are imported. Test 025 verifies primitive collection identities, generated warehouse IDs, exact product-category linking, default warehouse behavior, idempotency, source-change conflict and tenant isolation.
+
+
+## Legacy goods invoice draft import (026)
+
+Migration 026 adds `public.import_legacy_goods_invoice_drafts(uuid,uuid)`. It resolves the legacy customer, product and optional warehouse through the private mapping ledger, validates the date, invoice number, item count, quantities, prices, discount and tax, and calls the normalized draft-document RPC. Imported invoices remain `draft`; the legacy bank account, payments, item cost (`b`), stock quantity and financial postings are intentionally ignored. The importer fingerprints the sanitized public payload, makes identical reruns no-ops, and marks changed source invoices as conflicts rather than overwriting normalized drafts. Test 026 covers exact draft totals and item snapshots, idempotency, source-change conflict, cross-business denial, and absence of cost, stock, journal and posting records.
