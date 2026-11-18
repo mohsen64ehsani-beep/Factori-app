@@ -115,7 +115,8 @@ jobs:
             030_legacy_fiscal_period_import.sql \
             031_service_document_posting.sql \
             032_cheque_lifecycle_posting.sql \
-            033_cheque_reversal_posting.sql
+            033_cheque_reversal_posting.sql \
+            034_sales_return_posting.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
@@ -193,7 +194,8 @@ jobs:
             030_legacy_fiscal_period_import.sql \
             031_service_document_posting.sql \
             032_cheque_lifecycle_posting.sql \
-            033_cheque_reversal_posting.sql
+            033_cheque_reversal_posting.sql \
+            034_sales_return_posting.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
