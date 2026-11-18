@@ -61,6 +61,8 @@ jobs:
           create role authenticated nologin;
           create role service_role nologin bypassrls;
           create schema auth;
+          create schema extensions;
+          create extension if not exists pgcrypto with schema extensions;
           create table auth.users (
             id uuid primary key,
             email text,
@@ -97,6 +99,37 @@ jobs:
             echo "::endgroup::"
           done
 
+      - name: Bootstrap existing license schema fixture and apply account entitlement draft
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create table public.factori_license_keys (
+            id uuid primary key default gen_random_uuid(),
+            key_hash text not null unique,
+            status text not null check (status in ('unused','active','revoked')),
+            created_at timestamptz not null default now(),
+            activated_at timestamptz,
+            revoked_at timestamptz,
+            order_id text unique,
+            encrypted_key text,
+            payment_reference text,
+            payment_gateway text,
+            amount_paid_toman bigint,
+            payment_verified_at timestamptz
+          );
+          create table public.factori_license_activations (
+            id uuid primary key default gen_random_uuid(),
+            license_id uuid not null references public.factori_license_keys(id),
+            device_jwk jsonb not null,
+            device_thumbprint text not null,
+            activated_at timestamptz not null default now(),
+            transferred_from uuid
+          );
+          SQL
+          echo "::group::Applying 013_account_bound_license_entitlements.sql"
+          psql -v ON_ERROR_STOP=1 -f supabase/drafts/013_account_bound_license_entitlements.sql
+          echo "::endgroup::"
+
       - name: Run database regression checks
         run: |
           set -euo pipefail
@@ -113,7 +146,8 @@ jobs:
             009_sensitive_payload_partition.sql \
             010_transactional_posting.sql \
             011_device_proof.sql \
-            012_account_transfers.sql
+            012_account_transfers.sql \
+            013_account_bound_license_entitlements.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
