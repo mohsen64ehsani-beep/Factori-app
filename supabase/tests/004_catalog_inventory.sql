@@ -18,7 +18,7 @@ begin
  if not exists(
   select 1 from pg_constraint
   where conrelid='public.stock_movements'::regclass and contype='u'
-    and replace(pg_get_constraintdef(oid),' ','') like '%unique(business_id,id)%'
+    and lower(replace(pg_get_constraintdef(oid),' ','')) like '%unique(business_id,id)%'
  ) then
   raise exception 'Stock movements must expose a tenant-scoped unique key for composite foreign keys';
  end if;
