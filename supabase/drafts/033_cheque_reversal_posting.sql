@@ -197,7 +197,7 @@ begin
   description,source_legacy_id,created_by
  )
  select cle.business_id,cle.contact_id,p_event_date,
-  case when v_cheque.cheque_direction='received' then 'refund' else 'payment_reversal' end,
+  case when v_cheque.cheque_direction='received' then 'adjustment_debit' else 'adjustment_credit' end,
   cle.credit,cle.debit,v_reversal_tx_id,'برگشت چک: '||btrim(p_reason),
   'financial_transaction:'||v_reversal_tx_id::text,v_user
  from public.contact_ledger_entries cle
