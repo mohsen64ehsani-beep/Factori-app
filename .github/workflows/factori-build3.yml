@@ -163,7 +163,7 @@ jobs:
           grep -n -E 'versionCode|versionName' android/app/build.gradle
           grep -q 'versionCode 51' android/app/build.gradle
           grep -q 'versionName "1.2.49"' android/app/build.gradle
-          echo "Android update version verified: 1.2.49 (48)"
+          echo "Android update version verified: 1.2.49 (51)"
 
       - name: Allow fingerprint permission only
         run: |
