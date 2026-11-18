@@ -136,6 +136,15 @@ const api = {
   async getEntitlements(businessId) {
     return unwrap(await client.rpc('get_business_entitlements', { p_business_id: businessId })) || [];
   },
+  async claimLicense(businessId, licenseKey) {
+    if (!businessId || !String(licenseKey || '').trim()) {
+      throw new Error('کسب‌وکار و کد لایسنس برای ثبت مالکیت الزامی است.');
+    }
+    return unwrap(await client.rpc('claim_factori_license', {
+      p_license_key: String(licenseKey).trim(),
+      p_business_id: businessId
+    }));
+  },
   async createDocumentDraft(payload) {
     return unwrap(await client.rpc('create_document_draft', {
       p_business_id: payload.businessId,
