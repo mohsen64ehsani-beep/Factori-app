@@ -218,3 +218,46 @@ test('db:v2 adapter creates detached JSON snapshots without mutating the live da
   await assert.rejects(() => loadLocalDatabaseCheckpoint({ businessId: '' }), /explicitly selected business/);
   assert.throws(() => createLocalDatabaseSnapshot(null), /must be an object/);
 });
+
+
+test('legacy db:v2 adoption requires confirmation and never overwrites or deletes source data', async () => {
+  const {
+    LEGACY_DATABASE_KEY, LEGACY_ADOPTION_MARKER,
+    loadBusinessDatabase, saveBusinessDatabase, adoptLegacyDatabaseForBusiness
+  } = await import('./business-db-scope.js');
+  const values = new Map([[LEGACY_DATABASE_KEY, JSON.stringify({
+    cust: [{ id: 'legacy-1', n: 'Old customer' }],
+    advancedSettings: { sms: { apiKey: 'local-only' } }
+  })]]);
+  const storage = {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(key, String(value)); }
+  };
+  const declined = adoptLegacyDatabaseForBusiness({ storage, businessId: 'biz-A' });
+  assert.equal(declined.adopted, false);
+  assert.equal(declined.reason, 'confirmation_required');
+  assert.equal(values.has('db:v2:business:biz-A'), false);
+
+  const adopted = adoptLegacyDatabaseForBusiness({
+    storage, businessId: 'biz-A', confirmed: true
+  });
+  assert.equal(adopted.adopted, true);
+  assert.deepEqual(loadBusinessDatabase({ storage, businessId: 'biz-A' }), JSON.parse(values.get(LEGACY_DATABASE_KEY)));
+  assert.ok(values.has(LEGACY_DATABASE_KEY), 'legacy source remains available as recovery copy');
+  assert.ok(values.has(LEGACY_ADOPTION_MARKER));
+
+  const secondBusiness = adoptLegacyDatabaseForBusiness({
+    storage, businessId: 'biz-B', confirmed: true
+  });
+  assert.equal(secondBusiness.adopted, false);
+  assert.equal(secondBusiness.reason, 'legacy_database_already_assigned');
+
+  saveBusinessDatabase({
+    storage, businessId: 'biz-B', database: { cust: [{ id: 'new', n: 'Separate' }] }
+  });
+  assert.deepEqual(loadBusinessDatabase({ storage, businessId: 'biz-B' }), {
+    cust: [{ id: 'new', n: 'Separate' }]
+  });
+  assert.deepEqual(loadBusinessDatabase({ storage, businessId: 'biz-A' }), JSON.parse(values.get(LEGACY_DATABASE_KEY)));
+  assert.throws(() => loadBusinessDatabase({ storage, businessId: '' }), /explicit business ID/);
+});
