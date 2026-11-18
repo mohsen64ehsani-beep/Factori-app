@@ -821,3 +821,53 @@ test('regained cost access restores private fields without overwriting local pub
   assert.equal(retry.operations[0].base_version, 3);
   assert.equal(retry.operations[0].payload.buy, 120);
 });
+
+
+test('business sync coordinator resumes a permission reset before any write retry', async () => {
+  const { runBusinessSync } = await import('./sync-runtime.js');
+  let pushCount = 0, pullCount = 0;
+  const api = {
+    ensureSyncDevice: async () => ({ verified: true, device_id: 'device-resume' }),
+    getSyncDeviceId: () => 'device-resume',
+    syncPushBatches: async ({ operations }) => {
+      pushCount++;
+      return operations.map(op => ({ operation_id: op.operation_id, status: 'applied', version: 2 }));
+    },
+    syncPull: async () => {
+      pullCount++;
+      return {
+        records: [], next_cursor: pullCount, has_more: pullCount === 1, reset_required: false
+      };
+    }
+  };
+  const first = await runBusinessSync({
+    businessId: 'business-resume',
+    database: { prod: [{ id: 'p1', n: 'queued' }] },
+    syncState: {
+      ...createSyncState(),
+      permissionResetInProgress: true,
+      pending: [{ operation_id: 'queued-op', collection: 'prod', legacy_id: 'p1',
+        operation_type: 'upsert', base_version: 1, payload: { id: 'p1', n: 'queued' } }]
+    },
+    api,
+    createOperationId: () => 'next-op',
+    maxPullPages: 1,
+    persistCheckpoint: async () => {}
+  });
+  assert.equal(pushCount, 0, 'writes must wait until the permission reset pull is complete');
+  assert.equal(first.hasMore, true);
+  assert.equal(first.syncState.permissionResetInProgress, true);
+
+  const second = await runBusinessSync({
+    businessId: 'business-resume',
+    database: first.database,
+    syncState: first.syncState,
+    api,
+    createOperationId: () => 'next-op',
+    maxPullPages: 5,
+    persistCheckpoint: async () => {}
+  });
+  assert.equal(pushCount, 1);
+  assert.equal(second.syncState.permissionResetInProgress, false);
+  assert.equal(second.syncState.pending.length, 0);
+});
