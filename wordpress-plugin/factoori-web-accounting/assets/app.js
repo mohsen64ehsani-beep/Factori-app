@@ -142,10 +142,10 @@
         const id=await rpc('create_business',{p_name:data.name});
         await loadBusinesses();render();toast('فضای حسابداری ایجاد شد.');
       } else if(kind==='contact'){
-        await request('/rest/v1/contacts',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({business_id:state.business.id,contact_type:data.contact_type,name:data.name,phone:data.phone||null,code:data.code||null,address:data.address||null,created_by:state.user.id})});
+        await rpc('web_create_contact',{p_business_id:state.business.id,p_contact_type:data.contact_type,p_name:data.name,p_phone:data.phone||null,p_code:data.code||null,p_address:data.address||null,p_notes:null});
         await loadData();render();toast('شخص با موفقیت ذخیره شد.');
       } else if(kind==='product'){
-        await request('/rest/v1/products',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({business_id:state.business.id,name:data.name,sku:data.sku||null,unit_name:data.unit_name||'عدد',sale_price:Number(data.sale_price||0),track_inventory:form.querySelector('[name="track_inventory"]').checked,is_active:true,created_by:state.user.id})});
+        await rpc('web_create_product',{p_business_id:state.business.id,p_name:data.name,p_sku:data.sku||null,p_unit_name:data.unit_name||'عدد',p_sale_price:Number(data.sale_price||0),p_track_inventory:form.querySelector('[name="track_inventory"]').checked,p_minimum_stock:0,p_barcode:null});
         await loadData();render();toast('کالا با موفقیت ذخیره شد.');
       } else if(kind==='invoice'){
         const p=state.products.find(x=>x.id===data.product_id);if(!p)throw new Error('کالای انتخاب‌شده معتبر نیست.');
