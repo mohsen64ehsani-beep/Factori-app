@@ -125,10 +125,7 @@ jobs:
             039_bidirectional_master_sync.sql \
             040_product_sync_fields.sql \
             041_sales_invoice_mobile_bridge.sql \
-            042_invoice_bridge_warehouse_fix.sql \
-            043_restrict_legacy_license_rpc.sql \
-            044_web_legacy_collection_reads.sql \
-            045_web_inventory_balance_rpc.sql
+            042_invoice_bridge_warehouse_fix.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
@@ -167,6 +164,14 @@ jobs:
           echo "::group::Applying 013_account_bound_license_entitlements.sql"
           psql -v ON_ERROR_STOP=1 -f supabase/drafts/013_account_bound_license_entitlements.sql
           echo "::endgroup::"
+      - name: Apply post-license hardening and web read APIs
+        run: |
+          set -euo pipefail
+          for migration in 043_restrict_legacy_license_rpc.sql 044_web_legacy_collection_reads.sql 045_web_inventory_balance_rpc.sql; do
+            echo "::group::Applying $migration"
+            psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
+            echo "::endgroup::"
+          done
       - name: Run database regression checks
         run: |
           set -euo pipefail
