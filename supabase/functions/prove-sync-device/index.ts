@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { toHex, verifyP256Proof } from "./crypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,15 +12,6 @@ function json(status: number, body: unknown) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-}
-
-function fromBase64Url(value: string): Uint8Array {
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
-  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
-}
-
-function toHex(bytes: ArrayBuffer): string {
-  return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 Deno.serve(async (req) => {
@@ -71,16 +63,7 @@ Deno.serve(async (req) => {
   if (thumbprint !== device.device_key_thumbprint) return json(403, { error: "key_thumbprint_mismatch" });
 
   const signedMessage = [challenge.id, body.nonce, challenge.business_id, challenge.device_id, challenge.user_id].join(".");
-  let valid = false;
-  try {
-    const publicKey = await crypto.subtle.importKey("jwk", jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
-    valid = await crypto.subtle.verify(
-      { name: "ECDSA", hash: "SHA-256" },
-      publicKey,
-      fromBase64Url(body.signature),
-      new TextEncoder().encode(signedMessage),
-    );
-  } catch { valid = false; }
+  const valid = await verifyP256Proof(jwk, signedMessage, body.signature);
   if (!valid) return json(403, { error: "invalid_device_signature" });
 
   const { data: finalized, error: finalizeError } = await admin.rpc("finalize_sync_device_proof", {
