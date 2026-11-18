@@ -551,3 +551,15 @@ test('permission changes advance member version so sync clients receive a reset'
   assert.match(migration, /after insert or update or delete on public\.business_member_permission_overrides[\s\S]*execute function private\.bump_override_permission_version/);
   assert.match(syncSql, /v_device\.permission_version<>v_member_permission_version[\s\S]*'reset_required',true/);
 });
+
+
+test('local permission-reset redaction keys exactly match SQL private payload keys', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { SYNC_SENSITIVE_FIELDS } = await import('./sync-engine.js');
+  const sql = await readFile(new URL('./supabase/drafts/005_sync_compatibility.sql', import.meta.url), 'utf8');
+  const start = sql.indexOf('where e.key not in (', sql.indexOf('create or replace function private.strip_sensitive_json'));
+  const end = sql.indexOf(');', start);
+  assert.ok(start >= 0 && end > start);
+  const sqlFields = [...sql.slice(start, end).matchAll(/'([^']+)'/g)].map(match => match[1]).sort();
+  assert.deepEqual([...SYNC_SENSITIVE_FIELDS].sort(), sqlFields);
+});
