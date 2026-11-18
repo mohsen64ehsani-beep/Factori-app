@@ -37,7 +37,6 @@
     const data=await response.json().catch(()=>({}));
     if(!response.ok) throw new Error(data.msg||data.message||data.error_description||'ورود یا ثبت‌نام انجام نشد.');
     if(data.access_token) saveSession(data); else if(mode==='signup') toast('حساب ساخته شد. ایمیل خود را برای تأیید بررسی کنید، سپس وارد شوید.');
-    if(data.user) state.user=data.user;
     return data;
   }
   async function restore(){
@@ -80,7 +79,7 @@
     return '<div class="fw-table-wrap"><table class="fw-table"><thead><tr>'+heads.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
   }
   function dashboard(){
-    const sales=state.documents.filter(d=>d.document_type==='goods_sale'||d.document_type==='service_sale');
+    const sales=state.documents.filter(d=>(d.document_type==='goods_sale'||d.document_type==='service_sale')&&d.status==='posted');
     const drafts=state.documents.filter(d=>d.status==='draft').length;
     const total=sales.reduce((a,d)=>a+Number(d.total_amount||0),0);
     const latest=state.documents.slice(0,6).map(d=>'<tr><td>'+esc(d.document_number||'پیش‌نویس')+'</td><td>'+dateFa(d.document_date)+'</td><td>'+money(d.total_amount)+'</td><td><span class="fw-badge '+(d.status==='posted'?'green':'gray')+'">'+(d.status==='posted'?'ثبت نهایی':'پیش‌نویس')+'</span></td></tr>');
