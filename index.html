@@ -229,14 +229,12 @@ function resetCloudBusinessContext(){
  }
 }
 function isolateLocalDataForCloudSession(){
- let saveError=null;
  if(localDbBusinessId){
   try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}
-  catch(e){saveError=e;console.warn('[Factoori business save before account switch]',e)}
+  catch(e){console.warn('[Factoori business save before account switch]',e);throw new Error('ذخیره اطلاعات کسب‌وکار قبلی ناموفق بود؛ تغییر حساب تا ذخیره امن اطلاعات متوقف شد.')}
   localDbBusinessId='';
  }
  cancelBusinessSync();businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;syncGeneration++;dbRevision++;
- if(saveError)throw new Error('اطلاعات قبلی ذخیره نشد؛ برای جلوگیری از نمایش اطلاعات حساب دیگر، فضای محلی جدا شد.');
 }
 
 // Initial configurable Freemium limits; values can be tuned without changing billing integration.
@@ -439,10 +437,9 @@ async function loadCloudBusinesses(){
  }
 }
 function restoreLocalDataAfterCloudSession(saveCurrentBusiness=true){
- let saved=true;
  if(saveCurrentBusiness&&localDbBusinessId){
   try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}
-  catch(e){saved=false;console.warn('[Factoori business checkpoint before logout]',e)}
+  catch(e){console.warn('[Factoori business checkpoint before logout]',e);cloudSession=null;cloudSchemaReady=false;return false}
  }
  cancelBusinessSync();localDbBusinessId='';businessScopedMode=false;cloudSession=null;cloudBusinesses=[];cloudActiveBusinessId='';cloudSchemaReady=false;syncGeneration++;dbRevision++;
  db=JSON.parse(EMPTY_BUSINESS_DB_JSON);
@@ -450,7 +447,7 @@ function restoreLocalDataAfterCloudSession(saveCurrentBusiness=true){
  catch(e){console.warn('[Factoori legacy database restore]',e)}
  normalizeDemoCollections();realDb=db;
  try{localStorage.removeItem('factoori:active-business')}catch(e){}
- return saved;
+ return true;
 }
 async function initCloudSession(){
  const api=window.FactooriCloud;if(!api)return;
