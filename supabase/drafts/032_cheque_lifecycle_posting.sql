@@ -50,7 +50,7 @@ begin
   or not private.has_business_permission(p_business_id,'cheques.update_status') then
   raise exception using errcode='42501',message='Cheque creation is not permitted';
  end if;
- if p_cheque_direction not in ('received','issued')
+ if p_cheque_direction is null or p_cheque_direction not in ('received','issued')
   or p_contact_id is null
   or p_amount is null or p_amount::text in ('NaN','Infinity','-Infinity')
   or p_amount<=0 or trunc(p_amount)<>p_amount or p_amount>999999999999999999
@@ -161,7 +161,7 @@ begin
  if not private.has_business_permission(p_business_id,'cheques.update_status') then
   raise exception using errcode='42501',message='Cheque status update is not permitted';
  end if;
- if p_cheque_id is null or p_to_status not in ('deposited','cleared','bounced','cancelled','returned')
+ if p_cheque_id is null or p_to_status is null or p_to_status not in ('deposited','cleared','bounced','cancelled','returned')
   or p_event_date is null
   or p_idempotency_key is null or length(p_idempotency_key) not between 8 and 120
   or length(btrim(coalesce(p_note,'')))>500 then
@@ -174,9 +174,12 @@ begin
  if not found then
   raise exception using errcode='P0002',message='Cheque not found';
  end if;
+ if v_cheque.issue_date is not null and p_event_date<v_cheque.issue_date then
+  raise exception using errcode='22023',message='Cheque event date cannot precede its issue date';
+ end if;
 
  v_fingerprint:=md5(jsonb_build_array(
-  p_business_id,p_cheque_id,v_cheque.status,p_to_status,p_event_date,
+  p_business_id,p_cheque_id,p_to_status,p_event_date,
   p_financial_account_id,nullif(btrim(coalesce(p_note,'')),'')
  )::text);
  select id,request_fingerprint into v_event_id,v_existing_fingerprint
