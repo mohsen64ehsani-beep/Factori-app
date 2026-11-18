@@ -5,11 +5,67 @@ import {
   createSyncState,
   prepareSyncOperations,
   acknowledgeSyncResults,
-  applySyncPullPage
+  applySyncPullPage,
+  createSyncTombstone
 } from './sync-engine.js';
 import { saveLocalDatabaseCheckpoint, loadLocalDatabaseCheckpoint, createLocalDatabaseSnapshot, mergeLocalChangesOntoCheckpoint, acknowledgeLocalDatabaseApplied } from './sync-db-adapter.js';
 
 const activeRuns = new Set();
+const deferredDeletes = new Map();
+
+function queueDeferredDelete(businessId, collection, legacyId) {
+  const rows = deferredDeletes.get(businessId) || [];
+  if (!rows.some(row => row.collection === collection && row.legacyId === legacyId)) {
+    rows.push({ collection, legacyId });
+  }
+  deferredDeletes.set(businessId, rows);
+}
+
+async function persistBusinessDeletion({ businessId, collection, legacyId, indexedDBImpl }) {
+  const checkpoint = await loadLocalDatabaseCheckpoint({ businessId, indexedDBImpl });
+  if (!checkpoint) return false;
+  const nextState = createSyncTombstone(collection, legacyId, checkpoint.syncState);
+  const before = checkpoint.syncState?.tombstones?.length || 0;
+  if ((nextState.tombstones?.length || 0) === before) return false;
+  await saveLocalDatabaseCheckpoint({
+    businessId,
+    database: checkpoint.database,
+    baseDatabase: checkpoint.baseDatabase,
+    syncState: nextState,
+    indexedDBImpl
+  });
+  return true;
+}
+
+async function flushDeferredBusinessDeletions(businessId, indexedDBImpl) {
+  while (deferredDeletes.has(businessId)) {
+    const rows = deferredDeletes.get(businessId) || [];
+    deferredDeletes.delete(businessId);
+    for (const row of rows) {
+      try {
+        await persistBusinessDeletion({ businessId, ...row, indexedDBImpl });
+      } catch (error) {
+        queueDeferredDelete(businessId, row.collection, row.legacyId);
+        console.warn('[Factoori sync deletion queue]', error);
+      }
+    }
+    // On a storage failure, retain the item for a later run instead of spinning.
+    if ((deferredDeletes.get(businessId) || []).length) break;
+  }
+}
+
+export async function recordBusinessDeletion({ businessId, collection, legacyId, indexedDBImpl }) {
+  if (typeof businessId !== 'string' || !businessId.trim()) return { queued: false };
+  if (typeof collection !== 'string' || typeof legacyId !== 'string' || !legacyId) {
+    throw new Error('شناسه رکورد حذف‌شده معتبر نیست.');
+  }
+  if (activeRuns.has(businessId)) {
+    queueDeferredDelete(businessId, collection, legacyId);
+    return { queued: true, deferred: true };
+  }
+  const queued = await persistBusinessDeletion({ businessId, collection, legacyId, indexedDBImpl });
+  return { queued, deferred: false };
+}
 
 function isPermissionVersionMismatch(error) {
   const message = String(error?.message || '').toLowerCase();
@@ -168,6 +224,7 @@ export async function runBusinessSync({
       hasMore
     };
   } finally {
+    await flushDeferredBusinessDeletions(businessId, indexedDBImpl);
     activeRuns.delete(businessId);
   }
 }
@@ -180,7 +237,8 @@ if (typeof window !== 'undefined') {
   window.FactooriSyncRuntime = Object.freeze({
     runBusinessSync,
     isSyncPermissionVersionMismatch,
-    acknowledgeBusinessDatabaseApplied
+    acknowledgeBusinessDatabaseApplied,
+    recordBusinessDeletion
   });
   window.dispatchEvent(new Event('factoori-sync-runtime-ready'));
 }
