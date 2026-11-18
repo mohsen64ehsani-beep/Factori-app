@@ -1,6 +1,8 @@
 // Factoori local/shared sync primitives wired to the db:v2 business-scoped runtime.
-// Financial, payment, purchase, return and stock mutations stay out of generic sync
-// until their normalized transactional RPCs and reconciliation flows are available.
+// Financial and stock writes remain excluded from generic record sync even where
+// dedicated normalized RPCs now exist. The app-side operation adapters must call
+// those RPCs explicitly and persist idempotent offline intents before any collection
+// is moved into SYNC_WRITE_COLLECTIONS.
 export const SYNC_WRITE_COLLECTIONS = Object.freeze([
   'cust', 'suppliers', 'duedates', 'prod', 'services', 'categories',
   'inv', 'serviceInv', 'warehouses', 'bankAccounts', 'fiscal',
