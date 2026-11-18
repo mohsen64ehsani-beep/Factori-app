@@ -112,7 +112,8 @@ jobs:
             027_legacy_service_invoice_draft_import.sql \
             028_legacy_reconciliation_gate.sql \
             029_legacy_supplier_contact_import.sql \
-            030_legacy_fiscal_period_import.sql
+            030_legacy_fiscal_period_import.sql \
+            031_service_document_posting.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
@@ -187,7 +188,8 @@ jobs:
             027_legacy_service_invoice_draft_import.sql \
             028_legacy_reconciliation_gate.sql \
             029_legacy_supplier_contact_import.sql \
-            030_legacy_fiscal_period_import.sql
+            030_legacy_fiscal_period_import.sql \
+            031_service_document_posting.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
