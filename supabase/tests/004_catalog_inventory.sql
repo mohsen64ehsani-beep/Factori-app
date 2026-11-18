@@ -15,6 +15,13 @@ begin
   if has_table_privilege('authenticated','public.'||t,'UPDATE') then raise exception 'authenticated has direct UPDATE on public.%',t; end if;
   if has_table_privilege('authenticated','public.'||t,'DELETE') then raise exception 'authenticated has direct DELETE on public.%',t; end if;
  end loop;
+ if not exists(
+  select 1 from pg_constraint
+  where conrelid='public.stock_movements'::regclass and contype='u'
+    and replace(pg_get_constraintdef(oid),' ','') like '%unique(business_id,id)%'
+ ) then
+  raise exception 'Stock movements must expose a tenant-scoped unique key for composite foreign keys';
+ end if;
  if not exists(select 1 from pg_policies where schemaname='public' and tablename='product_costs' and policyname='product_costs_read') then
   raise exception 'Cost read policy missing';
  end if;
