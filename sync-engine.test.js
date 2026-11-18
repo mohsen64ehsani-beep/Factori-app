@@ -696,3 +696,98 @@ test('permission-reset pull recognizes an operation already applied remotely', a
   assert.equal(pulled.state.permissionResetDirty.length, 0);
   assert.equal(prepareSyncOperations(pulled.db, pulled.state, ids).operations.length, 0);
 });
+
+
+test('business sync coordinator checkpoints pending IDs before push and persists pull pages', async () => {
+  const { runBusinessSync } = await import('./sync-runtime.js');
+  const checkpoints = [], calls = [];
+  const api = {
+    ensureSyncDevice: async () => ({ verified: true, device_id: 'device-1' }),
+    getSyncDeviceId: () => 'device-1',
+    syncPushBatches: async ({ operations }) => {
+      calls.push(['push', operations.map(op => op.operation_id)]);
+      return operations.map(op => ({ operation_id: op.operation_id, status: 'applied', version: 1 }));
+    },
+    syncPull: async ({ sinceRevision }) => {
+      calls.push(['pull', sinceRevision]);
+      return {
+        records: [{ collection: 'cust', legacy_id: 'c1', version: 1, revision: 1,
+          change_type: 'upsert', deleted_at: null, payload: { id: 'c1', n: 'مشتری' } }],
+        next_cursor: 1, has_more: false, reset_required: false
+      };
+    }
+  };
+  const result = await runBusinessSync({
+    businessId: 'business-1',
+    database: { cust: [{ id: 'c1', n: 'مشتری' }] },
+    api,
+    createOperationId: () => 'operation-1',
+    persistCheckpoint: async checkpoint => checkpoints.push({
+      businessId: checkpoint.businessId,
+      pending: checkpoint.syncState.pending.length,
+      cursor: checkpoint.syncState.cursor
+    })
+  });
+  assert.equal(result.deviceId, 'device-1');
+  assert.equal(result.syncState.cursor, 1);
+  assert.equal(result.syncState.pending.length, 0);
+  assert.equal(result.database.cust[0].n, 'مشتری');
+  assert.equal(checkpoints[0].pending, 1, 'pending operation identity must be durable before network push');
+  assert.ok(checkpoints.length >= 3, 'checkpoint should be committed before push, after acknowledgement, and after pull');
+  assert.deepEqual(calls.map(call => call[0]), ['push', 'pull']);
+});
+
+
+test('business sync coordinator recovers from permission-version mismatch before retrying writes', async () => {
+  const { runBusinessSync } = await import('./sync-runtime.js');
+  const checkpoints = [];
+  let pushCount = 0, pullCount = 0;
+  const api = {
+    ensureSyncDevice: async () => ({ verified: true, device_id: 'device-2' }),
+    getSyncDeviceId: () => 'device-2',
+    syncPushBatches: async ({ operations }) => {
+      pushCount++;
+      if (pushCount === 1) throw Object.assign(new Error('sync_permissions_changed'), { code: '42501' });
+      return operations.map(op => ({ operation_id: op.operation_id, status: 'applied', version: 3 }));
+    },
+    syncPull: async ({ sinceRevision }) => {
+      pullCount++;
+      if (pullCount === 1) return {
+        records: [], next_cursor: 0, has_more: true, reset_required: true,
+        readable_collections: ['prod'], cost_access: false
+      };
+      if (pullCount === 2) return {
+        records: [{ collection: 'prod', legacy_id: 'p1', version: 2, revision: 2,
+          change_type: 'upsert', deleted_at: null, payload: { id: 'p1', n: 'old' } }],
+        next_cursor: 2, has_more: false, reset_required: false
+      };
+      return {
+        records: [{ collection: 'prod', legacy_id: 'p1', version: 3, revision: 3,
+          change_type: 'upsert', deleted_at: null, payload: { id: 'p1', n: 'local edit' } }],
+        next_cursor: 3, has_more: false, reset_required: false
+      };
+    }
+  };
+  const result = await runBusinessSync({
+    businessId: 'business-2',
+    database: { prod: [{ id: 'p1', n: 'local edit', buy: 10 }] },
+    syncState: {
+      ...createSyncState(),
+      versions: { prod: { p1: 1 } },
+      snapshots: { prod: { p1: '{"id":"p1","n":"old"}' } },
+      pending: [{ operation_id: 'old-operation', collection: 'prod', legacy_id: 'p1',
+        operation_type: 'upsert', base_version: 1, payload: { id: 'p1', n: 'local edit', buy: 10 } }]
+    },
+    api,
+    createOperationId: () => 'retry-operation',
+    persistCheckpoint: async checkpoint => checkpoints.push(checkpoint.syncState.cursor)
+  });
+  assert.equal(pushCount, 2);
+  assert.equal(pullCount, 3);
+  assert.equal(result.permissionResets, 1);
+  assert.equal(result.database.prod[0].n, 'local edit');
+  assert.equal(result.database.prod[0].buy, undefined, 'lost cost access must remove stale local cost data');
+  assert.equal(result.syncState.pending.length, 0);
+  assert.equal(result.syncState.cursor, 3);
+  assert.ok(checkpoints.length >= 6);
+});
