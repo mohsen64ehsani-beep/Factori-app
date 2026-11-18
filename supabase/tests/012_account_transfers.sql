@@ -30,8 +30,8 @@ begin
    or position('journal_entries' in v_fn)=0 or position('journal_lines' in v_fn)=0
    or position('currency_code' in v_fn)=0 or position('for update' in lower(v_fn))=0
    or position('source_legacy_id' in v_fn)=0
-   or position("'draft'" in v_fn)=0
-   or position("set status='posted'" in v_fn)=0 then
+   or position('''draft''' in v_fn)=0
+   or position('set status=''posted''' in v_fn)=0 then
   raise exception 'Account transfer permission, locking, currency or double-entry posting is missing';
  end if;
 end $$;
