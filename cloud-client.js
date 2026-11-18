@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://rtlwztotaolbnjdtsjqy.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_GhG0h_Mco3UomLqxnhynnw_blPQ3ii-';
+// Public landing page used after email confirmation; never redirect production users to localhost.
+const FACTOORI_AUTH_REDIRECT_URL = 'https://factoori.ir/';
 
 const client = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
@@ -99,7 +101,10 @@ const api = {
     return unwrap(await client.auth.signUp({
       email: String(email || '').trim(),
       password,
-      options: { data: { display_name: String(displayName || '').trim() } }
+      options: {
+        data: { display_name: String(displayName || '').trim() },
+        emailRedirectTo: FACTOORI_AUTH_REDIRECT_URL
+      }
     }));
   },
   async signOut() {
