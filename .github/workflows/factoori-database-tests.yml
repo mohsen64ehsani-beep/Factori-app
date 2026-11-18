@@ -126,7 +126,9 @@ jobs:
             040_product_sync_fields.sql \
             041_sales_invoice_mobile_bridge.sql \
             042_invoice_bridge_warehouse_fix.sql \
-            043_restrict_legacy_license_rpc.sql
+            043_restrict_legacy_license_rpc.sql \
+            044_web_legacy_collection_reads.sql \
+            045_web_inventory_balance_rpc.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
@@ -214,7 +216,9 @@ jobs:
             040_product_sync_fields.sql \
             041_sales_invoice_mobile_bridge.sql \
             042_invoice_bridge_warehouse_fix.sql \
-            043_restrict_legacy_license_rpc.sql
+            043_restrict_legacy_license_rpc.sql \
+            044_web_legacy_collection_reads.sql \
+            045_web_inventory_balance_rpc.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
