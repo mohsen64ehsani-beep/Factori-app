@@ -647,3 +647,52 @@ test('SQL permission reset returns the readable collection and cost-access snaps
   const resetCollections = [...reset.slice(arrayStart, arrayEnd).matchAll(/'([^']+)'/g)].map(match => match[1]).sort();
   assert.deepEqual(resetCollections, [...SYNC_READ_COLLECTIONS].sort());
 });
+
+
+test('permission-reset pull refreshes base version when remote still matches prior snapshot', async () => {
+  const { applySyncPullPage } = await import('./sync-engine.js');
+  const localDb = { prod: [{ id: 'p1', n: 'local edit', buy: 10 }] };
+  const state = {
+    ...createSyncState(),
+    versions: { prod: { p1: 1 } },
+    snapshots: { prod: { p1: '{"id":"p1","n":"old"}' } },
+    pending: [{ operation_id: 'pending', collection: 'prod', legacy_id: 'p1',
+      operation_type: 'upsert', base_version: 1, payload: { id: 'p1', n: 'local edit', buy: 10 } }]
+  };
+  const reset = applySyncPullPage(localDb, state, {
+    reset_required: true, readable_collections: ['prod'], cost_access: false
+  });
+  const pulled = applySyncPullPage(reset.db, reset.state, {
+    records: [{ collection: 'prod', legacy_id: 'p1', version: 2, revision: 2,
+      change_type: 'upsert', deleted_at: null, payload: { id: 'p1', n: 'old' } }],
+    next_cursor: 2, has_more: false, reset_required: false
+  });
+  assert.equal(pulled.db.prod[0].n, 'local edit');
+  assert.equal(pulled.state.versions.prod.p1, 2);
+  const retry = prepareSyncOperations(pulled.db, pulled.state, ids);
+  assert.equal(retry.operations[0].base_version, 2);
+});
+
+
+test('permission-reset pull recognizes an operation already applied remotely', async () => {
+  const { applySyncPullPage } = await import('./sync-engine.js');
+  const localDb = { prod: [{ id: 'p1', n: 'same edit', buy: 10 }] };
+  const state = {
+    ...createSyncState(),
+    versions: { prod: { p1: 1 } },
+    snapshots: { prod: { p1: '{"id":"p1","n":"old"}' } },
+    pending: [{ operation_id: 'pending', collection: 'prod', legacy_id: 'p1',
+      operation_type: 'upsert', base_version: 1, payload: { id: 'p1', n: 'same edit', buy: 10 } }]
+  };
+  const reset = applySyncPullPage(localDb, state, {
+    reset_required: true, readable_collections: ['prod'], cost_access: false
+  });
+  const pulled = applySyncPullPage(reset.db, reset.state, {
+    records: [{ collection: 'prod', legacy_id: 'p1', version: 2, revision: 2,
+      change_type: 'upsert', deleted_at: null, payload: { id: 'p1', n: 'same edit' } }],
+    next_cursor: 2, has_more: false, reset_required: false
+  });
+  assert.equal(pulled.state.versions.prod.p1, 2);
+  assert.equal(pulled.state.permissionResetDirty.length, 0);
+  assert.equal(prepareSyncOperations(pulled.db, pulled.state, ids).operations.length, 0);
+});
