@@ -68,7 +68,7 @@ The mapping ledger must be business-scoped and inaccessible to `anon`. Client wr
 2. **Reference data:** import categories, contacts, warehouses, services, and products. Resolve dependencies before child records. Protect product costs separately.
 3. **Draft documents:** import goods/service invoices as drafts only. Validate every customer, product/service, warehouse, date, quantity, amount, discount, tax, and item count. Keep original legacy identifiers in the mapping ledger.
 4. **Reconciliation:** compare source and normalized counts/totals per business; detect unmapped rows, duplicate numbers, mismatched totals, and orphan references. Produce a report before any posting.
-5. **Dedicated transactional operations:** payments, receipts, cheques, purchases, opening stock, returns, expenses, debts, supplier balances, account transfers, and stock movements require dedicated idempotent RPCs and journal/stock tests. Purchase posting is in 019, goods-sale posting in 020, FIFO warehouse transfer in 021, and valued opening stock in 022; returns and remaining lifecycle operations are still pending. They must not be replayed as generic upserts.
+5. **Dedicated transactional operations:** payments, receipts, cheques, purchases, opening stock, returns, expenses, debts, supplier balances, account transfers, and stock movements require dedicated idempotent RPCs and journal/stock tests. Purchase posting is in 019, goods-sale posting in 020, FIFO warehouse transfer in 021, valued opening stock in 022, and FIFO wastage write-off in 023; returns and remaining lifecycle operations are still pending. They must not be replayed as generic upserts.
 6. **Cutover:** retain the legacy source and a recoverable export until the owner explicitly approves a tested cutover. No automatic deletion or destructive replacement.
 
 ## Explicitly unsupported until separately designed
@@ -85,7 +85,7 @@ Do not import these as normalized financial or inventory facts yet: `pay`, `debt
 
 ## Next implementation gate
 
-The next work is completion of normalized transactional inventory/returns and then the importer design—not another mapping migration. Before any import RPC is added:
+The next work is completion of normalized transactional returns and remaining cheque/account lifecycle operations, followed by expanding the importer from customer/product reference data to categories, warehouses, services and draft documents. Before any import RPC is added:
 
 - finish the source audit for warehouses, category references, product edits, service costs, invoice edits/deletes, and all related tombstone behavior;
 - inspect the complete normalized table constraints, RLS policies, and transactional RPC signatures for contacts, products, services, warehouses, and draft documents;
@@ -93,4 +93,9 @@ The next work is completion of normalized transactional inventory/returns and th
 - add dry-run and write-phase tests for idempotency, cross-business isolation, permission denial, sensitive cost separation, orphan references, exact totals, and retry behavior;
 - test against isolated PostgreSQL and a real Supabase test environment when one is available.
 
-The bridge is not complete: mapping and read-only preflight are implemented, but reference-data import, draft-document import, reconciliation, and transactional financial/stock conversion remain outstanding.
+Migration 024 now imports only customers and products through an owner-authorized, fingerprinted RPC. It does not import cost, quantity, categories, warehouses, services, documents or financial records. The bridge remains incomplete: broader reference-data import, draft-document import, reconciliation, and transactional financial/stock conversion remain outstanding.
+
+
+## First legacy reference import (024)
+
+The first write-phase importer intentionally supports only `cust` and `prod`. It reads the sanitized public payload and never reads `payload_private`; product purchase cost (`buy`) is therefore not imported. The product's legacy `qty` is a balance rather than a movement and is ignored until a separate stock-opening reconciliation is approved. Each imported row is linked to `legacy_normalized_record_map` using a SHA-256 fingerprint. Same-fingerprint reruns are no-ops; changed source payloads are flagged as conflicts rather than silently overwriting user edits. Tombstones are skipped. The RPC requires business administration, contacts-write and catalog-write permissions. No production import has been run.
