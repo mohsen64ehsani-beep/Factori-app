@@ -94,7 +94,8 @@ jobs:
             009_device_proof.sql \
             010_account_transfers.sql \
             011_employee_provisioning.sql \
-            012_member_reactivation.sql
+            012_member_reactivation.sql \
+            014_legacy_normalization_preflight.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
@@ -133,10 +134,6 @@ jobs:
           echo "::group::Applying 013_account_bound_license_entitlements.sql"
           psql -v ON_ERROR_STOP=1 -f supabase/drafts/013_account_bound_license_entitlements.sql
           echo "::endgroup::"
-          echo "::group::Applying 014_legacy_normalization_preflight.sql"
-          psql -v ON_ERROR_STOP=1 -f supabase/drafts/014_legacy_normalization_preflight.sql
-          echo "::endgroup::"
-
       - name: Run database regression checks
         run: |
           set -euo pipefail
