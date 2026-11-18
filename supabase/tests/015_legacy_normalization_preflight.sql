@@ -1,7 +1,11 @@
 -- Read-only legacy normalization preflight contract.
 -- Requires migrations 001-014 and runs in the disposable PostgreSQL CI database.
 begin;
-do $$
+
+-- The minimal CI Auth shim omits this Supabase users column by default.
+alter table auth.users add column if not exists raw_user_meta_data jsonb not null default '{}'::jsonb;
+
+do $
 declare v_def text;
 begin
  if to_regprocedure('public.preview_legacy_normalization(uuid)') is null then
