@@ -28,6 +28,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 22. `021_fifo_warehouse_transfers.sql` — replaces quantity-only stock transfers with FIFO-layer movement and preserved cost provenance.
 23. `022_inventory_opening_posting.sql` — posts valued opening stock into warehouse movements, FIFO layers, product cost history, and opening-equity journal atomically.
 24. `023_inventory_wastage_posting.sql` — posts wastage as FIFO stock consumption, cost allocations and an expense/inventory write-off journal.
+25. `024_legacy_reference_import.sql` — owner-authorized, fingerprinted import of legacy customers and products only; excludes sensitive cost, stock quantities, documents and financial data.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -46,7 +47,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all twenty-four draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty-six SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all twenty-five draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty-seven SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -80,6 +81,7 @@ The test scripts are:
 - `supabase/tests/021_fifo_warehouse_transfers.sql`
 - `supabase/tests/022_inventory_opening_posting.sql`
 - `supabase/tests/023_inventory_wastage_posting.sql`
+- `supabase/tests/024_legacy_reference_import.sql`
 
 ## Device proof deployment note
 
@@ -155,3 +157,8 @@ Migration 022 adds `public.post_inventory_opening(uuid,date,text,jsonb,text)`. I
 ## Inventory wastage posting (023)
 
 Migration 023 adds `public.post_inventory_wastage(uuid,date,text,jsonb,text)`. It validates and locks the affected products/warehouses, checks both stock movement and FIFO-layer availability before writing, creates negative wastage movements, consumes cost layers FIFO, records cost allocations, and posts the write-off to operating expense (6000) against inventory (1200). Zero-cost stock is allowed and does not create an invalid zero-value journal. The operation is idempotent, tenant-scoped and permission-gated. Test 023 covers purchase-to-wastage cost consumption, remaining quantity, balanced journal, insufficient stock, retry and cross-business denial.
+
+
+## Legacy reference-data import (024)
+
+Migration 024 adds `public.import_legacy_reference_data(uuid,uuid)`, a business-owner-authorized import for legacy `cust` and `prod` rows only. It reads only `payload_public`, validates the legacy ID and required name, fingerprints each source row, and records target UUIDs in the private mapping ledger. Identical reruns are no-ops; changed source rows are marked `conflict` and never silently overwrite normalized records; missing mapped targets are marked `orphaned`. Product `buy`/cost fields remain in the private source payload and are not read or copied, and product `qty` is deliberately ignored: no stock movement, FIFO layer or product cost is created. Tombstoned rows are skipped. Barcode uniqueness collisions are reported as conflicts. Categories, warehouses, services, draft invoices and all financial/stock collections remain outside this first importer. Test 024 covers customer/product mapping, rerun idempotency, changed-source conflict, skipped tombstones, sensitive cost/quantity exclusion and cross-business denial.
