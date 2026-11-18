@@ -935,3 +935,15 @@ test('checkpoint recovery restores pulled records and overlays only local edits 
   assert.deepEqual(merged.prod, [{ id: 'p1', n: 'remote unchanged' }]);
   assert.equal(merged.advancedSettings.sms.apiKey, 'NEW-LOCAL');
 });
+
+
+test('account isolation and logout preserve the active database when local persistence fails', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const isolate = html.match(/function isolateLocalDataForCloudSession\(\)\{[\s\S]*?\n\}/)?.[0] || '';
+  const restore = html.match(/function restoreLocalDataAfterCloudSession\(saveCurrentBusiness=true\)\{[\s\S]*?\n\}/)?.[0] || '';
+  assert.ok(isolate.indexOf('throw new Error') < isolate.indexOf("localDbBusinessId=''"), 'failed save must abort before clearing the active business id');
+  assert.match(restore, /catch\(e\)\{[\s\S]*?cloudSession=null;cloudSchemaReady=false;return false/);
+  assert.ok(restore.indexOf('return false') < restore.indexOf("localDbBusinessId=''"), 'failed logout persistence must preserve the active local database');
+  assert.match(html, /const initialSession=await api\.getSession\(\);[\s\S]*?isolateLocalDataForCloudSession\(\);\s*cloudSession=initialSession/);
+});
