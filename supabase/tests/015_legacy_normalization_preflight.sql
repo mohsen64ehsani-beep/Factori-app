@@ -22,6 +22,7 @@ begin
   or position('read_only_preflight' in v_def)=0
   or position('orphan_invoice_customers' in v_def)=0
   or position('orphan_invoice_products' in v_def)=0
+  or position('orphan_purchase_suppliers' in v_def)=0
   or position('financial_collections_deferred' in v_def)=0 then
   raise exception 'Preflight permission, reconciliation, or deferred-collection contract is incomplete';
  end if;
