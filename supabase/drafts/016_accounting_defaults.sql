@@ -28,6 +28,7 @@ begin
     (p_business_id,'1030','وجوه در راه','asset',true,true,true),
     (p_business_id,'1100','حساب‌های دریافتنی اشخاص','asset',true,true,true),
     (p_business_id,'1200','موجودی کالا','asset',true,true,true),
+    (p_business_id,'1300','مالیات و عوارض خریدنی','asset',true,true,true),
     (p_business_id,'2000','حساب‌های پرداختنی اشخاص','liability',true,true,true),
     (p_business_id,'2100','مالیات و عوارض پرداختنی','liability',true,true,true),
     (p_business_id,'2200','پیش‌دریافت از مشتریان','liability',true,true,true),
