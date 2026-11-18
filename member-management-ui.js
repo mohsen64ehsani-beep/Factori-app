@@ -22,3 +22,6 @@ async function showCloudMemberPermissions(userId){
  $('ov').innerHTML='<div class="picker-shell"><div class="picker-top"><div class="r"><b style="flex:1">دسترسی‌های '+esc(member.display_name||member.email)+'</b><button class="b s" data-a="cloudManageMembers">بازگشت</button></div><p class="page-note">'+esc(member.email)+' · نقش پایه: '+esc(member.role_code)+'</p></div><div class="c">'+controls+'<button class="b w100" data-a="cloudMemberSavePermissions" data-user="'+esc(userId)+'">ذخیره دسترسی‌ها</button></div></div>';
  $('ov').className='on';
 }
+
+window.showCloudMembers=showCloudMembers;
+window.showCloudMemberPermissions=showCloudMemberPermissions;
