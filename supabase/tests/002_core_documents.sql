@@ -41,16 +41,20 @@ begin
   ) then raise exception 'Document idempotency payload mismatch guard is missing'; end if;
 
   if not exists (
-    select 1 from pg_constraint
-    where conrelid='public.documents'::regclass and contype='f'
-      and conname like '%contacts%'
-  ) then raise exception 'documents contact tenant FK is missing'; end if;
+    select 1 from pg_constraint c
+    where c.conrelid='public.documents'::regclass
+      and c.confrelid='public.contacts'::regclass
+      and c.contype='f'
+      and pg_get_constraintdef(c.oid) like 'FOREIGN KEY (business_id, contact_id) REFERENCES contacts(business_id, id)%'
+  ) then raise exception 'documents composite contact tenant FK is missing'; end if;
 
   if not exists (
-    select 1 from pg_constraint
-    where conrelid='public.document_items'::regclass and contype='f'
-      and conname like '%documents%'
-  ) then raise exception 'document_items tenant FK is missing'; end if;
+    select 1 from pg_constraint c
+    where c.conrelid='public.document_items'::regclass
+      and c.confrelid='public.documents'::regclass
+      and c.contype='f'
+      and pg_get_constraintdef(c.oid) like 'FOREIGN KEY (business_id, document_id) REFERENCES documents(business_id, id)%'
+  ) then raise exception 'document_items composite document tenant FK is missing'; end if;
 
   if exists (
     select 1 from information_schema.columns
