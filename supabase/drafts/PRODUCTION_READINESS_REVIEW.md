@@ -9,7 +9,7 @@ Branch: work/factoori-shared-db-integration
 - Regression checks 001–009 pass in GitHub Actions run 44238138762.
 - Security-surface test 008 checks RLS on public tables, denies direct anon table privileges, verifies fixed search_path on SECURITY DEFINER routines, and checks private SECURITY DEFINER routines are not executable by anon.
 - Sensitive-payload test 009 verifies recursive extraction/stripping and round-trip restoration for representative nested invoice data.
-- These checks are not a production security certification and do not exercise the full authenticated multi-user workflow.
+- These checks are not a production security certification and do not exercise the full authenticated multi-user workflow. The latest local sync CI run 44312629394 reports 47 tests passed, 0 failed.
 
 ## Production blockers — do not apply to the live Supabase project
 
