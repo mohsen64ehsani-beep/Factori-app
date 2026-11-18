@@ -215,17 +215,17 @@ function activateBusinessLocalDatabase(nextId){
   }
  }
  if(!next){next=JSON.parse(EMPTY_BUSINESS_DB_JSON);try{localStorage.setItem(targetKey,JSON.stringify(next))}catch(e){throw new Error('ساخت فضای اطلاعات کسب‌وکار ناموفق بود')}}
- db=next;normalizeDemoCollections();localDbBusinessId=nextId;businessScopedMode=true;realDb=db;return true;
+ cancelBusinessSync();db=next;normalizeDemoCollections();localDbBusinessId=nextId;businessScopedMode=true;realDb=db;syncGeneration++;dbRevision++;return true;
 }
 function clearLocalBusinessSelection(){
  if(localDbBusinessId){try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار ناموفق بود')}}
- localDbBusinessId='';businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;
+ cancelBusinessSync();localDbBusinessId='';businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;syncGeneration++;dbRevision++;
 }
 function resetCloudBusinessContext(){
  try{clearLocalBusinessSelection()}
  catch(e){
   console.warn('[Factoori clear cloud business context]',e);
-  localDbBusinessId='';businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;
+  cancelBusinessSync();localDbBusinessId='';businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;syncGeneration++;dbRevision++;
  }
 }
 function isolateLocalDataForCloudSession(){
@@ -235,7 +235,7 @@ function isolateLocalDataForCloudSession(){
   catch(e){saveError=e;console.warn('[Factoori business save before account switch]',e)}
   localDbBusinessId='';
  }
- businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;
+ cancelBusinessSync();businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;syncGeneration++;dbRevision++;
  if(saveError)throw new Error('اطلاعات قبلی ذخیره نشد؛ برای جلوگیری از نمایش اطلاعات حساب دیگر، فضای محلی جدا شد.');
 }
 
@@ -436,7 +436,7 @@ function restoreLocalDataAfterCloudSession(saveCurrentBusiness=true){
   try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}
   catch(e){saved=false;console.warn('[Factoori business checkpoint before logout]',e)}
  }
- localDbBusinessId='';businessScopedMode=false;cloudSession=null;cloudBusinesses=[];cloudActiveBusinessId='';cloudSchemaReady=false;
+ cancelBusinessSync();localDbBusinessId='';businessScopedMode=false;cloudSession=null;cloudBusinesses=[];cloudActiveBusinessId='';cloudSchemaReady=false;syncGeneration++;dbRevision++;
  db=JSON.parse(EMPTY_BUSINESS_DB_JSON);
  try{const legacy=localStorage.getItem(K);if(legacy)Object.assign(db,JSON.parse(legacy))}
  catch(e){console.warn('[Factoori legacy database restore]',e)}
