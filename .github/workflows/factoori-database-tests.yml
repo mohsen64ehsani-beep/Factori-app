@@ -103,7 +103,8 @@ jobs:
             004a_sync_infrastructure.sql \
             005_sync_compatibility.sql \
             006_journal_integrity.sql \
-            007_member_management.sql
+            007_member_management.sql \
+            008_security_surface.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
