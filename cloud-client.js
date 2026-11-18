@@ -226,6 +226,57 @@ const api = {
       p_limit: Math.min(500, Math.max(1, Number(payload.limit) || 200))
     }));
   },
+  async syncPushBatches(payload) {
+    if (!payload?.businessId || !payload?.deviceId || !Array.isArray(payload?.operations)) {
+      throw new Error('اطلاعات ارسال همگام‌سازی کامل نیست.');
+    }
+    const results = [];
+    for (let offset = 0; offset < payload.operations.length; offset += 100) {
+      const batch = payload.operations.slice(offset, offset + 100);
+      const result = await api.syncPush({
+        businessId: payload.businessId,
+        deviceId: payload.deviceId,
+        operations: batch
+      });
+      if (!Array.isArray(result)) throw new Error('پاسخ سرور برای بسته همگام‌سازی معتبر نیست.');
+      results.push(...result);
+    }
+    return results;
+  },
+  async syncPullAll(payload) {
+    if (!payload?.businessId || !payload?.deviceId) {
+      throw new Error('کسب‌وکار یا دستگاه همگام‌سازی مشخص نشده است.');
+    }
+    let cursor = Math.max(0, Number(payload.sinceRevision) || 0);
+    const records = [];
+    const pages = [];
+    const maxPages = Math.min(1000, Math.max(1, Number(payload.maxPages) || 100));
+    for (let page = 0; page < maxPages; page++) {
+      const result = await api.syncPull({
+        businessId: payload.businessId,
+        deviceId: payload.deviceId,
+        sinceRevision: cursor,
+        limit: 500
+      });
+      if (!result || !Array.isArray(result.records)) {
+        throw new Error('ساختار پاسخ دریافت همگام‌سازی معتبر نیست.');
+      }
+      pages.push(result);
+      if (result.reset_required) {
+        return { records: [], pages, nextCursor: 0, resetRequired: true, hasMore: true };
+      }
+      records.push(...result.records);
+      const next = Math.max(0, Number(result.next_cursor) || 0);
+      if (result.has_more && next <= cursor) {
+        throw new Error('مکان‌نمای همگام‌سازی پیشرفت نکرد؛ برای جلوگیری از حلقه بی‌نهایت عملیات متوقف شد.');
+      }
+      cursor = next;
+      if (!result.has_more) {
+        return { records, pages, nextCursor: cursor, resetRequired: false, hasMore: false };
+      }
+    }
+    return { records, pages, nextCursor: cursor, resetRequired: false, hasMore: true };
+  },
   async revokeSyncDevice(businessId, deviceId) {
     const result = unwrap(await client.rpc('revoke_sync_device', {
       p_business_id: businessId, p_device_id: deviceId
