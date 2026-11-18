@@ -104,7 +104,8 @@ jobs:
             019_purchase_document_posting.sql \
             020_goods_sale_posting.sql \
             021_fifo_warehouse_transfers.sql \
-            022_inventory_opening_posting.sql
+            022_inventory_opening_posting.sql \
+            023_inventory_wastage_posting.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
