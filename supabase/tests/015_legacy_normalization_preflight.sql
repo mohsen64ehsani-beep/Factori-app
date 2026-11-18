@@ -36,7 +36,7 @@ begin
  if position('payload_private' in v_def)>0 then
   raise exception 'Preflight must not expose or inspect protected payload values';
  end if;
-end $$;
+end $static$;
 
 -- Runtime contract: authorized owner can inspect a tenant-scoped fixture,
 -- orphan references are counted, and the RPC never mutates source or targets.
