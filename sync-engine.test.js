@@ -305,3 +305,48 @@ test('business switch saves the previous business and never leaks its data into 
     currentDatabase: a
   }), /valid business/);
 });
+
+
+test('legacy adoption rolls back its claim if writing the business copy fails', async () => {
+  const { LEGACY_DATABASE_KEY, LEGACY_ADOPTION_MARKER, adoptLegacyDatabaseForBusiness } =
+    await import('./business-db-scope.js');
+  const values = new Map([[LEGACY_DATABASE_KEY, JSON.stringify({ cust: [{ id: 'legacy' }] })]]);
+  const storage = {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) {
+      if (key === 'db:v2:business:biz-fail') throw new Error('quota exceeded');
+      values.set(key, String(value));
+    },
+    removeItem(key) { values.delete(key); }
+  };
+  assert.throws(() => adoptLegacyDatabaseForBusiness({
+    storage, businessId: 'biz-fail', confirmed: true
+  }), /quota exceeded/);
+  assert.equal(values.has(LEGACY_ADOPTION_MARKER), false);
+  assert.equal(values.has(LEGACY_DATABASE_KEY), true);
+  assert.equal(values.has('db:v2:business:biz-fail'), false);
+});
+
+test('legacy adoption leaves a fail-closed pending claim if rollback is unavailable', async () => {
+  const { LEGACY_DATABASE_KEY, LEGACY_ADOPTION_MARKER, adoptLegacyDatabaseForBusiness } =
+    await import('./business-db-scope.js');
+  const values = new Map([[LEGACY_DATABASE_KEY, JSON.stringify({ cust: [] })]]);
+  const storage = {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) {
+      if (key === 'db:v2:business:biz-stuck') throw new Error('quota exceeded');
+      values.set(key, String(value));
+    }
+  };
+  assert.throws(() => adoptLegacyDatabaseForBusiness({
+    storage, businessId: 'biz-stuck', confirmed: true
+  }), /quota exceeded/);
+  const marker = JSON.parse(values.get(LEGACY_ADOPTION_MARKER));
+  assert.equal(marker.businessId, 'biz-stuck');
+  assert.equal(marker.state, 'pending');
+  const other = adoptLegacyDatabaseForBusiness({
+    storage, businessId: 'biz-other', confirmed: true
+  });
+  assert.equal(other.adopted, false);
+  assert.equal(other.reason, 'legacy_database_already_assigned');
+});
