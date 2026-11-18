@@ -54,8 +54,8 @@ begin
   or position('999' in v_result::text)>0 then
   raise exception 'Reconciliation must not expose customer or protected cost payloads';
  end if;
- if not exists(select 1 from jsonb_array_elements(v_result->'collections') x
-   where x->>'collection'='prod' and (x->>'source_changed')::bigint=1) then
+ if not exists(select 1 from jsonb_array_elements(v_result->'collections') as x(value)
+   where value->>'collection'='prod' and (value->>'source_changed')::bigint=1) then
   raise exception 'Changed source fingerprint was not identified';
  end if;
 
