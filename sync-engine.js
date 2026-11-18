@@ -68,6 +68,7 @@ function resetAfterPermissionVersionChange(db, state, response) {
     : []);
   const costAccess = response?.cost_access === true;
   nextState.permissionResetCostAccess = costAccess;
+  nextState.permissionResetInProgress = true;
   const nextDb = { ...db };
 
   for (const collection of SYNC_READ_COLLECTIONS) {
@@ -146,7 +147,7 @@ function resetAfterPermissionVersionChange(db, state, response) {
 }
 
 export function createSyncState() {
-  return { cursor: 0, versions: {}, snapshots: {}, pending: [], conflicts: [], rejected: [], tombstones: [], permissionResetDirty: [] };
+  return { cursor: 0, versions: {}, snapshots: {}, pending: [], conflicts: [], rejected: [], tombstones: [], permissionResetDirty: [], permissionResetInProgress: false, permissionResetCostAccess: null };
 }
 
 function clone(value) {
@@ -412,6 +413,7 @@ export function applySyncPullPage(db, state, response) {
   }
   const merged = applyPulledRecords(db, currentState, response.records);
   const nextState = advanceSyncCursor(merged.state, cursor);
+  if (!response.has_more) nextState.permissionResetInProgress = false;
   return {
     db: merged.db,
     state: nextState,
