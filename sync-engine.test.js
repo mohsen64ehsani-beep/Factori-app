@@ -445,7 +445,7 @@ test('cloud client RPC argument names exist in the checked-in SQL contracts', as
   const sql = (await Promise.all(draftFiles.filter(name => name.endsWith('.sql'))
     .map(name => readFile(new URL('./supabase/drafts/' + name, import.meta.url), 'utf8')))).join('\\n');
   const used = new Map();
-  for (const match of client.matchAll(/client\\.rpc\\('([^']+)'/g)) {
+  for (const match of client.matchAll(/client\.rpc\('([^']+)'/g)) {
     const name = match[1];
     const start = client.indexOf('{', match.index + match[0].length);
     if (start < 0) continue;
@@ -458,14 +458,14 @@ test('cloud client RPC argument names exist in the checked-in SQL contracts', as
       if (ch === '}' && --depth === 0) { end = i; break; }
     }
     if (end < 0) continue;
-    const keys = [...client.slice(start, end + 1).matchAll(/\\b(p_[a-z0-9_]+)\\s*:/g)].map(item => item[1]);
+    const keys = [...client.slice(start, end + 1).matchAll(/\b(p_[a-z0-9_]+)\s*:/g)].map(item => item[1]);
     if (!used.has(name)) used.set(name, new Set());
     keys.forEach(key => used.get(name).add(key));
   }
   for (const [name, keys] of used) {
-    const signature = sql.match(new RegExp('create\\\\s+or\\\\s+replace\\\\s+function\\\\s+public\\\\.' + name + '\\\\s*\\\\(([\\\\s\\\\S]*?)\\\\)\\\\s*returns', 'i'));
+    const signature = sql.match(new RegExp('create\\s+or\\s+replace\\s+function\\s+public\\.' + name + '\\s*\\(([\\s\\S]*?)\\)\\s*returns', 'i'));
     assert.ok(signature, 'SQL function is missing: ' + name);
-    const accepted = new Set([...signature[1].matchAll(/\\b(p_[a-z0-9_]+)\\s+[a-z]/gi)].map(item => item[1]));
+    const accepted = new Set([...signature[1].matchAll(/\b(p_[a-z0-9_]+)\s+[a-z]/gi)].map(item => item[1]));
     assert.deepEqual([...keys].filter(key => !accepted.has(key)), [], 'unknown RPC args for ' + name);
   }
 });
