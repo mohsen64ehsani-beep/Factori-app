@@ -1,36 +1,28 @@
--- Security and integrity checks for migration 015.
+-- Read-only legacy normalization preflight contract.
 begin;
 do $$
-declare v_rls boolean;
+declare v_def text;
 begin
-  if to_regclass('private.legacy_normalized_record_map') is null then
-    raise exception 'Legacy normalized identity map is missing';
-  end if;
-  select c.relrowsecurity into v_rls from pg_class c
-  where c.oid='private.legacy_normalized_record_map'::regclass;
-  if not coalesce(v_rls,false) then
-    raise exception 'Legacy normalized identity map must have RLS enabled';
-  end if;
-  if has_table_privilege('anon','private.legacy_normalized_record_map','SELECT')
-    or has_table_privilege('authenticated','private.legacy_normalized_record_map','SELECT')
-    or has_table_privilege('anon','private.legacy_normalized_record_map','INSERT')
-    or has_table_privilege('authenticated','private.legacy_normalized_record_map','INSERT')
-    or has_table_privilege('authenticated','private.legacy_normalized_record_map','UPDATE')
-    or has_table_privilege('authenticated','private.legacy_normalized_record_map','DELETE') then
-    raise exception 'Client roles must not access the private legacy mapping table';
-  end if;
-  if not exists(select 1 from pg_constraint where conrelid='private.legacy_normalized_record_map'::regclass
-    and contype='u' and pg_get_constraintdef(oid) like '%business_id, legacy_collection, legacy_id%') then
-    raise exception 'Legacy identity uniqueness constraint is missing';
-  end if;
-  if not exists(select 1 from pg_constraint where conrelid='private.legacy_normalized_record_map'::regclass
-    and contype='u' and pg_get_constraintdef(oid) like '%business_id, target_table, normalized_id%') then
-    raise exception 'Normalized identity uniqueness constraint is missing';
-  end if;
-  if not exists(select 1 from pg_constraint where conrelid='private.legacy_normalized_record_map'::regclass
-    and contype='c' and pg_get_constraintdef(oid) like '%source_fingerprint%'
-    and pg_get_constraintdef(oid) like '%64%') then
-    raise exception 'Source fingerprint format constraint is missing';
-  end if;
+ if to_regprocedure('public.preview_legacy_normalization(uuid)') is null then
+  raise exception 'Legacy preflight RPC is missing';
+ end if;
+ if not has_function_privilege('authenticated','public.preview_legacy_normalization(uuid)','EXECUTE')
+  or has_function_privilege('anon','public.preview_legacy_normalization(uuid)','EXECUTE') then
+  raise exception 'Legacy preflight RPC grants are unsafe';
+ end if;
+ select pg_get_functiondef('public.preview_legacy_normalization(uuid)'::regprocedure) into v_def;
+ if position('business.settings.manage' in v_def)=0
+  or position('read_only_preflight' in v_def)=0
+  or position('orphan_invoice_customers' in v_def)=0
+  or position('orphan_invoice_products' in v_def)=0
+  or position('financial_collections_deferred' in v_def)=0 then
+  raise exception 'Preflight permission, reconciliation, or deferred-collection contract is incomplete';
+ end if;
+ if position('insert into public.' in lower(v_def))>0 or position('update public.' in lower(v_def))>0
+  or position('delete from public.' in lower(v_def))>0 or position('insert into private.' in lower(v_def))>0
+  or position('update private.' in lower(v_def))>0 or position('delete from private.' in lower(v_def))>0
+  or position('payload_private' in v_def)>0 then
+  raise exception 'Preflight must not mutate data or expose protected payloads';
+ end if;
 end $$;
 rollback;
