@@ -12,6 +12,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 6. `005_sync_compatibility.sql` — legacy compatibility sync bridge; currently limited to metadata and draft writes, with financial/stock mutations blocked pending normalized RPCs; **not production-ready**.
 7. `006_journal_integrity.sql` — database guards for balanced, immutable posted journal entries.
 8. `007_member_management.sql` — invitation acceptance, audited role changes and member suspension/removal.
+9. `008_transactional_posting.sql` — atomic balanced-journal posting and stock-transfer posting with permission checks, idempotency and row locking.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -29,7 +30,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all eight draft migrations in dependency order, then runs all eight SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all eight draft migrations in dependency order, then runs all ten SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it will validate SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it will not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -43,12 +44,13 @@ The test scripts are:
 - `supabase/tests/005_sync_compatibility.sql`
 - `supabase/tests/006_journal_integrity.sql`
 - `supabase/tests/007_member_management.sql`
+- `supabase/tests/010_transactional_posting.sql`
 
 ## Deliberately not included yet
 
 - Invoice numbering sequences and complete fiscal close/reopen controls
-- Posting/reversal RPCs and cheque assignment lifecycle (journal integrity guards are drafted, but the posting engine is not)
-- Server-side stock mutation RPCs and inventory balance projections
+- Journal reversal RPC, cheque lifecycle posting/assignment, and normalized invoice-to-ledger posting
+- Full inventory adjustment/purchase/sale posting RPCs and materialized inventory balance projections
 - Owner transfer, account deletion/retention and owner recovery
 - Verified subscription upgrades, downgrades, grace periods and paid-plan entitlements
 - Device proof-of-possession, full multi-device sync tests and normalized financial sync operations
