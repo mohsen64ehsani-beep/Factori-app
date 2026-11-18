@@ -34,41 +34,87 @@ function stripSensitiveLocalValue(value) {
   return result;
 }
 
-function resetAfterPermissionVersionChange(db, state) {
-  const nextDb = { ...db };
-  for (const collection of SYNC_READ_COLLECTIONS) {
-    if (Array.isArray(db[collection])) nextDb[collection] = stripSensitiveLocalValue(db[collection]);
-  }
+function resetAfterPermissionVersionChange(db, state, response) {
   const nextState = ensureState(state);
-  // Historical conflict/rejection payloads may also contain private fields.
-  nextState.conflicts = stripSensitiveLocalValue(nextState.conflicts);
-  nextState.rejected = stripSensitiveLocalValue(nextState.rejected);
-  // Pending payloads may contain data captured under the previous permission
-  // set. Quarantine sanitized copies; local records remain in nextDb and can
-  // be re-enqueued against their last acknowledged snapshot.
-  for (const operation of nextState.pending) {
-    if (WRITE_SET.has(operation.collection) && operation.legacy_id
-      && !nextState.permissionResetDirty.some(marker => marker.collection === operation.collection && String(marker.legacy_id) === String(operation.legacy_id))) {
-      nextState.permissionResetDirty.push({ collection: operation.collection, legacy_id: String(operation.legacy_id) });
+  // Missing permission metadata is treated as no access: older or incomplete
+  // servers must never leave a stale local cache visible after a reset.
+  const readable = new Set(Array.isArray(response?.readable_collections)
+    ? response.readable_collections.filter(name => READ_SET.has(name))
+    : []);
+  const costAccess = response?.cost_access === true;
+  const nextDb = { ...db };
+
+  for (const collection of SYNC_READ_COLLECTIONS) {
+    if (!readable.has(collection)) {
+      nextDb[collection] = [];
+      delete nextState.versions[collection];
+      delete nextState.snapshots[collection];
+    } else if (Array.isArray(db[collection])) {
+      nextDb[collection] = costAccess
+        ? db[collection].map(clone)
+        : stripSensitiveLocalValue(db[collection]);
+    } else {
+      nextDb[collection] = [];
     }
   }
-  nextState.conflicts.push(...nextState.pending.map(operation => ({
-    operation: stripSensitiveLocalValue(operation),
-    reason: 'permission_version_changed',
-    detected_at: Date.now()
-  })));
-  nextState.pending = [];
-  for (const collection of Object.keys(nextState.snapshots)) {
-    for (const [legacyId, fingerprint] of Object.entries(nextState.snapshots[collection] || {})) {
-      try {
-        nextState.snapshots[collection][legacyId] = stableStringify(
-          stripSensitiveLocalValue(JSON.parse(fingerprint))
-        );
-      } catch {
-        delete nextState.snapshots[collection][legacyId];
+
+  const inaccessiblePending = nextState.pending.filter(operation => !readable.has(operation.collection));
+  nextState.conflicts = nextState.conflicts.filter(item => {
+    const collection = item?.operation?.collection || item?.remote_record?.collection;
+    return !collection || readable.has(collection);
+  });
+  nextState.rejected = nextState.rejected.filter(item =>
+    !item?.operation?.collection || readable.has(item.operation.collection)
+  );
+  nextState.tombstones = nextState.tombstones.filter(item => readable.has(item.collection));
+  nextState.permissionResetDirty = nextState.permissionResetDirty.filter(item => readable.has(item.collection));
+
+  if (!costAccess) {
+    // Historical conflict/rejection payloads and queued operations can hold
+    // private values captured before the member lost cost access.
+    nextState.conflicts = stripSensitiveLocalValue(nextState.conflicts);
+    nextState.rejected = stripSensitiveLocalValue(nextState.rejected);
+    for (const operation of nextState.pending) {
+      if (WRITE_SET.has(operation.collection) && readable.has(operation.collection) && operation.legacy_id
+        && !nextState.permissionResetDirty.some(marker =>
+          marker.collection === operation.collection && String(marker.legacy_id) === String(operation.legacy_id))) {
+        nextState.permissionResetDirty.push({ collection: operation.collection, legacy_id: String(operation.legacy_id) });
+      }
+      if (readable.has(operation.collection)) {
+        nextState.conflicts.push({
+          operation: stripSensitiveLocalValue(operation),
+          reason: 'permission_version_changed',
+          detected_at: Date.now()
+        });
       }
     }
+    nextState.pending = [];
+    for (const collection of Object.keys(nextState.snapshots)) {
+      for (const [legacyId, fingerprint] of Object.entries(nextState.snapshots[collection] || {})) {
+        try {
+          nextState.snapshots[collection][legacyId] = stableStringify(
+            stripSensitiveLocalValue(JSON.parse(fingerprint))
+          );
+        } catch {
+          delete nextState.snapshots[collection][legacyId];
+        }
+      }
+    }
+  } else {
+    // Keep pending operation IDs and payload fingerprints intact while access
+    // remains valid; retries are idempotent even if the prior response was lost.
+    nextState.pending = nextState.pending.filter(operation => readable.has(operation.collection));
+    for (const operation of inaccessiblePending) {
+      nextState.conflicts.push({
+        operation_id: operation.operation_id,
+        collection: operation.collection,
+        legacy_id: operation.legacy_id,
+        reason: 'read_permission_revoked',
+        detected_at: Date.now()
+      });
+    }
   }
+
   nextState.cursor = 0;
   return { db: nextDb, state: nextState };
 }
@@ -295,7 +341,7 @@ export function applySyncPullPage(db, state, response) {
     throw new Error('invalid sync pull response');
   }
   if (response.reset_required === true) {
-    const reset = resetAfterPermissionVersionChange(db, state);
+    const reset = resetAfterPermissionVersionChange(db, state, response);
     return { db: reset.db, state: reset.state, resetRequired: true, hasMore: true };
   }
   if (!Array.isArray(response.records)) throw new Error('sync pull response records must be an array');
