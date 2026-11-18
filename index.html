@@ -363,12 +363,34 @@ async function loadCloudBusinesses(){
   try{if(localDbBusinessId)clearLocalBusinessSelection();else{db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;businessScopedMode=true}}catch(e){console.warn('[Factoori empty cloud context]',e)}
  }
 }
+function restoreLocalDataAfterCloudSession(saveCurrentBusiness=true){
+ let saved=true;
+ if(saveCurrentBusiness&&localDbBusinessId){
+  try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}
+  catch(e){saved=false;console.warn('[Factoori business checkpoint before logout]',e)}
+ }
+ localDbBusinessId='';businessScopedMode=false;cloudSession=null;cloudBusinesses=[];cloudActiveBusinessId='';cloudSchemaReady=false;
+ db=JSON.parse(EMPTY_BUSINESS_DB_JSON);
+ try{const legacy=localStorage.getItem(K);if(legacy)Object.assign(db,JSON.parse(legacy))}
+ catch(e){console.warn('[Factoori legacy database restore]',e)}
+ normalizeDemoCollections();realDb=db;
+ try{localStorage.removeItem('factoori:active-business')}catch(e){}
+ return saved;
+}
 async function initCloudSession(){
  const api=window.FactooriCloud;if(!api)return;
  try{cloudSession=await api.getSession();if(cloudSession){isolateLocalDataForCloudSession();cloudSchemaReady=await api.getClientHealth();if(cloudSchemaReady)await loadCloudBusinesses()}}catch(e){console.warn('[Factoori cloud session]',e)}
  if(!cloudAuthSubscription)cloudAuthSubscription=api.onAuthStateChange(async(_event,session)=>{
+  const previousSession=cloudSession;
   cloudSession=session;
-  try{await loadCloudBusinesses()}catch(e){console.warn('[Factoori business list]',e)}
+  try{
+   if(session){
+    if(!previousSession||previousSession.user?.id!==session.user?.id)isolateLocalDataForCloudSession();
+    await loadCloudBusinesses();
+   }else if(previousSession){
+    restoreLocalDataAfterCloudSession(true);
+   }
+  }catch(e){console.warn('[Factoori business/session state]',e)}
   if(!lock&&!demoMode)render();
  });
  if(!lock&&!demoMode)render();
@@ -598,7 +620,7 @@ cloudAuthMode:id=>showCloudAuth(id==='signup'?'signup':'login'),
 cloudClose:()=>{$('ov').className=''},
 cloudLogin:async()=>{const api=window.FactooriCloud,email=$('cloudEmail')?.value||'',password=$('cloudPassword')?.value||'';if(!email.trim()||!password)return toast('ایمیل و رمز عبور را وارد کنید');try{cloudLoading=true;await api.signIn(email,password);cloudSession=await api.getSession();if(cloudSession)isolateLocalDataForCloudSession();cloudSchemaReady=await api.getClientHealth();if(cloudSchemaReady)await loadCloudBusinesses();$('ov').className='';render();toast(cloudSchemaReady?'ورود به حساب مشترک موفق بود':'ورود موفق بود؛ دیتابیس مشترک هنوز فعال نشده است')}catch(e){toast('ورود ناموفق: '+(e.message||'خطای ارتباط'))}finally{cloudLoading=false}},
 cloudRegister:async()=>{const api=window.FactooriCloud,email=$('cloudEmail')?.value||'',password=$('cloudPassword')?.value||'',name=$('cloudDisplayName')?.value||'';if(!name.trim()||!email.trim()||password.length<8)return toast('نام، ایمیل و رمز حداقل ۸ کاراکتری را وارد کنید');try{cloudLoading=true;const result=await api.signUp(email,password,name);cloudSession=result.session||await api.getSession();if(cloudSession){isolateLocalDataForCloudSession();cloudSchemaReady=await api.getClientHealth();if(cloudSchemaReady)await loadCloudBusinesses();$('ov').className='';render();toast(cloudSchemaReady?'حساب ساخته شد؛ اکنون کسب‌وکار خود را ایجاد کنید':'حساب ساخته شد؛ فضای مشترک پس از فعال‌سازی دیتابیس آماده می‌شود')}else toast('حساب ساخته شد؛ برای تأیید ایمیل، صندوق ورودی خود را بررسی کنید')}catch(e){toast('ثبت‌نام ناموفق: '+(e.message||'خطای ارتباط'))}finally{cloudLoading=false}},
-cloudLogout:async()=>{if(!confirm('از حساب مشترک خارج شوید؟'))return;try{if(localDbBusinessId){try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار ناموفق بود')}}await window.FactooriCloud.signOut();cloudSession=null;cloudBusinesses=[];cloudActiveBusinessId='';cloudSchemaReady=false;localDbBusinessId='';businessScopedMode=false;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);try{const legacy=localStorage.getItem(K);if(legacy)Object.assign(db,JSON.parse(legacy))}catch(e){}normalizeDemoCollections();realDb=db;try{localStorage.removeItem('factoori:active-business')}catch(e){}render();toast('از حساب مشترک خارج شدید')}catch(e){toast('خروج ناموفق: '+(e.message||''))}},
+cloudLogout:async()=>{if(!confirm('از حساب مشترک خارج شوید؟'))return;try{if(localDbBusinessId){try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار ناموفق بود')}}await window.FactooriCloud.signOut();restoreLocalDataAfterCloudSession(false);render();toast('از حساب مشترک خارج شدید')}catch(e){toast('خروج ناموفق: '+(e.message||''))}},
 cloudRefresh:async()=>{try{cloudSession=await window.FactooriCloud.getSession();cloudSchemaReady=!!cloudSession&&await window.FactooriCloud.getClientHealth();await loadCloudBusinesses();render();toast(cloudSchemaReady?'فهرست کسب‌وکارها به‌روز شد':'ساختار دیتابیس مشترک هنوز فعال نشده است')}catch(e){toast('به‌روزرسانی ناموفق: '+(e.message||''))}},
 cloudCreateBusiness:async()=>{if(!cloudSchemaReady)return toast('دیتابیس مشترک هنوز فعال نشده است');const name=$('cloudBusinessName')?.value||'';if(!name.trim())return toast('نام کسب‌وکار را وارد کنید');try{const id=await window.FactooriCloud.createBusiness(name);await loadCloudBusinesses();if(typeof id==='string'&&cloudBusinesses.some(x=>x.id===id)){activateBusinessLocalDatabase(id);cloudActiveBusinessId=id;try{localStorage.setItem('factoori:active-business',id)}catch(e){}}else{cloudActiveBusinessId='';try{localStorage.removeItem('factoori:active-business')}catch(e){}}render();toast('کسب‌وکار مشترک ساخته شد')}catch(e){toast('ساخت کسب‌وکار ناموفق: '+(e.message||''))}},
 cloudSelectBusiness:id=>{if(!cloudSchemaReady)return;if(id&&!cloudBusinesses.some(x=>x.id===id))return toast('این کسب‌وکار در فهرست عضویت‌های شما نیست');try{if(id)activateBusinessLocalDatabase(id);else clearLocalBusinessSelection();cloudActiveBusinessId=id||'';try{if(cloudActiveBusinessId)localStorage.setItem('factoori:active-business',cloudActiveBusinessId);else localStorage.removeItem('factoori:active-business')}catch(e){}render()}catch(e){toast(e.message||'تغییر کسب‌وکار ناموفق بود')}},
