@@ -45,6 +45,8 @@ The SQL source files remain under `supabase/drafts/` as the tested development s
 39. `038_rls_initplan_optimization.sql` — changes three auth RLS predicates to scalar subselects to avoid per-row auth.uid() evaluation.
 40. `039_bidirectional_master_sync.sql` — bridges customer, supplier and product records both ways between normalized web tables and the Android legacy sync stream.
 41. `040_product_sync_fields.sql` — preserves SKU and inventory-tracking fields when product records cross the mobile/web bridge.
+42. `041_sales_invoice_mobile_bridge.sql` — mirrors normalized web goods-sale drafts into the Android `inv` sync stream and exposes mobile-origin invoices to web.
+43. `042_invoice_bridge_warehouse_fix.sql` — removes an unsupported legacy warehouse lookup and safely handles non-numeric document numbers.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -63,7 +65,7 @@ The SQL source files remain under `supabase/drafts/` as the tested development s
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all forty-one draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all forty-three SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all forty-three draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all forty-five SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -114,6 +116,8 @@ The test scripts are:
 - `supabase/tests/038_rls_initplan_optimization.sql`
 - `supabase/tests/039_bidirectional_master_sync.sql`
 - `supabase/tests/040_product_sync_fields.sql`
+- `supabase/tests/041_sales_invoice_mobile_bridge.sql`
+- `supabase/tests/042_invoice_bridge_warehouse_fix.sql`
 
 ## Device proof deployment note
 
@@ -274,3 +278,8 @@ Migration 038 updates the self-profile and membership read policies to use scala
 ## Bidirectional web/mobile master-data bridge (039)
 
 Web-created customers, suppliers and products are written to the same `business_state_records` stream consumed by Android sync. Records pushed by Android into that stream are projected into the normalized `contacts` and `products` tables used by the web workspace. Direct REST inserts/updates are revoked; the web uses permission-checked RPCs with Freemium limits so writes cannot bypass the sync stream or quota checks.
+
+
+## Sales invoice sync bridge (041–042)
+
+Normalized web goods-sale drafts receive a mobile-compatible document number and are mirrored to the Android `inv` sync collection. Android-origin invoice records are exposed to the web workspace through a permission-checked read RPC. Legacy mobile invoices remain marked as app-origin records until the owner completes the normalized import/reconciliation workflow; the web UI does not post those records directly.
