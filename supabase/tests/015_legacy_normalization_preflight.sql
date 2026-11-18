@@ -50,6 +50,9 @@ declare
   v_report jsonb;
   v_before bigint;
   v_after bigint;
+  v_contacts_before bigint;
+  v_products_before bigint;
+  v_documents_before bigint;
 begin
   insert into auth.users(id,email,email_confirmed_at)
   values(v_owner,'legacy-preflight-owner@example.test',now())
@@ -83,6 +86,9 @@ begin
 
   select count(*) into v_before from private.business_state_records
   where business_id=v_business;
+  select count(*) into v_contacts_before from public.contacts where business_id=v_business;
+  select count(*) into v_products_before from public.products where business_id=v_business;
+  select count(*) into v_documents_before from public.documents where business_id=v_business;
 
   perform set_config('request.jwt.claim.sub',v_owner::text,true);
   v_report:=public.preview_legacy_normalization(v_business);
@@ -125,10 +131,10 @@ begin
     raise exception 'Valid primitive categories and services must not block preflight: %',v_report;
   end if;
 
-  if exists(select 1 from public.contacts where business_id=v_business)
-    or exists(select 1 from public.products where business_id=v_business)
-    or exists(select 1 from public.documents where business_id=v_business) then
-    raise exception 'Preflight must not create normalized records';
+  if (select count(*) from public.contacts where business_id=v_business)<>v_contacts_before
+    or (select count(*) from public.products where business_id=v_business)<>v_products_before
+    or (select count(*) from public.documents where business_id=v_business)<>v_documents_before then
+    raise exception 'Preflight must not mutate normalized records';
   end if;
 
   v_report:=public.preview_legacy_normalization(v_other_business);
