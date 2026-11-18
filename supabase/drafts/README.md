@@ -33,6 +33,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 27. `026_legacy_goods_invoice_draft_import.sql` — imports legacy goods invoices as normalized drafts only; excludes posting, stock, payments, journals and protected legacy cost snapshots.
 28. `027_legacy_service_invoice_draft_import.sql` — imports legacy service invoices as normalized drafts only; excludes service costs and separate initial payments.
 29. `028_legacy_reconciliation_gate.sql` — read-only reconciliation counts and cutover gate across supported imports and deferred financial collections.
+30. `029_legacy_supplier_contact_import.sql` — extends the private identity map and imports legacy supplier contacts; does not import purchase invoices or supplier payments.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -51,7 +52,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all twenty-nine draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all thirty-one SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all thirty draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all thirty-two SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -90,6 +91,7 @@ The test scripts are:
 - `supabase/tests/026_legacy_goods_invoice_draft_import.sql`
 - `supabase/tests/027_legacy_service_invoice_draft_import.sql`
 - `supabase/tests/028_legacy_reconciliation_gate.sql`
+- `supabase/tests/029_legacy_supplier_contact_import.sql`
 
 ## Device proof deployment note
 
@@ -190,3 +192,8 @@ Migration 027 adds `public.import_legacy_service_invoice_drafts(uuid,uuid)`. It 
 ## Legacy reconciliation gate (028)
 
 Migration 028 adds `public.reconcile_legacy_normalization(uuid)`, a read-only, business-admin-only report. It returns per-collection counts for active/deleted source rows, current mappings, unmapped rows, changed fingerprints, conflicts, orphaned mappings and records needing review. It separately counts deferred financial/stock collections and mapped invoice drafts still awaiting user review. It returns no customer names, phone numbers, source payloads, product costs or financial details. `safe_to_cutover` remains false while any unresolved source/mapping row, deferred financial row or imported draft awaiting review exists. Test 028 verifies read-only behavior, source-change detection, deferred financial visibility, payload privacy and tenant isolation.
+
+
+## Legacy supplier contact import (029)
+
+Migration 029 extends the private legacy identity-map collection allowlist with `suppliers` and adds `public.import_legacy_supplier_contacts(uuid,uuid)`. It imports supplier name, phone and address as normalized `contacts` with `contact_type='supplier'`, using source fingerprints and the same no-overwrite conflict behavior as customer import. Purchase documents and supplier payments remain deferred. The preflight now validates supplier source identity and reports purchases that reference missing suppliers; the reconciliation gate includes suppliers and separately counts deferred bank-account, fiscal-period, due-date and SMS-history collections. Test 029 verifies mapping, idempotency, changed-source conflict, tenant isolation and the absence of financial postings.
