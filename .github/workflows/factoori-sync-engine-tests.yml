@@ -8,6 +8,7 @@ on:
       - "sync-engine.js"
       - "sync-engine.test.js"
       - "sync-storage.js"
+      - "sync-db-adapter.js"
       - ".github/workflows/factoori-sync-engine-tests.yml"
   pull_request:
     paths:
