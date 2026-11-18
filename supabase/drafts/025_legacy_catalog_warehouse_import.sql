@@ -181,6 +181,10 @@ begin
      and coalesce(w.address,'')=coalesce(v_address,'')
    order by w.created_at,w.id limit 1;
    if v_target_id is not null then
+    if exists(select 1 from private.legacy_normalized_record_map m
+      where m.business_id=p_business_id and m.target_table='warehouses' and m.normalized_id=v_target_id) then
+     v_conflicts:=v_conflicts+1; continue;
+    end if;
     insert into private.legacy_normalized_record_map(
      business_id,legacy_collection,legacy_id,target_table,normalized_id,
      source_fingerprint,import_status,import_generation,note_code,created_by
