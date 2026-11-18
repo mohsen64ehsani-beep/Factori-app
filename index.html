@@ -451,22 +451,35 @@ function restoreLocalDataAfterCloudSession(saveCurrentBusiness=true){
 }
 async function initCloudSession(){
  const api=window.FactooriCloud;if(!api)return;
- try{cloudSession=await api.getSession();if(cloudSession){isolateLocalDataForCloudSession();cloudSchemaReady=await api.getClientHealth();await loadCloudBusinesses()}}catch(e){console.warn('[Factoori cloud session]',e)}
+ try{
+  const initialSession=await api.getSession();
+  if(initialSession){
+   isolateLocalDataForCloudSession();
+   cloudSession=initialSession;
+   cloudSchemaReady=await api.getClientHealth();
+   await loadCloudBusinesses();
+  }
+ }catch(e){cloudSession=null;cloudSchemaReady=false;console.warn('[Factoori cloud session]',e)}
  if(!cloudAuthSubscription)cloudAuthSubscription=api.onAuthStateChange(async(_event,session)=>{
   const previousSession=cloudSession;
-  cloudSession=session;
   try{
    if(session){
     const accountChanged=!previousSession||previousSession.user?.id!==session.user?.id;
     if(accountChanged){
      cloudBusinesses=[];cloudActiveBusinessId='';
      try{localStorage.removeItem('factoori:active-business')}catch(e){}
-     isolateLocalDataForCloudSession();
+     try{isolateLocalDataForCloudSession()}
+     catch(e){cloudSession=null;cloudSchemaReady=false;throw e}
+     cloudSession=session;
      cloudSchemaReady=await api.getClientHealth();
+    }else{
+     cloudSession=session;
     }
     await loadCloudBusinesses();
    }else if(previousSession){
     restoreLocalDataAfterCloudSession(true);
+   }else{
+    cloudSession=null;cloudSchemaReady=false;cloudBusinesses=[];cloudActiveBusinessId='';
    }
   }catch(e){console.warn('[Factoori business/session state]',e)}
   if(!lock&&!demoMode)render();
