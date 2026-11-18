@@ -902,6 +902,6 @@ test('business sync lock is released when checkpoint initialization fails', asyn
     api,
     indexedDBImpl: { open() { throw new Error('IndexedDB unavailable in test'); } }
   };
-  await assert.rejects(runBusinessSync(options), /IndexedDB is unavailable/);
-  await assert.rejects(runBusinessSync(options), /IndexedDB is unavailable/);
+  await assert.rejects(runBusinessSync(options), /IndexedDB unavailable in test/);
+  await assert.rejects(runBusinessSync(options), /IndexedDB unavailable in test/);
 });
