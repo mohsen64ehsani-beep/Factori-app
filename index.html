@@ -186,7 +186,7 @@ esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 sum=a=>a.reduce((x,y)=>x+num(y),0);
 const K='db:v2';
 let cloudSession=null,cloudBusinesses=[],cloudActiveBusinessId='',cloudSchemaReady=false;
-let localDbBusinessId='';
+let localDbBusinessId='',businessScopedMode=false;
 const BUSINESS_DB_PREFIX='db:v2:business:';
 const LEGACY_ADOPTION_MARKER='factoori:db-v2:legacy-adopted';
 try{cloudActiveBusinessId=localStorage.getItem('factoori:active-business')||''}catch(e){}
@@ -212,11 +212,11 @@ function activateBusinessLocalDatabase(nextId){
   }
  }
  if(!next)next=JSON.parse(EMPTY_BUSINESS_DB_JSON);
- db=next;normalizeDemoCollections();localDbBusinessId=nextId;realDb=db;return true;
+ db=next;normalizeDemoCollections();localDbBusinessId=nextId;businessScopedMode=true;realDb=db;return true;
 }
 function clearLocalBusinessSelection(){
  if(localDbBusinessId){try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار ناموفق بود')}}
- localDbBusinessId='';db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;
+ localDbBusinessId='';businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;
 }
 // Initial configurable Freemium limits; values can be tuned without changing billing integration.
 const FREE_DAILY_INVOICE_LIMIT=3,FREE_CUSTOMER_LIMIT=5,FREE_PRODUCT_LIMIT=5,FREE_INVOICE_ITEMS=2;
@@ -224,7 +224,7 @@ const invoiceIssuedDay=i=>String(i.createdAt||i.dt||'').slice(0,10);
 const invoicesIssuedToday=()=>[...db.inv,...db.serviceInv].filter(i=>invoiceIssuedDay(i)===today()).length;
 const canCreateInvoice=()=>{if(licenseActive)return true;const left=FREE_DAILY_INVOICE_LIMIT-invoicesIssuedToday();if(left<=0){toast('سهمیه رایگان امروز تکمیل شده است؛ روزانه فقط ۳ فاکتور می‌توانید صادر کنید.');return false}return true};
 const freeInvoiceUsage=()=>Math.min(FREE_DAILY_INVOICE_LIMIT,invoicesIssuedToday());
-const save=()=>{if(demoMode)return;try{localStorage.setItem(localDbBusinessId?BUSINESS_DB_PREFIX+localDbBusinessId:K,JSON.stringify(db))}catch(e){toast('حافظه پر است')}},
+const save=()=>{if(demoMode)return;if(businessScopedMode&&!localDbBusinessId)return;try{localStorage.setItem(localDbBusinessId?BUSINESS_DB_PREFIX+localDbBusinessId:K,JSON.stringify(db))}catch(e){toast('حافظه پر است')}},
 uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6),
 money=n=>fa(n)+' '+db.cu,
 dstr=d=>d?new Date(d).toLocaleDateString('fa-IR-u-ca-persian',{year:'numeric',month:'long',day:'numeric',timeZone:'UTC'}):'',
@@ -345,6 +345,7 @@ async function loadCloudBusinesses(){
   return;
  }
  cloudBusinesses=await api.listBusinesses(cloudSession.user.id);
+ businessScopedMode=true;
  // Never silently switch a user's active business. A stale or foreign ID is
  // cleared and the user must explicitly choose from the membership list.
  if(!cloudBusinesses.some(x=>x.id===cloudActiveBusinessId)){
