@@ -50,6 +50,7 @@ begin
     raise exception using errcode='42501',message='Customer receipt is not permitted';
   end if;
   if p_contact_id is null or p_financial_account_id is null or p_amount is null
+    or p_amount::text in ('NaN','Infinity','-Infinity')
     or p_amount<=0 or trunc(p_amount)<>p_amount or p_amount>999999999999999999
     or p_transaction_date is null
     or p_idempotency_key is null or length(p_idempotency_key) not between 8 and 160
@@ -65,7 +66,8 @@ begin
     v_allocated:=0;
   else
     v_allocated:=coalesce(p_allocated_amount,p_amount);
-    if v_allocated<=0 or v_allocated>p_amount or trunc(v_allocated)<>v_allocated then
+    if v_allocated::text in ('NaN','Infinity','-Infinity')
+      or v_allocated<=0 or v_allocated>p_amount or trunc(v_allocated)<>v_allocated then
       raise exception using errcode='22023',message='Invalid receipt allocation amount';
     end if;
   end if;
@@ -147,7 +149,7 @@ begin
     for update;
     if not found or v_document.status<>'posted'
       or v_document.document_type not in ('goods_sale','service_sale')
-      or v_document.contact_id<>p_contact_id then
+      or v_document.contact_id is distinct from p_contact_id then
       raise exception using errcode='22023',message='Receipt allocation must target a posted sales document for this customer';
     end if;
     select v_document.total_amount-coalesce(sum(ta.amount),0) into v_outstanding
