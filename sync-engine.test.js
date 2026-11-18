@@ -261,3 +261,47 @@ test('legacy db:v2 adoption requires confirmation and never overwrites or delete
   assert.deepEqual(loadBusinessDatabase({ storage, businessId: 'biz-A' }), JSON.parse(values.get(LEGACY_DATABASE_KEY)));
   assert.throws(() => loadBusinessDatabase({ storage, businessId: '' }), /explicit business ID/);
 });
+
+
+test('business switch saves the previous business and never leaks its data into the next one', async () => {
+  const { BUSINESS_DATABASE_PREFIX } = await import('./business-db-scope.js');
+  const { switchLocalBusinessDatabase } = await import('./business-db-switch.js');
+  const values = new Map();
+  const storage = {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(key, String(value)); }
+  };
+  const a = { cust: [{ id: 'a-customer', n: 'Business A' }] };
+  const first = switchLocalBusinessDatabase({
+    storage, currentBusinessId: '', nextBusinessId: 'biz-A',
+    currentDatabase: {}, confirmLegacyAdoption: false
+  });
+  assert.equal(first.requiresEmptyDatabase, true);
+  const second = switchLocalBusinessDatabase({
+    storage, currentBusinessId: 'biz-A', nextBusinessId: 'biz-B',
+    currentDatabase: a, confirmLegacyAdoption: false
+  });
+  assert.equal(second.businessId, 'biz-B');
+  assert.equal(second.database, null);
+  assert.equal(second.requiresEmptyDatabase, true);
+  assert.deepEqual(JSON.parse(values.get(BUSINESS_DATABASE_PREFIX + 'biz-A')), a);
+
+  const back = switchLocalBusinessDatabase({
+    storage, currentBusinessId: 'biz-B', nextBusinessId: 'biz-A',
+    currentDatabase: { cust: [{ id: 'b-customer', n: 'Business B' }] }
+  });
+  assert.deepEqual(back.database, a);
+  assert.deepEqual(JSON.parse(values.get(BUSINESS_DATABASE_PREFIX + 'biz-B')), {
+    cust: [{ id: 'b-customer', n: 'Business B' }]
+  });
+  const same = switchLocalBusinessDatabase({
+    storage, currentBusinessId: 'biz-A', nextBusinessId: 'biz-A',
+    currentDatabase: a
+  });
+  assert.equal(same.changed, false);
+  assert.equal(same.database, a);
+  assert.throws(() => switchLocalBusinessDatabase({
+    storage, currentBusinessId: 'biz-A', nextBusinessId: '',
+    currentDatabase: a
+  }), /valid business/);
+});
