@@ -188,6 +188,8 @@ sum=a=>a.reduce((x,y)=>x+num(y),0);
 const K='db:v2';
 let cloudSession=null,cloudBusinesses=[],cloudActiveBusinessId='',cloudSchemaReady=false;
 let localDbBusinessId='',businessScopedMode=false;
+let syncTimer=null,syncRunning=false,syncPending=false,syncStatus='idle',syncError='',syncGeneration=0,dbRevision=0;
+window.addEventListener('factoori-sync-runtime-ready',()=>{if(syncPending)scheduleBusinessSync(80)});
 const BUSINESS_DB_PREFIX='db:v2:business:';
 const LEGACY_ADOPTION_MARKER='factoori:db-v2:legacy-adopted';
 try{cloudActiveBusinessId=localStorage.getItem('factoori:active-business')||''}catch(e){}
