@@ -218,6 +218,13 @@ function clearLocalBusinessSelection(){
  if(localDbBusinessId){try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار ناموفق بود')}}
  localDbBusinessId='';businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;
 }
+function resetCloudBusinessContext(){
+ try{clearLocalBusinessSelection()}
+ catch(e){
+  console.warn('[Factoori clear cloud business context]',e);
+  localDbBusinessId='';businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;
+ }
+}
 function isolateLocalDataForCloudSession(){
  if(localDbBusinessId){try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار قبلی ناموفق بود')}localDbBusinessId=''}
  businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;
@@ -347,9 +354,16 @@ async function loadCloudBusinesses(){
   cloudBusinesses=[];
   cloudActiveBusinessId='';
   try{localStorage.removeItem('factoori:active-business')}catch(e){}
+  if(!demoMode)resetCloudBusinessContext();
   return;
  }
- cloudBusinesses=await api.listBusinesses(cloudSession.user.id);
+ try{cloudBusinesses=await api.listBusinesses(cloudSession.user.id)}
+ catch(error){
+  cloudBusinesses=[];cloudActiveBusinessId='';
+  try{localStorage.removeItem('factoori:active-business')}catch(e){}
+  if(!demoMode)resetCloudBusinessContext();
+  throw error;
+ }
  businessScopedMode=true;
  // Never silently switch a user's active business. A stale or foreign ID is
  // cleared and the user must explicitly choose from the membership list.
@@ -358,7 +372,7 @@ async function loadCloudBusinesses(){
   try{localStorage.removeItem('factoori:active-business')}catch(e){}
  }
  if(cloudActiveBusinessId&&!demoMode){
-  try{activateBusinessLocalDatabase(cloudActiveBusinessId)}catch(e){cloudActiveBusinessId='';try{localStorage.removeItem('factoori:active-business')}catch(_){}console.warn('[Factoori local business database]',e)}
+  try{activateBusinessLocalDatabase(cloudActiveBusinessId)}catch(e){cloudActiveBusinessId='';try{localStorage.removeItem('factoori:active-business')}catch(_){}resetCloudBusinessContext();console.warn('[Factoori local business database]',e)}
  }else if(!demoMode){
   try{if(localDbBusinessId)clearLocalBusinessSelection();else{db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;businessScopedMode=true}}catch(e){console.warn('[Factoori empty cloud context]',e)}
  }
