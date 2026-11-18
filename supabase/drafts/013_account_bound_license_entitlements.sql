@@ -198,4 +198,102 @@ $$;
 revoke all on function public.get_business_entitlements(uuid) from public,anon;
 grant execute on function public.get_business_entitlements(uuid) to authenticated;
 
+
+create or replace function private.business_has_premium_entitlement(p_business_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from private.factori_license_entitlements e
+    join public.factori_license_keys k on k.id=e.license_id
+    join public.businesses b on b.id=e.business_id
+    where e.business_id=p_business_id
+      and e.status='active'
+      and e.purchaser_user_id=b.owner_user_id
+      and b.status='active'
+      and k.status in ('unused','active')
+  );
+$$;
+
+revoke all on function private.business_has_premium_entitlement(uuid) from public,anon,authenticated;
+
+-- Premium entitlement is checked inside the same server-side quota functions
+-- used by sync/document RPCs. Client-side license flags are never authoritative.
+create or replace function private.assert_feature_limit(p_business_id uuid,p_feature_code text,p_requested integer)
+returns void language plpgsql security definer set search_path=''
+as $$
+declare v_limit integer; v_period text; v_current bigint:=0; v_collection text;
+begin
+ if auth.uid() is null or not private.is_business_member(p_business_id) then
+  raise exception using errcode='42501',message='Business access denied';
+ end if;
+ if private.business_has_premium_entitlement(p_business_id) then return; end if;
+ if p_requested is null or p_requested<0 then
+  raise exception using errcode='22023',message='Invalid requested feature quantity';
+ end if;
+ select limit_value,period_type into v_limit,v_period
+ from public.business_feature_limits
+ where business_id=p_business_id and feature_code=p_feature_code and enabled
+ for update;
+ if not found then raise exception using errcode='55000',message='Feature entitlement is not configured'; end if;
+ if v_limit is null then return; end if;
+ if v_period='per_record' then
+  if p_requested>v_limit then raise exception using errcode='54000',message='Per-record feature limit exceeded'; end if;
+  return;
+ end if;
+ v_collection:=case p_feature_code
+  when 'customers.total_limit' then 'cust'
+  when 'products.total_limit' then 'prod'
+  when 'services.total_limit' then 'services'
+  when 'warehouses.total_limit' then 'warehouses'
+  else null end;
+ if v_collection is not null then
+  execute 'select count(*) from private.business_state_records where business_id=$1 and collection=$2 and deleted_at is null'
+   into v_current using p_business_id,v_collection;
+  if v_current+p_requested>v_limit then
+   raise exception using errcode='54000',message='Business feature limit exceeded';
+  end if;
+  return;
+ end if;
+ if p_requested>v_limit then raise exception using errcode='54000',message='Feature limit exceeded'; end if;
+end;
+$$;
+
+create or replace function private.consume_feature_quota(p_business_id uuid,p_feature_code text,p_usage_date date,p_operation_id uuid)
+returns void language plpgsql security definer set search_path=''
+as $$
+declare v_limit integer; v_period text; v_count bigint; v_inserted uuid;
+begin
+ if auth.uid() is null or not private.is_business_member(p_business_id) then
+  raise exception using errcode='42501',message='Business access denied';
+ end if;
+ if private.business_has_premium_entitlement(p_business_id) then return; end if;
+ if p_usage_date is null or p_operation_id is null then
+  raise exception using errcode='22023',message='Quota date and operation ID are required';
+ end if;
+ select limit_value,period_type into v_limit,v_period
+ from public.business_feature_limits
+ where business_id=p_business_id and feature_code=p_feature_code and enabled
+ for update;
+ if not found then raise exception using errcode='55000',message='Feature entitlement is not configured'; end if;
+ if v_period<>'daily' then raise exception using errcode='22023',message='Feature does not use a daily quota'; end if;
+ if v_limit is null then return; end if;
+ insert into public.business_feature_usage(business_id,feature_code,usage_date,operation_id)
+ values(p_business_id,p_feature_code,p_usage_date,p_operation_id)
+ on conflict(business_id,feature_code,usage_date,operation_id) do nothing
+ returning id into v_inserted;
+ if v_inserted is null then return; end if;
+ select count(*) into v_count from public.business_feature_usage
+ where business_id=p_business_id and feature_code=p_feature_code and usage_date=p_usage_date;
+ if v_count>v_limit then raise exception using errcode='54000',message='Daily feature quota exceeded'; end if;
+end;
+$$;
+
+revoke all on function private.assert_feature_limit(uuid,text,integer) from public,anon,authenticated;
+revoke all on function private.consume_feature_quota(uuid,text,date,uuid) from public,anon,authenticated;
+
 commit;
