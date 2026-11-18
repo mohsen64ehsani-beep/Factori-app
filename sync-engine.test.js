@@ -872,3 +872,17 @@ test('business sync coordinator resumes a permission reset before any write retr
   assert.equal(second.syncState.permissionResetInProgress, false);
   assert.equal(second.syncState.pending.length, 0);
 });
+
+
+test('app wires guarded sync scheduling to the runtime and rejects stale results', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const runtime = await readFile(new URL('./sync-runtime.js', import.meta.url), 'utf8');
+  assert.match(html, /<script type="module" src="sync-runtime\.js"><\/script>/);
+  assert.match(html, /function scheduleBusinessSync\(delay=1100\)[\s\S]*?if\(demoMode\|\|!cloudSession\?\.user\?\.id\|\|!cloudSchemaReady\|\|!localDbBusinessId\)return/);
+  assert.match(html, /localStorage\.setItem\(localDbBusinessId\?BUSINESS_DB_PREFIX\+localDbBusinessId:K,JSON\.stringify\(db\)\);dbRevision\+\+;scheduleBusinessSync\(\)/);
+  assert.match(html, /localDbBusinessId===businessId&&syncGeneration===generation&&dbRevision===revision/);
+  assert.match(html, /cloudSyncNow:\(\)=>/);
+  assert.match(runtime, /window\.FactooriSyncRuntime = Object\.freeze/);
+  assert.match(runtime, /factoori-sync-runtime-ready/);
+});
