@@ -19,7 +19,7 @@ begin
  values(v_business,'Reconcile business',v_owner),(v_other_business,'Other reconcile business',v_outsider)
  on conflict(id) do nothing;
  insert into public.business_members(business_id,user_id,role_code,status,joined_at)
- values(v_business,v_owner,'owner','active',now()),(v_other_business,v_outsider,'owner','active',now())
+ values(v_business,v_owner,'owner','active',now()),(v_other_business,v_owner,'owner','active',now())
  on conflict(business_id,user_id) do nothing;
 
  insert into private.business_state_records(business_id,collection,legacy_id,payload_public,payload_private,updated_by)
