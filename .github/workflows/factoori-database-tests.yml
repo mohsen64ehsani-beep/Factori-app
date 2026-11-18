@@ -155,8 +155,8 @@ jobs:
             012_account_transfers.sql \
             012_member_reactivation.sql \
             013_account_bound_license_entitlements.sql \
-            014_legacy_normalization_preflight.sql \
-            015_legacy_normalized_mapping.sql
+            014_legacy_normalized_mapping.sql \
+            015_legacy_normalization_preflight.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
