@@ -52,7 +52,7 @@ export async function loadSyncCheckpoint(businessId, indexedDBImpl) {
   }
 }
 
-export async function commitSyncCheckpoint(businessId, dbSnapshot, syncState, indexedDBImpl) {
+export async function commitSyncCheckpoint(businessId, dbSnapshot, syncState, indexedDBImpl, baseDatabase = dbSnapshot) {
   if (!businessId) throw new Error('businessId is required');
   if (!dbSnapshot || typeof dbSnapshot !== 'object' || Array.isArray(dbSnapshot)) {
     throw new Error('dbSnapshot must be a database object');
@@ -67,6 +67,7 @@ export async function commitSyncCheckpoint(businessId, dbSnapshot, syncState, in
     tx.objectStore(STORE_NAME).put({
       businessId: String(businessId),
       db: dbSnapshot,
+      baseDb: baseDatabase,
       syncState,
       savedAt: Date.now(),
       schemaVersion: 1
