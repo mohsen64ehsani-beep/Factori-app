@@ -33,6 +33,7 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Inventory balances from the complete movement history, FIFO stock transfers, opening stock and wastage posting.
 * Read-only legacy data preview and guarded import of supported customers, suppliers, products, services, warehouses, fiscal periods and invoice drafts.
 * Web-origin financial and inventory operations mirrored to the Android sync collections.
+* Shared service catalog management and service-sale invoice drafts with Android `serviceInv` synchronization.
 * Responsive full-screen desktop and mobile interface.
 * Optional prominent professional-upgrade link.
 
