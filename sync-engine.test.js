@@ -432,6 +432,8 @@ test('Premium entitlement follows the signed-in account and selected business, n
   assert.match(app, /active=entitlement\?\.is_premium===true&&entitlement\?\.plan_status==='premium'/);
   assert.match(app, /window\.FactooriCloud\.claimLicense\(cloudActiveBusinessId,code\)/);
   assert.match(app, /else if\(accountLicenseMode\)/);
+  assert.match(app, /cloudBusinesses=\[\];cloudActiveBusinessId='';licenseActive=false/);
+  assert.match(app, /licenseActive=false;cloudActiveBusinessId=id\|\|''/);
   assert.match(app, /await refreshLicenseStatus\(false\);render\(\);if\(id\)scheduleBusinessSync/);
   assert.match(cloud, /async claimLicense\(businessId, licenseKey\)/);
   assert.match(cloud, /client\.rpc\('claim_factori_license'/);
