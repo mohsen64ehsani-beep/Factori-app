@@ -21,8 +21,8 @@ declare
  v_line jsonb;
  v_account_id uuid;
  v_contact_id uuid;
- v_debit numeric(20,0);
- v_credit numeric(20,0);
+ v_debit numeric(30,4);
+ v_credit numeric(30,4);
  v_debit_total numeric(30,0):=0;
  v_credit_total numeric(30,0):=0;
  v_line_count integer:=0;
@@ -58,6 +58,8 @@ begin
   v_debit:=coalesce((v_line->>'debit')::numeric,0);
   v_credit:=coalesce((v_line->>'credit')::numeric,0);
   if v_account_id is null or v_debit<0 or v_credit<0
+    or v_debit>999999999999999999 or v_credit>999999999999999999
+    or trunc(v_debit)<>v_debit or trunc(v_credit)<>v_credit
     or not ((v_debit>0 and v_credit=0) or (v_credit>0 and v_debit=0)) then
    raise exception using errcode='22023',message='Each journal line must have one positive debit or credit';
   end if;
@@ -136,7 +138,7 @@ declare
  v_transfer_id uuid;
  v_item jsonb;
  v_product_id uuid;
- v_qty numeric(20,4);
+ v_qty numeric(30,6);
  v_available numeric(20,4);
  v_line integer:=0;
  v_fingerprint text;
@@ -170,7 +172,7 @@ begin
   if jsonb_typeof(v_item)<>'object' then raise exception using errcode='22023',message='Transfer line must be an object'; end if;
   v_product_id:=nullif(v_item->>'product_id','')::uuid;
   v_qty:=coalesce((v_item->>'quantity')::numeric,0);
-  if v_product_id is null or v_qty<=0 or v_qty>1000000000 then
+  if v_product_id is null or v_qty<=0 or v_qty>1000000000 or round(v_qty,4)<>v_qty then
    raise exception using errcode='22023',message='Invalid transfer product or quantity';
   end if;
   v_canonical_items:=v_canonical_items||jsonb_build_array(jsonb_build_object('product_id',v_product_id,'quantity',v_qty));
