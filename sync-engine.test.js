@@ -415,3 +415,11 @@ test('cloud readiness probe covers every RPC used by the shared cloud client', a
   assert.deepEqual(used.filter(name => !checked.has(name)), [],
     'every RPC used by the app must be checked before enabling shared cloud features');
 });
+
+
+test('cloud readiness fails closed when RPC probes have transport errors', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('./cloud-client.js', import.meta.url), 'utf8');
+  assert.match(source, /!result\.error\s*\|\|\s*\(!!result\.error\.code\s*&&\s*result\.error\.code\s*!==\s*'PGRST202'\)/);
+  assert.match(source, /transport failure has no Postgres\/PostgREST code/i);
+});
