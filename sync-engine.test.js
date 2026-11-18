@@ -171,7 +171,11 @@ test('IndexedDB checkpoint transactions attach completion handlers before comple
             error: null, oncomplete: null, onabort: null, onerror: null,
             objectStore() {
               return {
-                get(key) { return makeRequest(rows.get(key) ?? null); },
+                get(key) {
+                  const request = { result: rows.get(key) ?? null, error: null, onsuccess: null, onerror: null };
+                  queueMicrotask(() => { request.onsuccess?.(); tx.oncomplete?.(); });
+                  return request;
+                },
                 put(value) { rows.set(value.businessId, value); queueMicrotask(() => tx.oncomplete?.()); },
                 delete(key) { rows.delete(key); queueMicrotask(() => tx.oncomplete?.()); }
               };
