@@ -18,6 +18,7 @@ declare
   v_other_key text := 'FACTOORI-TEST-KEY-0002';
   v_hash text;
   v_result jsonb;
+  i integer;
 begin
   insert into auth.users(id,email,email_confirmed_at) values
     (v_owner,'owner@example.test',now()),
@@ -49,6 +50,32 @@ begin
   if v_result->>'plan_status'<>'premium' or (v_result->>'is_premium')::boolean is not true then
     raise exception 'Owner business should receive Premium entitlement';
   end if;
+
+  -- Premium bypasses server-side per-record and daily Free limits.
+  perform private.assert_feature_limit(v_business,'invoice.items.limit',100);
+  for i in 1..5 loop
+    perform private.consume_feature_quota(v_business,'invoices.daily_limit',current_date,gen_random_uuid());
+  end loop;
+  if exists (select 1 from public.business_feature_usage
+      where business_id=v_business and feature_code='invoices.daily_limit' and usage_date=current_date) then
+    raise exception 'Premium business must not consume Free daily quota';
+  end if;
+
+  -- Free accounts remain subject to the server-enforced limits.
+  perform set_config('request.jwt.claim.sub',v_other::text,true);
+  begin
+    perform private.assert_feature_limit(v_other_business,'invoice.items.limit',11);
+    raise exception 'Free business must retain the per-record limit';
+  exception when sqlstate '54000' then null;
+  end;
+  begin
+    for i in 1..4 loop
+      perform private.consume_feature_quota(v_other_business,'invoices.daily_limit',current_date,gen_random_uuid());
+    end loop;
+    raise exception 'Free business must retain the daily quota';
+  exception when sqlstate '54000' then null;
+  end;
+  perform set_config('request.jwt.claim.sub',v_owner::text,true);
 
   -- Same account can claim idempotently on another device/session.
   v_result := public.claim_factori_license(v_key,v_business);
