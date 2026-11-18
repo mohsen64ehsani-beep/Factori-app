@@ -350,3 +350,39 @@ test('legacy adoption leaves a fail-closed pending claim if rollback is unavaila
   assert.equal(other.adopted, false);
   assert.equal(other.reason, 'legacy_database_already_assigned');
 });
+
+
+test('startup resolver never attaches legacy db:v2 to a business without explicit consent', async () => {
+  const { LEGACY_DATABASE_KEY, BUSINESS_DATABASE_PREFIX, saveBusinessDatabase } =
+    await import('./business-db-scope.js');
+  const { resolveInitialBusinessDatabase } = await import('./business-db-bootstrap.js');
+  const values = new Map([[LEGACY_DATABASE_KEY, JSON.stringify({
+    cust: [{ id: 'legacy-customer', n: 'Unassigned legacy data' }]
+  })]]);
+  const storage = {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(key, String(value)); },
+    removeItem(key) { values.delete(key); }
+  };
+  const noBusiness = resolveInitialBusinessDatabase({ storage, businessId: '' });
+  assert.equal(noBusiness.status, 'no_business');
+  assert.equal(noBusiness.legacyAvailable, true);
+
+  const undecided = resolveInitialBusinessDatabase({ storage, businessId: 'biz-A' });
+  assert.equal(undecided.status, 'needs_legacy_decision');
+  assert.equal(undecided.database, null);
+  assert.equal(values.has(BUSINESS_DATABASE_PREFIX + 'biz-A'), false);
+
+  const adopted = resolveInitialBusinessDatabase({
+    storage, businessId: 'biz-A', legacyAdoptionConfirmed: true
+  });
+  assert.equal(adopted.status, 'adopted');
+  assert.equal(adopted.database.cust[0].id, 'legacy-customer');
+
+  saveBusinessDatabase({
+    storage, businessId: 'biz-B', database: { cust: [{ id: 'biz-b-only' }] }
+  });
+  const isolated = resolveInitialBusinessDatabase({ storage, businessId: 'biz-B' });
+  assert.equal(isolated.status, 'loaded');
+  assert.equal(isolated.database.cust[0].id, 'biz-b-only');
+});
