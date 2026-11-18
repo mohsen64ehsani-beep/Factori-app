@@ -116,7 +116,7 @@ begin
  v_failed:=false;
  begin
   perform public.post_service_document(v_business,v_sale_doc,'service-sale-other-key');
- exception when unique_violation then v_failed:=true;
+ exception when object_not_in_prerequisite_state then v_failed:=true;
  end;
  if not v_failed then raise exception 'A posted service document cannot be posted with another key'; end if;
 
