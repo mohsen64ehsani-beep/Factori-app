@@ -16,8 +16,9 @@ declare
   v_id_mismatch bigint;
   v_orphan_customer bigint:=0;
   v_orphan_product bigint:=0;
+  v_orphan_supplier bigint:=0;
   v_collections jsonb:='[]'::jsonb;
-  v_supported text[]:=array['cust','prod','categories','services','warehouses','inv','serviceInv'];
+  v_supported text[]:=array['cust','suppliers','prod','categories','services','warehouses','inv','serviceInv'];
   v_financial text[]:=array['pay','debt','creditors','creditorPayments','expenses','purchases',
     'supplierPayments','returns','wastage','stockMoves','warehouseStocks','transfers',
     'accounts','moneytransfers','opening','otherincome'];
@@ -70,11 +71,19 @@ begin
       where p.business_id=r.business_id and p.collection='prod'
         and p.legacy_id=item.value->>'pid' and p.deleted_at is null);
 
+  select count(*) into v_orphan_supplier
+  from private.business_state_records r
+  where r.business_id=p_business_id and r.collection='purchases' and r.deleted_at is null
+    and coalesce(r.payload_public->>'supplierId','')<>''
+    and not exists(select 1 from private.business_state_records s
+      where s.business_id=r.business_id and s.collection='suppliers'
+        and s.legacy_id=r.payload_public->>'supplierId' and s.deleted_at is null);
+
   return jsonb_build_object(
     'business_id',p_business_id,'mode','read_only_preflight','collections',v_collections,
-    'orphan_invoice_customers',v_orphan_customer,'orphan_invoice_products',v_orphan_product,
+    'orphan_invoice_customers',v_orphan_customer,'orphan_invoice_products',v_orphan_product,'orphan_purchase_suppliers',v_orphan_supplier,
     'financial_collections_deferred',to_jsonb(v_financial),
-    'safe_to_import',v_orphan_customer=0 and v_orphan_product=0 and not exists(
+    'safe_to_import',v_orphan_customer=0 and v_orphan_product=0 and v_orphan_supplier=0 and not exists(
       select 1 from private.business_state_records r
       where r.business_id=p_business_id and r.collection=any(v_supported) and r.deleted_at is null
         and (jsonb_typeof(r.payload_public)<>'object'
