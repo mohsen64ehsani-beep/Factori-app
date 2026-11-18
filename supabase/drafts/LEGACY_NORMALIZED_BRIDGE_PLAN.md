@@ -75,26 +75,26 @@ The mapping ledger must be business-scoped and inaccessible to `anon`. Client wr
 
 Do not import these as normalized financial or inventory facts yet: `pay`, `debt`, `creditors`, `creditorPayments`, `expenses`, `purchases`, `supplierPayments`, `returns`, `wastage`, `stockMoves`, `warehouseStocks`, `transfers`, `accounts`, `moneytransfers`, `opening`, `otherincome`, and cheque lifecycle data. These collections need source-shape audits, account/contact allocation rules, cheque status mapping, opening-balance semantics, and transactional posting RPCs.
 
-## Current implementation status (2026-11-18)
+## Current implementation status (2026-11-19)
 
-- Migration 014 now creates the private business-scoped legacy identity map. It stores a source fingerprint and target identity, not the source payload.
-- Migration 015 now adds `preview_legacy_normalization(uuid)`, a read-only owner/admin audit RPC. It counts supported collection rows, tombstones, malformed payload objects, missing/mismatched payload IDs, and orphan customer/product references in goods invoices. It reports deferred financial collections and never writes normalized records.
-- CI runs the current ordered draft migrations and SQL regression suite on disposable PostgreSQL 17 with a minimal Auth compatibility shim. The preflight test includes runtime fixtures for orphan detection, read-only behavior, and tenant isolation. This is not a complete Supabase Auth/JWT/Edge Functions environment.
-- The active app source audit confirms the customer, product, goods-invoice, service-catalog, and service-invoice shapes described above. Service costs and invoice cost fields are sensitive. Initial service-invoice receipts are separate `pay` records.
-- `warehouses`, categories, product category IDs, complete service catalog reconciliation, and every edit/delete/tombstone path still need focused audit before importing those records.
+- Migrations 014–015 provide the private business-scoped identity map and read-only preflight. Preflight covers customers, suppliers, products, primitive categories/services, warehouses, fiscal periods, and invoice references; it also reports missing supplier references in legacy purchases. It never writes normalized records or exposes protected payloads.
+- Migrations 017–023 and 031 add dedicated, idempotent transactional operations for customer receipts, supplier payments, expense payments, other income, goods purchases, goods sales with FIFO costing, FIFO warehouse transfers, valued opening stock, wastage, and service sales/purchases. Account transfers are handled by migration 010. Generic sync remains blocked for unsupported financial and stock collections.
+- Migrations 024–027 import customer/product references, catalog/warehouse metadata, and goods/service invoice drafts. Migration 029 imports supplier contacts; migration 030 preserves legacy fiscal locks as closed normalized periods. Imported invoices remain drafts and require review/posting through the ordinary normalized posting RPCs.
+- Migration 028 provides a read-only count-based reconciliation and cutover gate. It includes mapped source fingerprints, unresolved mappings, deferred financial/other collections, and invoice drafts awaiting review. It does not declare cutover safe while deferred or unresolved rows remain.
+- CI applies 32 draft migrations in dependency order (013 follows a test-only license fixture) and runs 34 SQL regression scripts on disposable PostgreSQL 17 with a minimal Auth compatibility shim. P-256 device-proof crypto tests and Edge Function type-check are also included. This does not prove behavior against real Supabase Auth/JWT/Edge Functions or production data.
+- No importer has been run against production and no draft migration has been applied to the live Supabase project. Existing license records/activations remain untouched.
 
 ## Next implementation gate
 
-The next work is completion of normalized transactional returns and remaining cheque/account lifecycle operations, followed by expanding the importer from customer/product reference data to categories, warehouses, services and draft documents. Before any import RPC is added:
+The remaining server-side work is deliberately narrower than the original bridge plan:
 
-- finish the source audit for warehouses, category references, product edits, service costs, invoice edits/deletes, and all related tombstone behavior;
-- inspect the complete normalized table constraints, RLS policies, and transactional RPC signatures for contacts, products, services, warehouses, and draft documents;
-- choose a repeatable owner-only import/reconciliation contract with generation IDs, fingerprints, conflict handling, and no destructive source changes;
-- add dry-run and write-phase tests for idempotency, cross-business isolation, permission denial, sensitive cost separation, orphan references, exact totals, and retry behavior;
-- test against isolated PostgreSQL and a real Supabase test environment when one is available.
+1. Design returns/refunds around original posted document items, returned-quantity ceilings, customer/supplier ledger effects, and exact FIFO cost restoration. Legacy return rows without an original invoice/item reference must remain in reconciliation until matched; never auto-post them.
+2. Complete cheque creation, immutable event history, status transitions and cleared/bounced settlement posting. A status-only change must not masquerade as a cash receipt or supplier payment.
+3. Decide whether legacy bank-account metadata, due dates and SMS history need normalized targets. Add importers only after target schema, privacy/retention rules, and ownership semantics are explicit.
+4. Expand reconciliation to compare source and normalized counts/totals for every supported collection, report every deferred collection, and produce an owner-reviewed cutover report.
+5. Exercise concurrency, role revocation, replay, offline retries and multi-device conflict behavior. Verify the full auth/device/sync flow against a real isolated Supabase environment when one is available.
 
-Migration 024 imports customers and products through an owner-authorized, fingerprinted RPC, excluding cost and quantity. Migration 025 imports primitive category/service names and warehouse metadata and links exact product category labels; it does not import warehouse quantities or stock movements. Migration 026 imports goods invoices and migration 027 imports service invoices as normalized drafts only; neither posts stock, receivables, journals or payments, and both exclude protected legacy cost snapshots. Migration 028 adds a read-only reconciliation/cutover gate, and migration 029 imports legacy suppliers as normalized supplier contacts, and migration 030 preserves legacy fiscal locks as closed normalized fiscal periods. Migration 031 adds balanced posting for normalized service sales and purchases without creating inventory or fabricated service costs. Legacy purchase documents and supplier payments remain deferred. The bridge remains incomplete: bank-account/due-date import, purchase documents, financial/stock import, returns matching, and transactional financial/stock conversion remain outstanding. The new report is a count-based readiness gate, not a claim that cutover is safe.
-
+The release gate remains unchanged: retain the legacy source and a recoverable export; do not cut over, delete, or rewrite source data without a tested recovery plan and the owner's explicit approval.
 
 ## First legacy reference import (024)
 
