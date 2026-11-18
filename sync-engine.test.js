@@ -525,3 +525,13 @@ test('local sync collection allowlists exactly match SQL read and write permissi
   assert.deepEqual([...SYNC_READ_COLLECTIONS].sort(), sqlRead);
   assert.deepEqual([...SYNC_WRITE_COLLECTIONS].sort(), sqlWrite);
 });
+
+
+test('permission changes advance member version so sync clients receive a reset', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const migration = await readFile(new URL('./supabase/drafts/004a_sync_infrastructure.sql', import.meta.url), 'utf8');
+  const syncSql = await readFile(new URL('./supabase/drafts/005_sync_compatibility.sql', import.meta.url), 'utf8');
+  assert.match(migration, /new\.role_code is distinct from old\.role_code or new\.status is distinct from old\.status[\s\S]*new\.permission_version:=old\.permission_version\+1/);
+  assert.match(migration, /after insert or update or delete on public\.business_member_permission_overrides[\s\S]*execute function private\.bump_override_permission_version/);
+  assert.match(syncSql, /v_device\.permission_version<>v_member_permission_version[\s\S]*'reset_required',true/);
+});
