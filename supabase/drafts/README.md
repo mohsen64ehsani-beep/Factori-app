@@ -29,6 +29,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 23. `022_inventory_opening_posting.sql` — posts valued opening stock into warehouse movements, FIFO layers, product cost history, and opening-equity journal atomically.
 24. `023_inventory_wastage_posting.sql` — posts wastage as FIFO stock consumption, cost allocations and an expense/inventory write-off journal.
 25. `024_legacy_reference_import.sql` — owner-authorized, fingerprinted import of legacy customers and products only; excludes sensitive cost, stock quantities, documents and financial data.
+26. `025_legacy_catalog_warehouse_import.sql` — imports legacy category labels, service names and warehouses with stable mapping; never imports warehouse quantities or stock movements.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -47,7 +48,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all twenty-five draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty-seven SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all twenty-six draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all twenty-eight SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -82,6 +83,7 @@ The test scripts are:
 - `supabase/tests/022_inventory_opening_posting.sql`
 - `supabase/tests/023_inventory_wastage_posting.sql`
 - `supabase/tests/024_legacy_reference_import.sql`
+- `supabase/tests/025_legacy_catalog_warehouse_import.sql`
 
 ## Device proof deployment note
 
@@ -162,3 +164,8 @@ Migration 023 adds `public.post_inventory_wastage(uuid,date,text,jsonb,text)`. I
 ## Legacy reference-data import (024)
 
 Migration 024 adds `public.import_legacy_reference_data(uuid,uuid)`, a business-owner-authorized import for legacy `cust` and `prod` rows only. It reads only `payload_public`, validates the legacy ID and required name, fingerprints each source row, and records target UUIDs in the private mapping ledger. Identical reruns are no-ops; changed source rows are marked `conflict` and never silently overwrite normalized records; missing mapped targets are marked `orphaned`. Product `buy`/cost fields remain in the private source payload and are not read or copied, and product `qty` is deliberately ignored: no stock movement, FIFO layer or product cost is created. Tombstoned rows are skipped. Barcode uniqueness collisions are reported as conflicts. Categories, warehouses, services, draft invoices and all financial/stock collections remain outside this first importer. Test 024 covers customer/product mapping, rerun idempotency, changed-source conflict, skipped tombstones, sensitive cost/quantity exclusion and cross-business denial.
+
+
+## Legacy catalog and warehouse import (025)
+
+Migration 025 adds `public.import_legacy_catalog_and_warehouses(uuid,uuid)`. It normalizes the app's primitive category/service strings using their sync identity `value:<text>`, and imports warehouse objects using their legacy string IDs mapped to newly generated normalized UUIDs. The first active legacy warehouse becomes the default only when the business has no active default. Products are linked to a category only by an exact label match and only when their normalized category is still unset. Repeated imports are no-ops; changed rows are flagged as conflicts; ambiguous existing warehouse matches are not silently linked. No warehouse stock quantities, stock movements, FIFO layers, product costs, or financial data are imported. Test 025 verifies primitive collection identities, generated warehouse IDs, exact product-category linking, default warehouse behavior, idempotency, source-change conflict and tenant isolation.
