@@ -39,6 +39,9 @@ function resetAfterPermissionVersionChange(db, state) {
     if (Array.isArray(db[collection])) nextDb[collection] = stripSensitiveLocalValue(db[collection]);
   }
   const nextState = ensureState(state);
+  // Historical conflict/rejection payloads may also contain private fields.
+  nextState.conflicts = stripSensitiveLocalValue(nextState.conflicts);
+  nextState.rejected = stripSensitiveLocalValue(nextState.rejected);
   // Pending payloads may contain data captured under the previous permission
   // set. Quarantine sanitized copies; local records remain in nextDb and can
   // be re-enqueued against their last acknowledged snapshot.
