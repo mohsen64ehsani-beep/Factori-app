@@ -169,10 +169,10 @@ begin
  ) returning id into v_reversal_tx_id;
 
  insert into public.journal_entries(
-  business_id,entry_date,fiscal_period_id,source_type,source_id,description,
+  business_id,entry_date,fiscal_period_id,source_type,source_id,reverses_entry_id,description,
   status,idempotency_key,created_by
  ) values(
-  p_business_id,p_event_date,v_period_id,'reversal',v_original_tx.id,
+  p_business_id,p_event_date,v_period_id,'reversal',v_original_tx.id,v_original_journal_id,
   'برگشت چک: '||btrim(p_reason),'draft','cheque-reversal-journal:'||p_cheque_id::text,v_user
  ) returning id into v_reversal_journal_id;
 
