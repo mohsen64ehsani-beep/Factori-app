@@ -23,7 +23,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 - Added static regression assertions for sync-pull cursor progress and invoice quota coverage.
 - Wrapped migration 005 in a transaction so a failed apply cannot leave a partially created sync bridge.
 - Extended migration 006 to reject DELETE as well as UPDATE on posted/reversed journal headers.
-- These are source-level fixes only; no production migration has been applied. Runtime SQL tests still require a disposable staging database.
+- These are source-level fixes only; no production migration has been applied. Runtime SQL regression tests are configured in GitHub Actions using an isolated PostgreSQL 17 service; this does not create or modify a Supabase project. The workflow bootstraps only the minimal Auth compatibility objects needed by these drafts, applies all eight drafts, and runs their regression scripts.
 
 ## Test scripts
 
