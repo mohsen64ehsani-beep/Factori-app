@@ -440,6 +440,24 @@ test('Premium entitlement follows the signed-in account and selected business, n
 });
 
 
+test('explicit deletions are queued for remote sync from supported business collections', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const app = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+  const runtime = await readFile(new URL('./sync-runtime.js', import.meta.url), 'utf8');
+  assert.match(runtime, /export async function recordBusinessDeletion/);
+  assert.match(runtime, /createSyncTombstone\(collection, legacyId, checkpoint\.syncState\)/);
+  assert.match(runtime, /flushDeferredBusinessDeletions\(businessId, indexedDBImpl\)/);
+  assert.match(runtime, /recordBusinessDeletion\s*\n\s*\}\);/);
+  for (const [collection, handler] of [
+    ['cust', /db\.cust=db\.cust\.filter\(c=>c\.id!=id\);queueBusinessSyncDeletion\('cust',id\)/],
+    ['prod', /db\.prod=db\.prod\.filter\(p=>p\.id!=id\);queueBusinessSyncDeletion\('prod',id\)/],
+    ['inv', /db\.inv=db\.inv\.filter\(i=>i!==o\);queueBusinessSyncDeletion\('inv',id\)/],
+    ['serviceInv', /db\.serviceInv=db\.serviceInv\.filter\(x=>x\.id!==id\);queueBusinessSyncDeletion\('serviceInv',id\)/],
+    ['bankAccounts', /db\.bankAccounts=db\.bankAccounts\.filter\(x=>x\.id!==id\);queueBusinessSyncDeletion\('bankAccounts',id\)/]
+  ]) assert.match(app, handler, collection + ' deletion must be explicitly queued');
+});
+
+
 test('cloud readiness distinguishes schema errors from transport failures', async () => {
   const { isSchemaProbeErrorReady } = await import('./cloud-health.js');
   assert.equal(isSchemaProbeErrorReady(null), true);
