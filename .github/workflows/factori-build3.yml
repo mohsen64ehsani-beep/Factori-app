@@ -94,6 +94,8 @@ jobs:
         run: |
           npx esbuild license-client.js --bundle --format=esm --outfile=www/license-client.js
           npx esbuild cloud-client.js --bundle --format=iife --outfile=www/cloud-client.js
+          node --check member-management-ui.js
+          npx esbuild member-management-ui.js --bundle --format=iife --outfile=www/member-management-ui.js
           npx esbuild sync-runtime.js --bundle --format=esm --outfile=www/sync-runtime.js
           npx esbuild back-handler.js --bundle --format=iife --outfile=www/back-handler.js
 
