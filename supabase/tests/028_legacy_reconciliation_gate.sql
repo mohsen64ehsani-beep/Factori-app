@@ -59,7 +59,6 @@ begin
   raise exception 'Changed source fingerprint was not identified';
  end if;
 
- perform set_config('request.jwt.claim.sub',v_outsider::text,true);
  v_result:=public.reconcile_legacy_normalization(v_other_business);
  if (v_result->>'deferred_financial_records')::bigint<>0
   or (v_result->>'unresolved_source_or_mapping_rows')::bigint<>0 then
