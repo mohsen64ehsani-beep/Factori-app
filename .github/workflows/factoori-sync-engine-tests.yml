@@ -9,6 +9,7 @@ on:
       - "sync-engine.test.js"
       - "sync-storage.js"
       - "sync-db-adapter.js"
+      - "sync-runtime.js"
       - "cloud-client.js"
       - "cloud-health.js"
       - "supabase/drafts/**.sql"
