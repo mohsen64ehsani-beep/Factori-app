@@ -340,6 +340,42 @@ const api = {
       p_idempotency_key: payload.idempotencyKey
     }));
   },
+  async manageBusinessMembers(payload) {
+    if (!payload?.businessId || !['list', 'create'].includes(payload.action)) {
+      throw new Error('درخواست مدیریت کارکنان معتبر نیست.');
+    }
+    const result = await client.functions.invoke('manage-business-members', { body: payload });
+    return unwrap(result);
+  },
+  async getBusinessMemberPermissions(businessId, userId) {
+    if (!businessId) throw new Error('کسب‌وکار مشخص نشده است.');
+    return unwrap(await client.rpc('get_business_member_permissions', {
+      p_business_id: businessId, p_member_user_id: userId || null
+    })) || [];
+  },
+  async setBusinessMemberRole(businessId, userId, roleCode) {
+    return unwrap(await client.rpc('update_business_member_role', {
+      p_business_id: businessId, p_member_user_id: userId, p_role_code: roleCode
+    }));
+  },
+  async setBusinessMemberStatus(businessId, userId, status) {
+    return unwrap(await client.rpc('set_business_member_status', {
+      p_business_id: businessId, p_member_user_id: userId, p_status: status
+    }));
+  },
+  async setBusinessMemberPermission(businessId, userId, permissionCode, allowed) {
+    return unwrap(await client.rpc('set_business_member_permission_override', {
+      p_business_id: businessId, p_member_user_id: userId,
+      p_permission_code: permissionCode, p_allowed: allowed,
+      p_reason: 'Updated from Factoori app'
+    }));
+  },
+  async clearBusinessMemberPermission(businessId, userId, permissionCode) {
+    return unwrap(await client.rpc('clear_business_member_permission_override', {
+      p_business_id: businessId, p_member_user_id: userId,
+      p_permission_code: permissionCode
+    }));
+  },
   async getClientHealth() {
     // A successful Auth session alone does not mean the shared-account schema
     // has been deployed. Probe every relation required by the account UI and
