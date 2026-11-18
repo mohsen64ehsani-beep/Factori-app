@@ -28,16 +28,16 @@ begin
       raise exception 'Missing authenticated RLS policy %',p;
     end if;
   end loop;
-  if not has_table_privilege('authenticated','public.contacts','INSERT')
-    or not has_table_privilege('authenticated','public.contacts','UPDATE') then
+  if not has_any_column_privilege('authenticated','public.contacts','INSERT')
+    or not has_any_column_privilege('authenticated','public.contacts','UPDATE') then
     raise exception 'Authenticated contact CRUD grants are missing';
   end if;
-  if not has_table_privilege('authenticated','public.products','INSERT')
-    or not has_table_privilege('authenticated','public.products','UPDATE') then
+  if not has_any_column_privilege('authenticated','public.products','INSERT')
+    or not has_any_column_privilege('authenticated','public.products','UPDATE') then
     raise exception 'Authenticated product CRUD grants are missing';
   end if;
-  if not has_table_privilege('authenticated','public.services','INSERT')
-    or not has_table_privilege('authenticated','public.services','UPDATE') then
+  if not has_any_column_privilege('authenticated','public.services','INSERT')
+    or not has_any_column_privilege('authenticated','public.services','UPDATE') then
     raise exception 'Authenticated service CRUD grants are missing';
   end if;
 end $$;
