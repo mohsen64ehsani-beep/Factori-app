@@ -1,6 +1,6 @@
 // Explicit, testable coordinator for a single selected business.
-// This module is not wired into index.html yet: the app must still add a
-// business-generation guard before applying the returned database to live UI.
+// index.html invokes this runtime and applies results only when the selected
+// business generation and local database revision still match the run snapshot.
 import {
   createSyncState,
   prepareSyncOperations,
