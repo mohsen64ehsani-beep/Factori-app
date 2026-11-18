@@ -1,6 +1,6 @@
 # Legacy db:v2 to normalized accounting bridge
 
-Status: design checkpoint only — no migration, production data, or live Supabase project is changed by this document.
+Status: mapping foundation and read-only preflight are implemented as development drafts (014/015) and covered by isolated PostgreSQL CI. No importer exists yet; no production data or live Supabase schema has been changed.
 
 ## Why a bridge is required
 
@@ -48,7 +48,7 @@ The app's current legacy invoice object does not itself prove that an invoice is
 
 ### Services and service invoices
 
-The app has separate `services` and `serviceInv` collections. Service invoice editor rows use `desc`, `qty`, `price`, and `cost`; service invoice headers use `cid`, `no`, `dt`, `bankAccountId`, `discount`, and cost-mode fields. The complete persisted shape and service catalog row shape still require a focused source audit before an importer is written.
+The current app source confirms that `services` is a list of service-description strings, not objects. The persisted `serviceInv` row is `{id,no,dt,createdAt,cid,bankAccountId,items,discount,costMode,costTotal}`. Each item is `{desc,qty,price,cost}`. `cost` and `costTotal` are sensitive and must never be returned in ordinary client-readable payloads. Initial paid amounts are represented separately in `pay` with `source='service_invoice'` and `invoiceId`; they must not be imported through a draft-document importer. Service catalog normalization needs a deterministic business-scoped name mapping because legacy service rows have no stable IDs. The exact persisted warehouse shape and category semantics still require source audit.
 
 Target candidates are `public.services`, `public.documents` with `document_type='service_sale'`, and `public.document_items` with `item_type='service'`. Cost fields must remain protected.
 
@@ -75,14 +75,22 @@ The mapping ledger must be business-scoped and inaccessible to `anon`. Client wr
 
 Do not import these as normalized financial or inventory facts yet: `pay`, `debt`, `creditors`, `creditorPayments`, `expenses`, `purchases`, `supplierPayments`, `returns`, `wastage`, `stockMoves`, `warehouseStocks`, `transfers`, `accounts`, `moneytransfers`, `opening`, `otherincome`, and cheque lifecycle data. These collections need source-shape audits, account/contact allocation rules, cheque status mapping, opening-balance semantics, and transactional posting RPCs.
 
+## Current implementation status (2026-11-18)
+
+- Migration 014 now creates the private business-scoped legacy identity map. It stores a source fingerprint and target identity, not the source payload.
+- Migration 015 now adds `preview_legacy_normalization(uuid)`, a read-only owner/admin audit RPC. It counts supported collection rows, tombstones, malformed payload objects, missing/mismatched payload IDs, and orphan customer/product references in goods invoices. It reports deferred financial collections and never writes normalized records.
+- CI runs all 16 draft migrations and 18 SQL tests on disposable PostgreSQL 17 with a minimal Auth compatibility shim. The preflight test includes runtime fixtures for orphan detection, read-only behavior, and tenant isolation. This is not a complete Supabase Auth/JWT/Edge Functions environment.
+- The active app source audit confirms the customer, product, goods-invoice, service-catalog, and service-invoice shapes described above. Service costs and invoice cost fields are sensitive. Initial service-invoice receipts are separate `pay` records.
+- `warehouses`, categories, product category IDs, complete service catalog reconciliation, and every edit/delete/tombstone path still need focused audit before importing those records.
+
 ## Next implementation gate
 
-Before writing migration 014 or importer RPCs:
+The next work is an importer design and implementation—not another mapping migration. Before any import RPC is added:
 
-- audit the complete persisted shapes and edit/delete flows for the supported legacy collections;
-- inspect the full normalized table constraints, RLS policies, and existing draft-creation RPC signatures;
-- specify whether import is an owner-only one-time operation or a repeatable reconciliation;
-- add tests for idempotency, cross-business isolation, permission denial, sensitive cost separation, orphan references, and exact totals;
+- finish the source audit for warehouses, category references, product edits, service costs, invoice edits/deletes, and all related tombstone behavior;
+- inspect the complete normalized table constraints, RLS policies, and transactional RPC signatures for contacts, products, services, warehouses, and draft documents;
+- choose a repeatable owner-only import/reconciliation contract with generation IDs, fingerprints, conflict handling, and no destructive source changes;
+- add dry-run and write-phase tests for idempotency, cross-business isolation, permission denial, sensitive cost separation, orphan references, exact totals, and retry behavior;
 - test against isolated PostgreSQL and a real Supabase test environment when one is available.
 
-This document deliberately does not claim that the bridge is implemented. It records the verified data model and the safe order for implementing it.
+The bridge is not complete: mapping and read-only preflight are implemented, but reference-data import, draft-document import, reconciliation, and transactional financial/stock conversion remain outstanding.
