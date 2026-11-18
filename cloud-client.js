@@ -1,10 +1,12 @@
 import { isSchemaProbeErrorReady } from './cloud-health.js';
 import { createClient } from '@supabase/supabase-js';
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 
 const SUPABASE_URL = 'https://rtlwztotaolbnjdtsjqy.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_GhG0h_Mco3UomLqxnhynnw_blPQ3ii-';
-// Public landing page used after email confirmation; never redirect production users to localhost.
-const FACTOORI_AUTH_REDIRECT_URL = 'https://factoori.ir/';
+// Android custom-scheme callback. This exact URI must be allow-listed in Supabase Auth.
+const FACTOORI_AUTH_REDIRECT_URL = 'com.factori.app://auth/callback';
 
 const client = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
@@ -23,6 +25,56 @@ const client = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
 function unwrap(result) {
   if (result?.error) throw result.error;
   return result?.data;
+}
+
+const handledAuthCodes = new Set();
+async function completeAuthRedirect(rawUrl) {
+  if (!rawUrl) return false;
+  let callback;
+  try { callback = new URL(rawUrl); } catch { return false; }
+  if (callback.protocol !== 'com.factori.app:' || callback.hostname !== 'auth'
+    || callback.pathname.replace(/\\/$/, '') !== '/callback') return false;
+
+  const params = new URLSearchParams(callback.search);
+  const fragment = new URLSearchParams(callback.hash.replace(/^#/, ''));
+  const authError = params.get('error_description') || fragment.get('error_description')
+    || params.get('error') || fragment.get('error');
+  if (authError) throw new Error(authError);
+
+  const code = params.get('code');
+  if (!code) throw new Error('لینک تأیید معتبر نیست یا کد ورود در آن وجود ندارد.');
+  if (handledAuthCodes.has(code)) return true;
+  handledAuthCodes.add(code);
+  try {
+    unwrap(await client.auth.exchangeCodeForSession(code));
+    window.dispatchEvent(new CustomEvent('factoori:auth-callback', {
+      detail: { success: true }
+    }));
+    return true;
+  } catch (error) {
+    handledAuthCodes.delete(code);
+    throw error;
+  }
+}
+
+function reportAuthRedirectError(error) {
+  console.error('[Factoori email confirmation]', error);
+  window.dispatchEvent(new CustomEvent('factoori:auth-callback', {
+    detail: { success: false, message: error?.message || 'تأیید ایمیل انجام نشد.' }
+  }));
+}
+
+async function initializeAuthDeepLinks() {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await App.addListener('appUrlOpen', ({ url }) => {
+      completeAuthRedirect(url).catch(reportAuthRedirectError);
+    });
+    const launch = await App.getLaunchUrl();
+    if (launch?.url) await completeAuthRedirect(launch.url);
+  } catch (error) {
+    reportAuthRedirectError(error);
+  }
 }
 
 const DEVICE_KEY_DB = 'factoori-device-keys-v1';
@@ -498,3 +550,4 @@ const api = {
 };
 
 window.FactooriCloud = Object.freeze(api);
+initializeAuthDeepLinks();
