@@ -32,8 +32,8 @@ begin
    '{"buy":250}',v_owner),
   (v_business,'categories','value:Hardware','{"value":"Hardware"}','{}',v_owner),
   (v_business,'services','value:Installation','{"value":"Installation"}','{}',v_owner),
-  (v_business,'warehouses','aaaaaaaa-0000-4000-8000-000000000001',
-   '{"id":"aaaaaaaa-0000-4000-8000-000000000001","name":"Main warehouse","address":"Unit 1"}','{}',v_owner);
+  (v_business,'warehouses','legacy-warehouse-1',
+   '{"id":"legacy-warehouse-1","name":"Main warehouse","address":"Unit 1"}','{}',v_owner);
 
  perform set_config('request.jwt.claim.sub',v_owner::text,true);
  v_result:=public.import_legacy_reference_data(v_business,v_generation);
@@ -56,7 +56,7 @@ begin
  where business_id=v_business and legacy_collection='services' and legacy_id='value:Installation';
  select normalized_id into v_warehouse_id from private.legacy_normalized_record_map
  where business_id=v_business and legacy_collection='warehouses'
-  and legacy_id='aaaaaaaa-0000-4000-8000-000000000001';
+  and legacy_id='legacy-warehouse-1';
 
  if not exists(select 1 from public.products where business_id=v_business and id=v_product_id and category_id=v_category_id) then
   raise exception 'Imported product was not linked to its exact legacy category';
@@ -85,7 +85,7 @@ begin
  update private.business_state_records
  set payload_public=payload_public||'{"name":"Renamed warehouse"}'::jsonb
  where business_id=v_business and collection='warehouses'
-  and legacy_id='aaaaaaaa-0000-4000-8000-000000000001';
+  and legacy_id='legacy-warehouse-1';
  v_result:=public.import_legacy_catalog_and_warehouses(v_business,'9f000000-0000-4000-8000-000000000002');
  if (v_result->>'conflicts')::integer<>1 then
   raise exception 'Changed warehouse source must be flagged, not overwritten: %',v_result;
