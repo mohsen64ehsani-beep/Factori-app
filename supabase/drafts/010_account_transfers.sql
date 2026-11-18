@@ -89,6 +89,7 @@ declare
  v_to_chart uuid;
  v_transfer_id uuid;
  v_existing_fingerprint text;
+ v_existing_currency text;
  v_fingerprint text;
  v_period record;
  v_out_id uuid;
@@ -104,6 +105,23 @@ begin
    or trunc(p_amount)<>p_amount or p_transfer_date is null
    or p_idempotency_key is null or length(p_idempotency_key) not between 8 and 120 then
   raise exception using errcode='22023',message='Invalid financial transfer data';
+ end if;
+
+ -- Resolve completed retries before requiring mutable account/mapping state.
+ -- A retry must remain idempotent even if an account was later deactivated or remapped.
+ perform pg_advisory_xact_lock(hashtextextended(p_business_id::text||':account-transfer:'||p_idempotency_key,0));
+ select id,request_fingerprint,currency_code
+ into v_transfer_id,v_existing_fingerprint,v_existing_currency
+ from public.account_transfers
+ where business_id=p_business_id and idempotency_key=p_idempotency_key;
+ if v_transfer_id is not null then
+  v_fingerprint:=md5(jsonb_build_array(p_business_id,p_from_account_id,p_to_account_id,
+    p_amount::numeric(20,0),v_existing_currency,p_transfer_date,
+    nullif(btrim(coalesce(p_note,'')),''),p_fiscal_period_id)::text);
+  if v_existing_fingerprint is distinct from v_fingerprint then
+   raise exception using errcode='23505',message='Idempotency key reused with different transfer data';
+  end if;
+  return v_transfer_id;
  end if;
 
  -- Stable row-lock ordering serializes transfers touching the same account pair.
@@ -143,16 +161,6 @@ begin
  v_fingerprint:=md5(jsonb_build_array(p_business_id,p_from_account_id,p_to_account_id,
    p_amount::numeric(20,0),v_from.currency_code,p_transfer_date,
    nullif(btrim(coalesce(p_note,'')),''),p_fiscal_period_id)::text);
- perform pg_advisory_xact_lock(hashtextextended(p_business_id::text||':account-transfer:'||p_idempotency_key,0));
- select id,request_fingerprint into v_transfer_id,v_existing_fingerprint
- from public.account_transfers where business_id=p_business_id and idempotency_key=p_idempotency_key;
- if v_transfer_id is not null then
-  if v_existing_fingerprint is distinct from v_fingerprint then
-   raise exception using errcode='23505',message='Idempotency key reused with different transfer data';
-  end if;
-  return v_transfer_id;
- end if;
-
  insert into public.account_transfers(business_id,from_account_id,to_account_id,amount,currency_code,
    transfer_date,note,idempotency_key,request_fingerprint,created_by)
  values(p_business_id,p_from_account_id,p_to_account_id,p_amount::numeric(20,0),v_from.currency_code,
