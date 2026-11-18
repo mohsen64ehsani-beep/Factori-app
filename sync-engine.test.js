@@ -1,0 +1,85 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  createSyncState, prepareSyncOperations, acknowledgeSyncResults,
+  applyPulledRecords, advanceSyncCursor
+} from './sync-engine.js';
+
+const ids = (() => { let n = 0; return () => '00000000-0000-4000-8000-' + String(++n).padStart(12, '0'); })();
+
+test('only explicitly write-enabled collections produce operations', () => {
+  const { operations } = prepareSyncOperations({
+    cust: [{ id: 1, n: 'A' }], pay: [{ id: 2, amount: 10 }],
+    purchases: [{ id: 3, amount: 20 }], accounts: [{ id: 4, name: 'Cash' }]
+  }, createSyncState(), ids);
+  assert.deepEqual(operations.map(op => op.collection), ['cust']);
+});
+
+test('new records use base version zero and stable legacy ids', () => {
+  const { operations } = prepareSyncOperations({ cust: [{ id: 17, n: 'مشتری' }] }, createSyncState(), ids);
+  assert.equal(operations[0].legacy_id, '17');
+  assert.equal(operations[0].base_version, 0);
+  assert.equal(operations[0].operation_type, 'upsert');
+});
+
+test('unchanged records are not re-enqueued after successful acknowledgement', () => {
+  const db = { cust: [{ id: 'c1', n: 'A' }] };
+  const first = prepareSyncOperations(db, createSyncState(), ids);
+  const ack = acknowledgeSyncResults(first.state, [{ operation_id: first.operations[0].operation_id, status: 'applied', version: 1 }]);
+  assert.equal(prepareSyncOperations(db, ack, ids).operations.length, 0);
+});
+
+test('pending operation identity and payload survive retries', () => {
+  const first = prepareSyncOperations({ prod: [{ id: 'p1', n: 'X' }] }, createSyncState(), ids);
+  const retry = prepareSyncOperations({ prod: [{ id: 'p1', n: 'Y' }] }, first.state, ids);
+  assert.equal(retry.operations[0].operation_id, first.operations[0].operation_id);
+  assert.deepEqual(retry.operations[0].payload, { id: 'p1', n: 'X' });
+});
+
+test('conflicts are quarantined and not silently overwritten', () => {
+  const first = prepareSyncOperations({ cust: [{ id: 'c1', n: 'local' }] }, createSyncState(), ids);
+  const state = acknowledgeSyncResults(first.state, [{ operation_id: first.operations[0].operation_id, status: 'conflict', current_version: 4 }]);
+  assert.equal(state.pending.length, 0);
+  assert.equal(state.conflicts.length, 1);
+  assert.equal(state.conflicts[0].current_version, 4);
+});
+
+test('pull applies remote records, preserves dirty local records, and handles tombstones', () => {
+  const initial = createSyncState();
+  const stateWithPending = {
+    ...initial,
+    pending: [{ operation_id: 'pending-1', collection: 'cust', legacy_id: 'local-1', operation_type: 'upsert', base_version: 0, payload: { id: 'local-1', n: 'dirty' } }]
+  };
+  const { db, state } = applyPulledRecords({
+    cust: [{ id: 'local-1', n: 'dirty' }, { id: 'old', n: 'remove' }]
+  }, stateWithPending, [
+    { collection: 'cust', legacy_id: 'local-1', version: 1, payload: { id: 'local-1', n: 'remote' } },
+    { collection: 'cust', legacy_id: 'old', version: 2, deleted_at: '2026-01-01T00:00:00Z' },
+    { collection: 'prod', legacy_id: 'p1', version: 1, payload: { id: 'p1', n: 'remote product' } }
+  ]);
+  assert.equal(db.cust[0].n, 'dirty');
+  assert.equal(db.cust.length, 1);
+  assert.equal(db.prod[0].n, 'remote product');
+  assert.equal(state.conflicts.length, 1);
+});
+
+test('primitive service/category values get stable object payloads', () => {
+  const { operations } = prepareSyncOperations({ categories: ['خوراکی'] }, createSyncState(), ids);
+  assert.equal(operations[0].legacy_id, 'value:خوراکی');
+  assert.deepEqual(operations[0].payload, { value: 'خوراکی' });
+});
+
+test('explicit tombstones delete only records with a known remote version', () => {
+  const state = { ...createSyncState(), versions: { cust: { c1: 3 } }, tombstones: [{ collection: 'cust', legacy_id: 'c1' }, { collection: 'cust', legacy_id: 'unknown' }] };
+  const { operations } = prepareSyncOperations({}, state, ids);
+  assert.equal(operations.length, 1);
+  assert.equal(operations[0].operation_type, 'delete');
+  assert.equal(operations[0].base_version, 3);
+});
+
+test('cursor cannot move backwards or exceed safe integer precision', () => {
+  const state = advanceSyncCursor(createSyncState(), 9);
+  assert.equal(state.cursor, 9);
+  assert.throws(() => advanceSyncCursor(state, 8));
+  assert.throws(() => advanceSyncCursor(state, Number.MAX_SAFE_INTEGER + 1));
+});
