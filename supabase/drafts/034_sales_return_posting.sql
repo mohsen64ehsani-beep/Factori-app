@@ -156,7 +156,10 @@ begin
   or p_idempotency_key is null or length(p_idempotency_key) not between 8 and 160 then
   raise exception using errcode='22023',message='Invalid sales return request';
  end if;
- if jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items)<1 or jsonb_array_length(p_items)>500 then
+ if jsonb_typeof(p_items)<>'array' then
+  raise exception using errcode='22023',message='Sales return lines must be a JSON array';
+ end if;
+ if jsonb_array_length(p_items)<1 or jsonb_array_length(p_items)>500 then
   raise exception using errcode='22023',message='Sales return must contain between one and 500 lines';
  end if;
 
