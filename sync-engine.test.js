@@ -50,15 +50,15 @@ test('pull applies remote records, preserves dirty local records, and handles to
     ...initial,
     pending: [{ operation_id: 'pending-1', collection: 'cust', legacy_id: 'local-1', operation_type: 'upsert', base_version: 0, payload: { id: 'local-1', n: 'dirty' } }]
   };
-  const { db, state } = applyPulledRecords({
-    cust: [{ id: 'local-1', n: 'dirty' }, { id: 'old', n: 'remove' }]
-  }, stateWithPending, [
+  const inputDb = { cust: [{ id: 'local-1', n: 'dirty' }, { id: 'old', n: 'remove' }] };
+  const { db, state } = applyPulledRecords(inputDb, stateWithPending, [
     { collection: 'cust', legacy_id: 'local-1', version: 1, payload: { id: 'local-1', n: 'remote' } },
     { collection: 'cust', legacy_id: 'old', version: 2, deleted_at: '2026-01-01T00:00:00Z' },
     { collection: 'prod', legacy_id: 'p1', version: 1, payload: { id: 'p1', n: 'remote product' } }
   ]);
   assert.equal(db.cust[0].n, 'dirty');
-  assert.equal(db.cust.length, 2, 'pull merge must not mutate the caller\'s local database');
+  assert.equal(db.cust.length, 1, 'remote tombstone should be applied to the returned database');
+  assert.equal(inputDb.cust.length, 2, 'pull merge must not mutate the caller\'s local database');
   assert.equal(stateWithPending.pending.length, 1, 'input sync state must remain immutable');
   assert.equal(db.prod[0].n, 'remote product');
   assert.equal(state.conflicts.length, 1);
