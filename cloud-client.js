@@ -178,13 +178,13 @@ const api = {
     let deviceId = '';
     try { deviceId = localStorage.getItem('factoori:sync-device:' + payload.businessId) || ''; } catch {}
     if (deviceId && await getDevicePrivateKey(deviceId)) {
-      return await this.proveSyncDevice({ businessId: payload.businessId, deviceId });
+      return await api.proveSyncDevice({ businessId: payload.businessId, deviceId });
     }
     if (deviceId) {
       await this.revokeSyncDevice(payload.businessId, deviceId);
     }
     const registered = await this.registerSyncDevice(payload);
-    return await this.proveSyncDevice({ businessId: payload.businessId, deviceId: registered.deviceId });
+    return await api.proveSyncDevice({ businessId: payload.businessId, deviceId: registered.deviceId });
   },
   async proveSyncDevice(payload) {
     if (!payload?.businessId || !payload?.deviceId) throw new Error('دستگاه برای تأیید مشخص نشده است.');
@@ -203,6 +203,28 @@ const api = {
     }));
     if (!proof?.verified) throw new Error('تأیید رمزنگاری‌شده دستگاه انجام نشد.');
     return proof;
+  },
+  getSyncDeviceId(businessId) {
+    try { return localStorage.getItem('factoori:sync-device:' + businessId) || ''; } catch { return ''; }
+  },
+  async syncPush(payload) {
+    if (!payload?.businessId || !payload?.deviceId || !Array.isArray(payload?.operations) || payload.operations.length > 100) {
+      throw new Error('بسته همگام‌سازی معتبر نیست؛ حداکثر ۱۰۰ عملیات مجاز است.');
+    }
+    return unwrap(await client.rpc('sync_push', {
+      p_business_id: payload.businessId,
+      p_device_id: payload.deviceId,
+      p_operations: payload.operations
+    }));
+  },
+  async syncPull(payload) {
+    if (!payload?.businessId || !payload?.deviceId) throw new Error('کسب‌وکار یا دستگاه همگام‌سازی مشخص نشده است.');
+    return unwrap(await client.rpc('sync_pull', {
+      p_business_id: payload.businessId,
+      p_device_id: payload.deviceId,
+      p_since_revision: Math.max(0, Number(payload.sinceRevision) || 0),
+      p_limit: Math.min(500, Math.max(1, Number(payload.limit) || 200))
+    }));
   },
   async revokeSyncDevice(businessId, deviceId) {
     const result = unwrap(await client.rpc('revoke_sync_device', {
