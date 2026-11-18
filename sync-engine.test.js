@@ -436,3 +436,36 @@ test('cloud startup always clears stale selection when schema readiness is false
   assert.match(source, /cloudSchemaReady=await api\.getClientHealth\(\);await loadCloudBusinesses\(\)/);
   assert.match(source, /if\(!api\|\|!cloudSession\?\.user\?\.id\|\|!cloudSchemaReady\)\{\s*cloudBusinesses=\[\];\s*cloudActiveBusinessId='';\s*try\{localStorage\.removeItem\('factoori:active-business'\)/);
 });
+
+
+test('cloud client RPC argument names exist in the checked-in SQL contracts', async () => {
+  const { readFile, readdir } = await import('node:fs/promises');
+  const client = await readFile(new URL('./cloud-client.js', import.meta.url), 'utf8');
+  const draftFiles = await readdir(new URL('./supabase/drafts/', import.meta.url));
+  const sql = (await Promise.all(draftFiles.filter(name => name.endsWith('.sql'))
+    .map(name => readFile(new URL('./supabase/drafts/' + name, import.meta.url), 'utf8')))).join('\\n');
+  const used = new Map();
+  for (const match of client.matchAll(/client\\.rpc\\('([^']+)'/g)) {
+    const name = match[1];
+    const start = client.indexOf('{', match.index + match[0].length);
+    if (start < 0) continue;
+    let depth = 0, end = -1, quote = '';
+    for (let i = start; i < client.length; i++) {
+      const ch = client[i];
+      if (quote) { if (ch === quote && client[i - 1] !== '\\\\') quote = ''; continue; }
+      if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
+      if (ch === '{') depth++;
+      if (ch === '}' && --depth === 0) { end = i; break; }
+    }
+    if (end < 0) continue;
+    const keys = [...client.slice(start, end + 1).matchAll(/\\b(p_[a-z0-9_]+)\\s*:/g)].map(item => item[1]);
+    if (!used.has(name)) used.set(name, new Set());
+    keys.forEach(key => used.get(name).add(key));
+  }
+  for (const [name, keys] of used) {
+    const signature = sql.match(new RegExp('create\\\\s+or\\\\s+replace\\\\s+function\\\\s+public\\\\.' + name + '\\\\s*\\\\(([\\\\s\\\\S]*?)\\\\)\\\\s*returns', 'i'));
+    assert.ok(signature, 'SQL function is missing: ' + name);
+    const accepted = new Set([...signature[1].matchAll(/\\b(p_[a-z0-9_]+)\\s+[a-z]/gi)].map(item => item[1]));
+    assert.deepEqual([...keys].filter(key => !accepted.has(key)), [], 'unknown RPC args for ' + name);
+  }
+});
