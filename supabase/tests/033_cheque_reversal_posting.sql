@@ -75,6 +75,12 @@ begin
  if v_count<>2 or v_debit<>800 or v_credit<>800 then
   raise exception 'Received cheque reversal journal must balance';
  end if;
+ if not exists(
+  select 1 from private.financial_transaction_reversals r
+  join public.journal_entries rev on rev.business_id=r.business_id and rev.id=r.reversal_journal_entry_id
+  where r.business_id=v_business and r.original_transaction_id=v_original_tx
+   and rev.reverses_entry_id=r.original_journal_entry_id
+ ) then raise exception 'Reversal journal must link to its original journal'; end if;
  if not exists(select 1 from public.contact_ledger_entries where business_id=v_business
   and transaction_id=v_reversal_tx and debit=800 and credit=0) then
   raise exception 'Received cheque reversal must debit customer ledger';
