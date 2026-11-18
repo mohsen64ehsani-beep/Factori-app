@@ -1,0 +1,39 @@
+name: Build Factoori Web Accounting Plugin
+on:
+  push:
+    branches:
+      - work/factoori-shared-db-integration
+    paths:
+      - "wordpress-plugin/factoori-web-accounting/**"
+      - ".github/workflows/build-factoori-web-plugin.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate plugin structure
+        run: |
+          test -f wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php
+          test -f wordpress-plugin/factoori-web-accounting/assets/app.js
+          test -f wordpress-plugin/factoori-web-accounting/assets/app.css
+          test -f wordpress-plugin/factoori-web-accounting/templates/fullscreen.php
+          php -l wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php
+          php -l wordpress-plugin/factoori-web-accounting/templates/fullscreen.php
+          node --check wordpress-plugin/factoori-web-accounting/assets/app.js
+      - name: Build installable ZIP
+        run: |
+          mkdir -p dist
+          cd wordpress-plugin
+          zip -r ../dist/factoori-web-accounting-0.1.0.zip factoori-web-accounting
+      - name: Upload plugin ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: factoori-web-accounting-0.1.0
+          path: dist/factoori-web-accounting-0.1.0.zip
+          if-no-files-found: error
+          retention-days: 30
