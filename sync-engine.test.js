@@ -520,9 +520,17 @@ test('permission-version reset redacts stale private cache and quarantines pendi
     },
     { reset_required: true }
   );
-  const retry = prepareSyncOperations(unsynced.db, unsynced.state, ids);
+  const replayed = applySyncPullPage(unsynced.db, unsynced.state, {
+    records: [{ collection: 'prod', legacy_id: 'p2', version: 2, revision: 1,
+      change_type: 'upsert', deleted_at: null, payload: { id: 'p2', name: 'remote version' } }],
+    next_cursor: 1, has_more: false, reset_required: false
+  });
+  assert.equal(replayed.db.prod[0].name, 'edited locally',
+    'full permission-reset pull must not overwrite a locally dirty row');
+  const retry = prepareSyncOperations(replayed.db, replayed.state, ids);
   assert.equal(retry.operations.length, 1, 'public edits must remain eligible for retry after permission reset');
   assert.deepEqual(retry.operations[0].payload, { id: 'p2', name: 'edited locally' });
+  assert.equal(retry.state.permissionResetDirty.length, 0, 'the new pending operation replaces the reset dirty marker');
 });
 
 
