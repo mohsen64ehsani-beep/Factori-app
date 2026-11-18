@@ -75,7 +75,7 @@ begin
   v_credit_total:=v_credit_total+v_credit;
   v_line_count:=v_line_count+1;
   v_canonical_lines:=v_canonical_lines||jsonb_build_array(jsonb_build_object(
-    'account_id',v_account_id,'contact_id',v_contact_id,'debit',v_debit,'credit',v_credit,
+    'account_id',v_account_id,'contact_id',v_contact_id,'debit',v_debit::numeric(20,0),'credit',v_credit::numeric(20,0),
     'description',nullif(btrim(coalesce(v_line->>'description','')),'')));
  end loop;
  if v_line_count<2 or v_debit_total<=0 or v_debit_total<>v_credit_total then
@@ -175,7 +175,7 @@ begin
   if v_product_id is null or v_qty<=0 or v_qty>1000000000 or round(v_qty,4)<>v_qty then
    raise exception using errcode='22023',message='Invalid transfer product or quantity';
   end if;
-  v_canonical_items:=v_canonical_items||jsonb_build_array(jsonb_build_object('product_id',v_product_id,'quantity',v_qty));
+  v_canonical_items:=v_canonical_items||jsonb_build_array(jsonb_build_object('product_id',v_product_id,'quantity',v_qty::numeric(20,4)));
  end loop;
  v_fingerprint:=md5(jsonb_build_array(p_business_id,p_from_warehouse_id,p_to_warehouse_id,p_transfer_date,
    nullif(btrim(coalesce(p_note,'')),''),v_canonical_items)::text);
