@@ -122,7 +122,8 @@ jobs:
             036_purchase_return_posting.sql \
             037_web_catalog_crud.sql \
             038_rls_initplan_optimization.sql \
-            039_bidirectional_master_sync.sql
+            039_bidirectional_master_sync.sql \
+            040_product_sync_fields.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
@@ -206,7 +207,8 @@ jobs:
             036_purchase_return_posting.sql \
             037_web_catalog_crud.sql \
             038_rls_initplan_optimization.sql \
-            039_bidirectional_master_sync.sql
+            039_bidirectional_master_sync.sql \
+            040_product_sync_fields.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
