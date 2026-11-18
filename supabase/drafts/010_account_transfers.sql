@@ -120,16 +120,16 @@ begin
   raise exception using errcode='22023',message='Transfers between different currencies require an exchange workflow';
  end if;
  select chart_account_id into v_from_chart from public.financial_account_ledger_map
- where business_id=p_business_id and financial_account_id=p_from_account_id;
+ where business_id=p_business_id and financial_account_id=p_from_account_id for share;
  select chart_account_id into v_to_chart from public.financial_account_ledger_map
- where business_id=p_business_id and financial_account_id=p_to_account_id;
+ where business_id=p_business_id and financial_account_id=p_to_account_id for share;
  if v_from_chart is null or v_to_chart is null then
   raise exception using errcode='55000',message='Map both financial accounts to active asset ledger accounts before transferring';
  end if;
  if not exists(select 1 from public.chart_of_accounts where business_id=p_business_id
-   and id=v_from_chart and account_class='asset' and is_active and allow_posting)
+   and id=v_from_chart and account_class='asset' and is_active and allow_posting for share)
    or not exists(select 1 from public.chart_of_accounts where business_id=p_business_id
-   and id=v_to_chart and account_class='asset' and is_active and allow_posting) then
+   and id=v_to_chart and account_class='asset' and is_active and allow_posting for share) then
   raise exception using errcode='55000',message='Financial account ledger mapping is no longer valid';
  end if;
  if p_fiscal_period_id is not null then
