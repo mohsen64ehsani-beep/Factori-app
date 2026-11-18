@@ -1,6 +1,6 @@
 name: Build Android APK
-# Trigger dedicated 1.2.46 build
-# Factori 1.2.46: Capacitor 8 migration, Node 22 / Java 21, Android API 24+
+# Trigger dedicated 1.2.47 build
+# Factori 1.2.47: Capacitor 8 migration, Node 22 / Java 21, Android API 24+
 
 concurrency:
   group: factoori-android-build-${{ github.ref }}
@@ -55,13 +55,13 @@ jobs:
       - name: Set visible app version
         run: |
           set -euo pipefail
-          sed -i 's/__FACTOORI_VERSION__/1.2.46/g' www/index.html
+          sed -i 's/__FACTOORI_VERSION__/1.2.47/g' www/index.html
           if grep -Fq '__FACTOORI_VERSION__' www/index.html; then
             echo "::error::Visible app version placeholder was not replaced."
             exit 1
           fi
-          grep -Fq 'نسخه 1.2.46' www/index.html
-          echo "Splash version label verified: 1.2.46"
+          grep -Fq 'نسخه 1.2.47' www/index.html
+          echo "Splash version label verified: 1.2.47"
 
       - name: Verify requested homepage promo is in the active app entry
         run: |
@@ -118,12 +118,12 @@ jobs:
 
       - name: Set Android update version
         run: |
-          sed -i -E 's/versionCode [0-9]+/versionCode 48/' android/app/build.gradle
-          sed -i -E 's/versionName "[^"]+"/versionName "1.2.46"/' android/app/build.gradle
+          sed -i -E 's/versionCode [0-9]+/versionCode 49/' android/app/build.gradle
+          sed -i -E 's/versionName "[^"]+"/versionName "1.2.47"/' android/app/build.gradle
           grep -n -E 'versionCode|versionName' android/app/build.gradle
-          grep -q 'versionCode 48' android/app/build.gradle
-          grep -q 'versionName "1.2.46"' android/app/build.gradle
-          echo "Android update version verified: 1.2.46 (48)"
+          grep -q 'versionCode 49' android/app/build.gradle
+          grep -q 'versionName "1.2.47"' android/app/build.gradle
+          echo "Android update version verified: 1.2.47 (48)"
 
       - name: Allow fingerprint permission only
         run: |
@@ -233,25 +233,25 @@ jobs:
           MIN_SDK=$("$AAPT" dump badging "$APK" | sed -n "s/^sdkVersion:'\\([0-9]*\\)'.*/\\1/p" | head -n1)
           echo "APK minimum Android SDK: $MIN_SDK"
           test "$MIN_SDK" = "24" || { echo "::error::APK minimum SDK is not Android 7 (API 24)."; exit 1; }
-          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.46-release.apk"
-          sha256sum "app/build/outputs/apk/release/Factori-v1.2.46-release.apk"
+          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.47-release.apk"
+          sha256sum "app/build/outputs/apk/release/Factori-v1.2.47-release.apk"
           echo "Official release APK signature and Android 7 minimum verified."
 
       - name: Package exact source snapshot
         run: |
           set -euo pipefail
-          git archive --format=zip --output="$RUNNER_TEMP/factoori-v1.2.46-source.zip" HEAD
-          test -s "$RUNNER_TEMP/factoori-v1.2.46-source.zip"
-          sha256sum "$RUNNER_TEMP/factoori-v1.2.46-source.zip"
+          git archive --format=zip --output="$RUNNER_TEMP/factoori-v1.2.47-source.zip" HEAD
+          test -s "$RUNNER_TEMP/factoori-v1.2.47-source.zip"
+          sha256sum "$RUNNER_TEMP/factoori-v1.2.47-source.zip"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factoori-source-v1.2.46
-          path: ${{ runner.temp }}/factoori-v1.2.46-source.zip
+          name: factoori-source-v1.2.47
+          path: ${{ runner.temp }}/factoori-v1.2.47-source.zip
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factori-android-v1.2.46-release
-          path: android/app/build/outputs/apk/release/Factori-v1.2.46-release.apk
+          name: factori-android-v1.2.47-release
+          path: android/app/build/outputs/apk/release/Factori-v1.2.47-release.apk
           if-no-files-found: error
