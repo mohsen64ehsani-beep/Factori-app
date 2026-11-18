@@ -85,7 +85,7 @@ begin
  select st.id,md5(jsonb_build_array(st.business_id,st.from_warehouse_id,st.to_warehouse_id,st.transfer_date,
    nullif(btrim(coalesce(st.note,'')),''),coalesce((select jsonb_agg(
      jsonb_build_object('product_id',si.product_id,'quantity',si.quantity) order by si.line_order
-   ) from public.stock_transfer_items si where si.business_id=st.business_id and si.transfer_id=st.id),'[]'::jsonb)))
+   ) from public.stock_transfer_items si where si.business_id=st.business_id and si.transfer_id=st.id),'[]'::jsonb))::text)
  into v_existing_id,v_existing_fingerprint
  from public.stock_transfers st
  where st.business_id=p_business_id and st.idempotency_key=p_idempotency_key;
