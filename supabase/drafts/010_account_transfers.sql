@@ -171,15 +171,17 @@ begin
    p_idempotency_key||':in','transfer:'||v_transfer_id::text||':in',v_user) returning id into v_in_id;
 
  insert into public.journal_entries(business_id,entry_date,fiscal_period_id,source_type,source_id,
-   description,status,idempotency_key,posted_at,posted_by,created_by)
+   description,status,idempotency_key,created_by)
  values(p_business_id,p_transfer_date,p_fiscal_period_id,'financial_transaction',v_transfer_id,
-   coalesce(nullif(btrim(coalesce(p_note,'')),''),'انتقال بین حساب‌ها'),'posted',
-   'account-transfer:'||p_idempotency_key,now(),v_user,v_user)
+   coalesce(nullif(btrim(coalesce(p_note,'')),''),'انتقال بین حساب‌ها'),'draft',
+   'account-transfer:'||p_idempotency_key,v_user)
  returning id into v_journal_id;
  insert into public.journal_lines(business_id,journal_entry_id,account_id,debit,credit,description,line_order)
  values
   (p_business_id,v_journal_id,v_to_chart,p_amount::numeric(20,0),0,'افزایش موجودی حساب مقصد',1),
   (p_business_id,v_journal_id,v_from_chart,0,p_amount::numeric(20,0),'کاهش موجودی حساب مبدأ',2);
+ update public.journal_entries set status='posted',posted_at=now(),posted_by=v_user,version=version+1
+ where business_id=p_business_id and id=v_journal_id;
  return v_transfer_id;
 end;
 $$;
