@@ -280,7 +280,13 @@ const api = {
     // A business-not-found / authorization error proves the function exists;
     // PostgREST's PGRST202 means the function itself is not exposed/found.
     const probeBusinessId = '00000000-0000-0000-0000-000000000000';
-    const [entitlementProbe, createBusinessProbe, draftProbe] = await Promise.all([
+    const publicKeyProbe = {
+      kty: 'EC', crv: 'P-256',
+      x: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      y: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    };
+    const [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
+      challengeProbe, pushProbe, pullProbe] = await Promise.all([
       client.rpc('get_business_entitlements', { p_business_id: probeBusinessId }),
       // Empty name is intentionally invalid; the function must reject it without creating a row.
       client.rpc('create_business', { p_name: '' }),
@@ -289,10 +295,28 @@ const api = {
         p_business_id: probeBusinessId,
         p_document_type: 'goods_sale',
         p_items: []
+      }),
+      client.rpc('register_sync_device_secure', {
+        p_business_id: probeBusinessId, p_device_name: 'health-probe',
+        p_platform: 'web', p_device_public_key: publicKeyProbe
+      }),
+      client.rpc('create_sync_device_challenge', {
+        p_business_id: probeBusinessId, p_device_id: probeBusinessId
+      }),
+      client.rpc('sync_push', { p_business_id: probeBusinessId, p_device_id: probeBusinessId, p_operations: [] }),
+      client.rpc('sync_pull', {
+        p_business_id: probeBusinessId, p_device_id: probeBusinessId, p_since_revision: 0, p_limit: 1
       })
     ]);
-    return [entitlementProbe, createBusinessProbe, draftProbe]
-      .every(result => result.error?.code !== 'PGRST202');
+    const rpcReady = [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
+      challengeProbe, pushProbe, pullProbe].every(result => result.error?.code !== 'PGRST202');
+    if (!rpcReady) return false;
+
+    // A 400 response for an empty body means the function is deployed and correctly rejects
+    // malformed input. A 404/relay error means device proof is not ready on this project.
+    const proofProbe = await client.functions.invoke('prove-sync-device', { body: {} });
+    const proofStatus = proofProbe.error?.context?.status;
+    return !proofProbe.error || proofStatus === 400;
   }
 };
 
