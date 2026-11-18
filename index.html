@@ -186,19 +186,45 @@ esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 sum=a=>a.reduce((x,y)=>x+num(y),0);
 const K='db:v2';
 let cloudSession=null,cloudBusinesses=[],cloudActiveBusinessId='',cloudSchemaReady=false;
+let localDbBusinessId='';
+const BUSINESS_DB_PREFIX='db:v2:business:';
+const LEGACY_ADOPTION_MARKER='factoori:db-v2:legacy-adopted';
 try{cloudActiveBusinessId=localStorage.getItem('factoori:active-business')||''}catch(e){}
 let appTheme='light';try{appTheme=localStorage.getItem('factoori-theme')||'light'}catch(e){}if(!['light','dark'].includes(appTheme))appTheme='light';document.documentElement.setAttribute('data-theme',appTheme);
 function toggleAppTheme(){appTheme=appTheme==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',appTheme);try{localStorage.setItem('factoori-theme',appTheme)}catch(e){}render();}
 let db={cust:[],prod:[],inv:[],pay:[],debt:[],creditors:[],creditorPayments:[],expenses:[],services:[],serviceInv:[],categories:[],stockMoves:[],serviceSeq:2000,seq:1000,cu:'ریال',sn:'',sp:'',ad:''};
 try{Object.assign(db,JSON.parse(localStorage.getItem(K))||{})}catch(e){}
 db.debt=Array.isArray(db.debt)?db.debt:[];db.creditors=Array.isArray(db.creditors)?db.creditors:[];db.creditorPayments=Array.isArray(db.creditorPayments)?db.creditorPayments:[];db.expenses=Array.isArray(db.expenses)?db.expenses:[];db.services=Array.isArray(db.services)?db.services:[];db.serviceInv=Array.isArray(db.serviceInv)?db.serviceInv:[];db.categories=Array.isArray(db.categories)?db.categories:[];db.stockMoves=Array.isArray(db.stockMoves)?db.stockMoves:[];['suppliers','purchases','supplierPayments','returns','wastage','warehouses','transfers','accounts','moneytransfers','otherincome','opening','fiscal','duedates'].forEach(k=>{db[k]=Array.isArray(db[k])?db[k]:[]});db.advancedSettings=db.advancedSettings&&typeof db.advancedSettings==='object'?db.advancedSettings:{};db.warehouseStocks=Array.isArray(db.warehouseStocks)?db.warehouseStocks:[];db.smsHistory=Array.isArray(db.smsHistory)?db.smsHistory:[];db.bankAccounts=Array.isArray(db.bankAccounts)?db.bankAccounts:[];db.serviceSeq=Number(db.serviceSeq)||2000;
+const EMPTY_BUSINESS_DB_JSON=JSON.stringify(db);
+function activateBusinessLocalDatabase(nextId){
+ if(!nextId||!cloudBusinesses.some(x=>x.id===nextId))throw new Error('کسب‌وکار انتخاب‌شده معتبر نیست');
+ if(localDbBusinessId===nextId)return false;
+ if(localDbBusinessId){try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار قبلی ناموفق بود')}}
+ const targetKey=BUSINESS_DB_PREFIX+nextId;
+ let next=null;
+ try{const raw=localStorage.getItem(targetKey);if(raw)next=JSON.parse(raw)}catch(e){throw new Error('اطلاعات کسب‌وکار قابل خواندن نیست')}
+ if(!next){
+  let legacy=null,marker=null;try{legacy=localStorage.getItem(K);marker=localStorage.getItem(LEGACY_ADOPTION_MARKER)}catch(e){}
+  if(legacy&&!marker&&confirm('اطلاعات قدیمی این برنامه پیدا شد. آیا می‌خواهید آن‌ها به کسب‌وکار انتخاب‌شده منتقل شوند؟ این انتقال فقط یک‌بار انجام می‌شود.')){
+   const claim={businessId:nextId,adoptedAt:new Date().toISOString(),source:K,state:'pending'};
+   try{localStorage.setItem(LEGACY_ADOPTION_MARKER,JSON.stringify(claim));localStorage.setItem(targetKey,legacy);localStorage.setItem(LEGACY_ADOPTION_MARKER,JSON.stringify({...claim,state:'committed'}));next=JSON.parse(legacy)}
+   catch(error){try{if(!localStorage.getItem(targetKey))localStorage.removeItem(LEGACY_ADOPTION_MARKER)}catch(_){}throw new Error('انتقال اطلاعات قدیمی ناموفق بود؛ نسخه اصلی اطلاعات حفظ شده است')}
+  }
+ }
+ if(!next)next=JSON.parse(EMPTY_BUSINESS_DB_JSON);
+ db=next;normalizeDemoCollections();localDbBusinessId=nextId;realDb=db;return true;
+}
+function clearLocalBusinessSelection(){
+ if(localDbBusinessId){try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار ناموفق بود')}}
+ localDbBusinessId='';db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;
+}
 // Initial configurable Freemium limits; values can be tuned without changing billing integration.
 const FREE_DAILY_INVOICE_LIMIT=3,FREE_CUSTOMER_LIMIT=5,FREE_PRODUCT_LIMIT=5,FREE_INVOICE_ITEMS=2;
 const invoiceIssuedDay=i=>String(i.createdAt||i.dt||'').slice(0,10);
 const invoicesIssuedToday=()=>[...db.inv,...db.serviceInv].filter(i=>invoiceIssuedDay(i)===today()).length;
 const canCreateInvoice=()=>{if(licenseActive)return true;const left=FREE_DAILY_INVOICE_LIMIT-invoicesIssuedToday();if(left<=0){toast('سهمیه رایگان امروز تکمیل شده است؛ روزانه فقط ۳ فاکتور می‌توانید صادر کنید.');return false}return true};
 const freeInvoiceUsage=()=>Math.min(FREE_DAILY_INVOICE_LIMIT,invoicesIssuedToday());
-const save=()=>{if(demoMode)return;try{localStorage.setItem(K,JSON.stringify(db))}catch(e){toast('حافظه پر است')}},
+const save=()=>{if(demoMode)return;try{localStorage.setItem(localDbBusinessId?BUSINESS_DB_PREFIX+localDbBusinessId:K,JSON.stringify(db))}catch(e){toast('حافظه پر است')}},
 uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6),
 money=n=>fa(n)+' '+db.cu,
 dstr=d=>d?new Date(d).toLocaleDateString('fa-IR-u-ca-persian',{year:'numeric',month:'long',day:'numeric',timeZone:'UTC'}):'',
@@ -324,6 +350,9 @@ async function loadCloudBusinesses(){
  if(!cloudBusinesses.some(x=>x.id===cloudActiveBusinessId)){
   cloudActiveBusinessId='';
   try{localStorage.removeItem('factoori:active-business')}catch(e){}
+ }
+ if(cloudActiveBusinessId&&!demoMode){
+  try{activateBusinessLocalDatabase(cloudActiveBusinessId)}catch(e){cloudActiveBusinessId='';try{localStorage.removeItem('factoori:active-business')}catch(_){}console.warn('[Factoori local business database]',e)}
  }
 }
 async function initCloudSession(){
@@ -563,8 +592,8 @@ cloudLogin:async()=>{const api=window.FactooriCloud,email=$('cloudEmail')?.value
 cloudRegister:async()=>{const api=window.FactooriCloud,email=$('cloudEmail')?.value||'',password=$('cloudPassword')?.value||'',name=$('cloudDisplayName')?.value||'';if(!name.trim()||!email.trim()||password.length<8)return toast('نام، ایمیل و رمز حداقل ۸ کاراکتری را وارد کنید');try{cloudLoading=true;const result=await api.signUp(email,password,name);cloudSession=result.session||await api.getSession();if(cloudSession){cloudSchemaReady=await api.getClientHealth();if(cloudSchemaReady)await loadCloudBusinesses();$('ov').className='';render();toast(cloudSchemaReady?'حساب ساخته شد؛ اکنون کسب‌وکار خود را ایجاد کنید':'حساب ساخته شد؛ فضای مشترک پس از فعال‌سازی دیتابیس آماده می‌شود')}else toast('حساب ساخته شد؛ برای تأیید ایمیل، صندوق ورودی خود را بررسی کنید')}catch(e){toast('ثبت‌نام ناموفق: '+(e.message||'خطای ارتباط'))}finally{cloudLoading=false}},
 cloudLogout:async()=>{if(!confirm('از حساب مشترک خارج شوید؟'))return;try{await window.FactooriCloud.signOut();cloudSession=null;cloudBusinesses=[];cloudActiveBusinessId='';cloudSchemaReady=false;try{localStorage.removeItem('factoori:active-business')}catch(e){}render();toast('از حساب مشترک خارج شدید')}catch(e){toast('خروج ناموفق: '+(e.message||''))}},
 cloudRefresh:async()=>{try{cloudSession=await window.FactooriCloud.getSession();cloudSchemaReady=!!cloudSession&&await window.FactooriCloud.getClientHealth();await loadCloudBusinesses();render();toast(cloudSchemaReady?'فهرست کسب‌وکارها به‌روز شد':'ساختار دیتابیس مشترک هنوز فعال نشده است')}catch(e){toast('به‌روزرسانی ناموفق: '+(e.message||''))}},
-cloudCreateBusiness:async()=>{if(!cloudSchemaReady)return toast('دیتابیس مشترک هنوز فعال نشده است');const name=$('cloudBusinessName')?.value||'';if(!name.trim())return toast('نام کسب‌وکار را وارد کنید');try{const id=await window.FactooriCloud.createBusiness(name);await loadCloudBusinesses();if(typeof id==='string'&&cloudBusinesses.some(x=>x.id===id))cloudActiveBusinessId=id;else if(cloudBusinesses.length)cloudActiveBusinessId=cloudBusinesses[0].id;try{localStorage.setItem('factoori:active-business',cloudActiveBusinessId)}catch(e){}render();toast('کسب‌وکار مشترک ساخته شد')}catch(e){toast('ساخت کسب‌وکار ناموفق: '+(e.message||''))}},
-cloudSelectBusiness:id=>{if(!cloudSchemaReady)return;if(id&&!cloudBusinesses.some(x=>x.id===id))return toast('این کسب‌وکار در فهرست عضویت‌های شما نیست');cloudActiveBusinessId=id||'';try{if(cloudActiveBusinessId)localStorage.setItem('factoori:active-business',cloudActiveBusinessId);else localStorage.removeItem('factoori:active-business')}catch(e){}render()},
+cloudCreateBusiness:async()=>{if(!cloudSchemaReady)return toast('دیتابیس مشترک هنوز فعال نشده است');const name=$('cloudBusinessName')?.value||'';if(!name.trim())return toast('نام کسب‌وکار را وارد کنید');try{const id=await window.FactooriCloud.createBusiness(name);await loadCloudBusinesses();if(typeof id==='string'&&cloudBusinesses.some(x=>x.id===id)){activateBusinessLocalDatabase(id);cloudActiveBusinessId=id;try{localStorage.setItem('factoori:active-business',id)}catch(e){}}else{cloudActiveBusinessId='';try{localStorage.removeItem('factoori:active-business')}catch(e){}}render();toast('کسب‌وکار مشترک ساخته شد')}catch(e){toast('ساخت کسب‌وکار ناموفق: '+(e.message||''))}},
+cloudSelectBusiness:id=>{if(!cloudSchemaReady)return;if(id&&!cloudBusinesses.some(x=>x.id===id))return toast('این کسب‌وکار در فهرست عضویت‌های شما نیست');try{if(id)activateBusinessLocalDatabase(id);else clearLocalBusinessSelection();cloudActiveBusinessId=id||'';try{if(cloudActiveBusinessId)localStorage.setItem('factoori:active-business',cloudActiveBusinessId);else localStorage.removeItem('factoori:active-business')}catch(e){}render()}catch(e){toast(e.message||'تغییر کسب‌وکار ناموفق بود')}},
 
 buyoptions:()=>{try{localStorage.setItem('factoori:welcome:1.2.36','1')}catch(e){}$('firstWelcome')?.remove();$('ov').innerHTML=`<div class="picker-shell"><div class="picker-top"><div class="r"><b style="flex:2">خرید نسخه کامل فاکتوری</b><button class="b s" data-a="cls">بستن</button></div><p class="page-note">روش خرید دلخواهت را انتخاب کن. اتصال نهایی فروشگاه‌ها در به‌روزرسانی بعدی فعال می‌شود.</p></div><div class="c buy-choices"><button data-a="buysoon">🛍️ خرید از مایکت<small>به‌زودی فعال می‌شود</small></button><button data-a="buysoon">📱 خرید از کافه‌بازار<small>به‌زودی فعال می‌شود</small></button><button data-a="buysite">🌐 خرید از سایت و پشتیبانی<small>راهنمای خرید و ارتباط با پشتیبانی</small></button></div></div>`;$('ov').className='on'},
 buysoon:()=>toast('اتصال خرید این فروشگاه در به‌روزرسانی بعدی فعال می‌شود.'),
