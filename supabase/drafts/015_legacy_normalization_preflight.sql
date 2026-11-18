@@ -33,8 +33,13 @@ begin
     select count(*),
       count(*) filter(where r.deleted_at is not null),
       count(*) filter(where r.deleted_at is null and jsonb_typeof(r.payload_public)<>'object'),
-      count(*) filter(where r.deleted_at is null and coalesce(r.payload_public->>'id','')=''),
-      count(*) filter(where r.deleted_at is null and r.payload_public->>'id' is distinct from r.legacy_id)
+      count(*) filter(where r.deleted_at is null and case
+        when v_collection in ('categories','services') then coalesce(r.payload_public->>'value','')=''
+        else coalesce(r.payload_public->>'id','')='' end),
+      count(*) filter(where r.deleted_at is null and case
+        when v_collection in ('categories','services')
+          then ('value:'||coalesce(r.payload_public->>'value','')) is distinct from r.legacy_id
+        else r.payload_public->>'id' is distinct from r.legacy_id end)
     into v_total,v_deleted,v_bad_shape,v_missing_id,v_id_mismatch
     from private.business_state_records r
     where r.business_id=p_business_id and r.collection=v_collection;
@@ -72,9 +77,12 @@ begin
     'safe_to_import',v_orphan_customer=0 and v_orphan_product=0 and not exists(
       select 1 from private.business_state_records r
       where r.business_id=p_business_id and r.collection=any(v_supported) and r.deleted_at is null
-        and (coalesce(r.payload_public->>'id','')=''
-          or r.payload_public->>'id' is distinct from r.legacy_id
-          or jsonb_typeof(r.payload_public)<>'object')
+        and (jsonb_typeof(r.payload_public)<>'object'
+          or case when r.collection in ('categories','services') then
+            coalesce(r.payload_public->>'value','')=''
+            or ('value:'||coalesce(r.payload_public->>'value','')) is distinct from r.legacy_id
+          else coalesce(r.payload_public->>'id','')=''
+            or r.payload_public->>'id' is distinct from r.legacy_id end)
     )
   );
 end;
