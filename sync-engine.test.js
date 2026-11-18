@@ -583,7 +583,7 @@ test('cloud account switch and membership failures fail closed before rendering 
   assert.match(source, /if\(accountChanged\)\{\s*cloudBusinesses=\[\];cloudActiveBusinessId='';\s*try\{localStorage\.removeItem\('factoori:active-business'\)\}catch\(e\)\{\}\s*try\{isolateLocalDataForCloudSession\(\)\}\s*catch\(e\)\{cloudSession=null;cloudSchemaReady=false;throw e\}/);
   assert.match(source, /catch\(error\)\{\s*cloudBusinesses=\[\];cloudActiveBusinessId='';\s*try\{localStorage\.removeItem\('factoori:active-business'\)\}catch\(e\)\{\}\s*if\(!demoMode\)resetCloudBusinessContext\(\)/);
   assert.match(source, /function isolateLocalDataForCloudSession\(\)[\s\S]*?localDbBusinessId='';[\s\S]*?businessScopedMode=true;db=JSON\.parse\(EMPTY_BUSINESS_DB_JSON\)/);
-  assert.match(source, /function resetCloudBusinessContext\(\)[\s\S]*?localDbBusinessId='';businessScopedMode=true;db=JSON\.parse\(EMPTY_BUSINESS_DB_JSON\)/);
+  assert.match(source, /function resetCloudBusinessContext\(\)[\s\S]*?cloudSession=null;cloudSchemaReady=false;cancelBusinessSync\(\);return false/);
   assert.match(source, /\}else if\(!demoMode\)\{\s*resetCloudBusinessContext\(\);\s*\}/);
 
 });
