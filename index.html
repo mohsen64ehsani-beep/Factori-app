@@ -373,10 +373,14 @@ async function runScheduledBusinessSync(){
    db=result.database;realDb=db;dbRevision++;
    try{
     localStorage.setItem(BUSINESS_DB_PREFIX+businessId,JSON.stringify(db));
-    window.FactooriSyncRuntime.acknowledgeBusinessDatabaseApplied?.({
-     businessId,database:db,syncState:result.syncState
-    }).catch(error=>console.warn('[Factoori sync checkpoint baseline]',error));
    }catch(e){syncStatus='error';syncError='ذخیره نسخه همگام‌شده در حافظه دستگاه ناموفق بود'}
+   if(syncStatus!=='error'){
+    try{
+     await window.FactooriSyncRuntime.acknowledgeBusinessDatabaseApplied?.({
+      businessId,database:db,syncState:result.syncState
+     });
+    }catch(e){syncStatus='error';syncError='ثبت نسخه پشتیبان همگام‌سازی ناموفق بود';console.warn('[Factoori sync checkpoint baseline]',e)}
+   }
    if(syncStatus!=='error')syncStatus=result.hasMore?'partial':'synced';
    if(result.hasMore)syncPending=true;
    render();
