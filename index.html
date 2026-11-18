@@ -312,11 +312,18 @@ function showCloudAuth(mode='login'){
 let cloudAuthMode='login',cloudAuthSubscription=null,cloudLoading=false;
 async function loadCloudBusinesses(){
  const api=window.FactooriCloud;
- if(!api||!cloudSession?.user?.id||!cloudSchemaReady){cloudBusinesses=[];cloudActiveBusinessId='';return}
+ if(!api||!cloudSession?.user?.id||!cloudSchemaReady){
+  cloudBusinesses=[];
+  cloudActiveBusinessId='';
+  try{localStorage.removeItem('factoori:active-business')}catch(e){}
+  return;
+ }
  cloudBusinesses=await api.listBusinesses(cloudSession.user.id);
+ // Never silently switch a user's active business. A stale or foreign ID is
+ // cleared and the user must explicitly choose from the membership list.
  if(!cloudBusinesses.some(x=>x.id===cloudActiveBusinessId)){
-  cloudActiveBusinessId=cloudBusinesses[0]?.id||'';
-  try{if(cloudActiveBusinessId)localStorage.setItem('factoori:active-business',cloudActiveBusinessId);else localStorage.removeItem('factoori:active-business')}catch(e){}
+  cloudActiveBusinessId='';
+  try{localStorage.removeItem('factoori:active-business')}catch(e){}
  }
 }
 async function initCloudSession(){
