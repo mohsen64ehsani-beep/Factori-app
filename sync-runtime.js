@@ -117,16 +117,19 @@ export async function runBusinessSync({
       throw new Error('تأیید امن این دستگاه برای همگام‌سازی انجام نشد.');
     }
 
+    const resumingPermissionReset = state.permissionResetInProgress === true;
     let permissionMismatch = false;
-    try {
-      pushedOperations += await pushPending();
-    } catch (error) {
-      if (!isPermissionVersionMismatch(error)) throw error;
-      permissionMismatch = true;
+    if (!resumingPermissionReset) {
+      try {
+        pushedOperations += await pushPending();
+      } catch (error) {
+        if (!isPermissionVersionMismatch(error)) throw error;
+        permissionMismatch = true;
+      }
     }
 
     const firstPull = await pullPages();
-    if (permissionMismatch || firstPull.sawReset) {
+    if ((permissionMismatch || firstPull.sawReset || resumingPermissionReset) && !firstPull.hasMore) {
       pushedOperations += await pushPending();
       if (!hasMore) await pullPages();
     }
