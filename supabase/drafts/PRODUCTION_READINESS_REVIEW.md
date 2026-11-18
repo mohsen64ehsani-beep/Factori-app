@@ -5,7 +5,7 @@ Branch: work/factoori-shared-db-integration
 
 ## Current implementation update (2026-11-19)
 
-The development branch has advanced well beyond the original 001–007 audit snapshot. It now contains 32 draft migrations (including 013, which CI applies after a test-only legacy license-schema fixture) and 34 SQL regression scripts. The latest completed database CI run applies the complete ordered draft set on disposable PostgreSQL 17 and passes the SQL regression suite plus P-256 device-proof tests. The CI environment remains a minimal Supabase Auth compatibility shim, not a full Supabase emulator.
+The development branch has advanced well beyond the original 001–007 audit snapshot. It now contains 34 draft migrations (including 013, which CI applies after a test-only legacy license-schema fixture) and 36 SQL regression scripts. The latest completed database CI run applies the complete ordered draft set on disposable PostgreSQL 17 and passes the SQL regression suite plus P-256 device-proof tests. The CI environment remains a minimal Supabase Auth compatibility shim, not a full Supabase emulator.
 
 Implemented server-side slices on the development branch now include:
 - tenant identity, business membership/permissions, document drafts, financial ledger, catalog and inventory schema;
@@ -36,7 +36,7 @@ These are development drafts only. No draft migration or new RPC has been applie
 4. **Concurrency and adversarial behavior need runtime tests.** Exercise simultaneous devices, duplicate operation IDs with same/different payloads, stale versions, simultaneous quota consumption, invitation acceptance races, role revocation during sync, and cursor pagination with interleaved unreadable collections.
 5. **Legacy license surface remains separate.** The existing public `activate_license(text,text)` SECURITY DEFINER RPC is a legacy path with broader anon/authenticated execute grants. Do not alter it until old-client compatibility and migration/retirement strategy are established.
 6. **Invitation delivery and abuse controls need trusted implementation.** Token generation/hash, verified-email checks, email delivery, rate limits, duplicate invitation handling, and concurrent acceptance require Edge Function and runtime validation.
-7. **Migration and data conversion are not complete.** The branch has fingerprinted importers for customer/product/supplier references, categories/services/warehouses, goods/service invoice drafts and closed fiscal periods, plus read-only preflight/reconciliation. It intentionally does not import or post historical payments, returns, cheques, bank accounts, due dates, SMS history, stock quantities or opening financial balances. Full currency-unit reconciliation, source-to-target totals, returns matching, cheque attachments and financial/stock cutover still require separate design and tests.
+7. **Migration and data conversion are not complete.** The branch has fingerprinted importers for customer/product/supplier references, categories/services/warehouses, goods/service invoice drafts and closed fiscal periods, plus read-only preflight/reconciliation. It intentionally does not import or post historical payments, returns, cheques, bank accounts, due dates, SMS history, stock quantities or opening financial balances. Full currency-unit reconciliation, source-to-target totals, returns matching, cheque attachment storage, returns matching and financial/stock cutover still require separate design and tests.
 
 ## Release gate
 
