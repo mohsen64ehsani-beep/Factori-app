@@ -203,7 +203,8 @@ jobs:
             034_sales_return_posting.sql \
             035_customer_refund_posting.sql \
             036_purchase_return_posting.sql \
-            037_web_catalog_crud.sql
+            037_web_catalog_crud.sql \
+            038_rls_initplan_optimization.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
