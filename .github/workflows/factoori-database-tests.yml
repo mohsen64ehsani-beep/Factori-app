@@ -6,6 +6,7 @@ on:
       - work/factoori-shared-db-integration
     paths:
       - "supabase/drafts/**"
+      - "supabase/migrations/**"
       - "supabase/tests/**"
       - "supabase/functions/prove-sync-device/**"
       - ".github/workflows/factoori-database-tests.yml"
@@ -118,7 +119,8 @@ jobs:
             033_cheque_reversal_posting.sql \
             034_sales_return_posting.sql \
             035_customer_refund_posting.sql \
-            036_purchase_return_posting.sql
+            036_purchase_return_posting.sql \
+            037_web_catalog_crud.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
@@ -199,7 +201,8 @@ jobs:
             033_cheque_reversal_posting.sql \
             034_sales_return_posting.sql \
             035_customer_refund_posting.sql \
-            036_purchase_return_posting.sql
+            036_purchase_return_posting.sql \
+            037_web_catalog_crud.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
