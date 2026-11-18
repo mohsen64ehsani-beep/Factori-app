@@ -149,3 +149,48 @@ test('durable checkpoint API rejects incomplete snapshots before opening storage
   await assert.rejects(() => commitSyncCheckpoint('b1', null, createSyncState()), /dbSnapshot must be a database object/);
   await assert.rejects(() => commitSyncCheckpoint('b1', {}, { cursor: -1 }), /syncState cursor is invalid/);
 });
+
+
+test('IndexedDB checkpoint transactions attach completion handlers before completion events', async () => {
+  const { loadSyncCheckpoint, commitSyncCheckpoint, clearSyncCheckpoint } = await import('./sync-storage.js');
+  const rows = new Map();
+  const makeRequest = (result) => {
+    const request = { result, error: null, onsuccess: null, onerror: null };
+    queueMicrotask(() => request.onsuccess?.());
+    return request;
+  };
+  const indexedDBImpl = {
+    open() {
+      const request = { result: null, error: null, onupgradeneeded: null, onsuccess: null, onerror: null, onblocked: null };
+      const storeNames = { contains: () => true };
+      const db = {
+        objectStoreNames: storeNames,
+        close() {},
+        transaction() {
+          const tx = {
+            error: null, oncomplete: null, onabort: null, onerror: null,
+            objectStore() {
+              return {
+                get(key) { return makeRequest(rows.get(key) ?? null); },
+                put(value) { rows.set(value.businessId, value); queueMicrotask(() => tx.oncomplete?.()); },
+                delete(key) { rows.delete(key); queueMicrotask(() => tx.oncomplete?.()); }
+              };
+            }
+          };
+          return tx;
+        }
+      };
+      request.result = db;
+      queueMicrotask(() => request.onsuccess?.());
+      return request;
+    }
+  };
+  const snapshot = { cust: [{ id: 'c1', n: 'A' }] };
+  const state = createSyncState();
+  await commitSyncCheckpoint('business-1', snapshot, state, indexedDBImpl);
+  const loaded = await loadSyncCheckpoint('business-1', indexedDBImpl);
+  assert.deepEqual(loaded.db, snapshot);
+  assert.equal(loaded.syncState.cursor, 0);
+  await clearSyncCheckpoint('business-1', indexedDBImpl);
+  assert.equal(await loadSyncCheckpoint('business-1', indexedDBImpl), null);
+});
