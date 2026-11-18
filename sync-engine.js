@@ -74,7 +74,7 @@ function resetAfterPermissionVersionChange(db, state) {
 }
 
 export function createSyncState() {
-  return { cursor: 0, versions: {}, snapshots: {}, pending: [], conflicts: [], rejected: [], tombstones: [] };
+  return { cursor: 0, versions: {}, snapshots: {}, pending: [], conflicts: [], rejected: [], tombstones: [], permissionResetDirty: [] };
 }
 
 function clone(value) {
@@ -125,7 +125,7 @@ export function prepareSyncOperations(db, state, createOperationId) {
       const normalized = normalizeLocalRecord(marker.collection, value);
       return normalized?.legacyId === id;
     });
-    if (!row) return next.tombstones.some(t => t.collection === marker.collection && String(t.legacy_id) === id);
+    if (row === undefined) return next.tombstones.some(t => t.collection === marker.collection && String(t.legacy_id) === id);
     const normalized = normalizeLocalRecord(marker.collection, row);
     return next.snapshots[marker.collection]?.[id] !== stableStringify(normalized.payload);
   });
