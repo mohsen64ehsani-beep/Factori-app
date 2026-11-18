@@ -26,7 +26,8 @@ begin
  values
   (v_business,'cust','reconcile-customer','{"id":"reconcile-customer","n":"Private customer name"}','{"secret":"never return"}',v_owner),
   (v_business,'prod','reconcile-product','{"id":"reconcile-product","n":"Product"}','{"buy":999}',v_owner),
-  (v_business,'pay','reconcile-payment','{"id":"reconcile-payment","amt":100}','{}',v_owner);
+  (v_business,'pay','reconcile-payment','{"id":"reconcile-payment","amt":100}','{}',v_owner),
+  (v_business,'bankAccounts','legacy-bank-account','{"id":"legacy-bank-account","name":"Legacy bank"}','{}',v_owner);
 
  perform set_config('request.jwt.claim.sub',v_owner::text,true);
  v_result:=public.import_legacy_reference_data(v_business,'a9000000-0000-4000-8000-000000000001');
@@ -46,6 +47,7 @@ begin
  if (v_result->>'mode')<>'read_only_reconciliation'
   or (v_result->>'safe_to_cutover')::boolean is not false
   or (v_result->>'deferred_financial_records')::bigint<>1
+  or (v_result->>'deferred_other_records')::bigint<>1
   or (v_result->>'unresolved_source_or_mapping_rows')::bigint<1 then
   raise exception 'Reconciliation did not report unresolved/deferred rows: %',v_result;
  end if;
@@ -61,6 +63,7 @@ begin
 
  v_result:=public.reconcile_legacy_normalization(v_other_business);
  if (v_result->>'deferred_financial_records')::bigint<>0
+  or (v_result->>'deferred_other_records')::bigint<>0
   or (v_result->>'unresolved_source_or_mapping_rows')::bigint<>0 then
   raise exception 'Reconciliation leaked data across business boundaries';
  end if;
