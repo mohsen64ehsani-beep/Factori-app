@@ -85,14 +85,21 @@ declare
  v_user_id uuid:=auth.uid();
  v_nonce text:=encode(gen_random_bytes(32),'hex');
  v_challenge_id uuid;
+ v_recent_count integer;
  v_expires timestamptz:=now()+interval '3 minutes';
 begin
  if v_user_id is null then raise exception using errcode='28000',message='Authentication required'; end if;
- if not exists(select 1 from public.sync_devices d join public.business_members m
+ perform 1 from public.sync_devices d join public.business_members m
    on m.business_id=d.business_id and m.user_id=d.user_id
    where d.business_id=p_business_id and d.id=p_device_id and d.user_id=v_user_id
-     and d.status='active' and m.status='active') then
+     and d.status='active' and m.status='active' for update of d;
+ if not found then
   raise exception using errcode='42501',message='Active device and membership required';
+ end if;
+ select count(*) into v_recent_count from public.sync_device_challenges
+ where business_id=p_business_id and device_id=p_device_id and created_at>now()-interval '10 minutes';
+ if v_recent_count>=10 then
+  raise exception using errcode='54000',message='Too many device proof challenges; retry later';
  end if;
  insert into public.sync_device_challenges(business_id,device_id,user_id,challenge_hash,expires_at)
  values(p_business_id,p_device_id,v_user_id,
