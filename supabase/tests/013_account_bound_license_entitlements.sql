@@ -20,6 +20,16 @@ declare
   v_result jsonb;
   i integer;
 begin
+  if not has_function_privilege('authenticated','public.claim_factori_license(text,uuid)','EXECUTE')
+     or has_function_privilege('anon','public.claim_factori_license(text,uuid)','EXECUTE') then
+    raise exception 'License claim RPC must be authenticated-only';
+  end if;
+  if has_table_privilege('authenticated','private.factori_license_entitlements','SELECT')
+     or has_table_privilege('authenticated','private.factori_license_entitlement_events','SELECT')
+     or has_function_privilege('authenticated','private.business_has_premium_entitlement(uuid)','EXECUTE') then
+    raise exception 'Clients must not directly read or execute private entitlement internals';
+  end if;
+
   insert into auth.users(id,email,email_confirmed_at) values
     (v_owner,'owner@example.test',now()),
     (v_other,'other@example.test',now()),
