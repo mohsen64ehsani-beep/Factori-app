@@ -13,6 +13,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 7. `006_journal_integrity.sql` — database guards for balanced, immutable posted journal entries.
 8. `007_member_management.sql` — invitation acceptance, audited role changes and member suspension/removal.
 9. `008_transactional_posting.sql` — atomic balanced-journal posting and stock-transfer posting with permission checks, idempotency and row locking.
+10. `009_device_proof.sql` — P-256 challenge-response device verification, single-use nonces, device revocation and verified-device sync gate.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -30,7 +31,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all nine draft migrations in dependency order, then runs all ten SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all ten draft migrations in dependency order, then runs all eleven SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it will validate SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it will not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -47,6 +48,7 @@ The test scripts are:
 - `supabase/tests/008_security_surface.sql`
 - `supabase/tests/009_sensitive_payload_partition.sql`
 - `supabase/tests/010_transactional_posting.sql`
+- `supabase/tests/011_device_proof.sql`
 
 ## Deliberately not included yet
 
@@ -55,7 +57,7 @@ The test scripts are:
 - Full inventory adjustment/purchase/sale posting RPCs and materialized inventory balance projections
 - Owner transfer, account deletion/retention and owner recovery
 - Verified subscription upgrades, downgrades, grace periods and paid-plan entitlements
-- Device proof-of-possession, full multi-device sync tests and normalized financial sync operations
+- Full multi-device sync runtime tests and normalized financial sync operations
 - Legacy `db:v2` import/reconciliation and migration id mapping
 - Private cheque-image storage and SMS retention policy
 
