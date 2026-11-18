@@ -26,6 +26,9 @@ begin
  if position('reset_required' in v_def)=0 or position('permission_version' in v_def)=0 then
   raise exception 'Permission-change reset protocol is missing';
  end if;
+ if position('readable_collections' in v_def)=0 or position('cost_access' in v_def)=0 then
+  raise exception 'Permission reset must return effective readable collections and cost access';
+ end if;
 
  select pg_get_functiondef('private.sync_push(uuid,uuid,jsonb)'::regprocedure) into v_def;
  if position('document_sync_accepts_drafts_only' in v_def)=0 then
