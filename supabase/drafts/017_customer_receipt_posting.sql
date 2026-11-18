@@ -198,15 +198,22 @@ begin
 
   insert into public.journal_lines(
     business_id,journal_entry_id,account_id,contact_id,debit,credit,description,line_order
-  ) values
-    (p_business_id,v_journal_id,v_cash_account_id,null,p_amount,0,'دریافت وجه',1),
-    (p_business_id,v_journal_id,v_receivable_account_id,p_contact_id,0,v_allocated,'تسویه مطالبات',2);
+  ) values (p_business_id,v_journal_id,v_cash_account_id,null,p_amount,0,'دریافت وجه',1);
+
+  if v_allocated>0 then
+    insert into public.journal_lines(
+      business_id,journal_entry_id,account_id,contact_id,debit,credit,description,line_order
+    ) values (
+      p_business_id,v_journal_id,v_receivable_account_id,p_contact_id,0,v_allocated,'تسویه مطالبات',2
+    );
+  end if;
 
   if p_amount>v_allocated then
     insert into public.journal_lines(
       business_id,journal_entry_id,account_id,contact_id,debit,credit,description,line_order
     ) values (
-      p_business_id,v_journal_id,v_advance_account_id,p_contact_id,0,p_amount-v_allocated,'پیش‌دریافت مشتری',3
+      p_business_id,v_journal_id,v_advance_account_id,p_contact_id,0,p_amount-v_allocated,
+      'پیش‌دریافت مشتری',case when v_allocated>0 then 3 else 2 end
     );
   end if;
 
