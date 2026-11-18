@@ -125,6 +125,8 @@ jobs:
             activated_at timestamptz not null default now(),
             transferred_from uuid
           );
+          alter table public.factori_license_keys enable row level security;
+          alter table public.factori_license_activations enable row level security;
           SQL
           echo "::group::Applying 013_account_bound_license_entitlements.sql"
           psql -v ON_ERROR_STOP=1 -f supabase/drafts/013_account_bound_license_entitlements.sql
