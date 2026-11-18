@@ -6,6 +6,10 @@ on:
     paths:
       - "wordpress-plugin/factoori-web-accounting/**"
       - ".github/workflows/build-factoori-web-plugin.yml"
+  pull_request:
+    paths:
+      - "wordpress-plugin/factoori-web-accounting/**"
+      - ".github/workflows/build-factoori-web-plugin.yml"
   workflow_dispatch:
 permissions:
   contents: read
