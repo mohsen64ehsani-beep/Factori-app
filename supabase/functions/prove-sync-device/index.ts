@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { toHex, verifyP256Proof } from "./crypto.ts";
+import { encodeText, toHex, verifyP256Proof } from "./crypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     return json(403, { error: "challenge_expired_or_consumed" });
   }
 
-  const nonceHash = toHex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body.nonce)));
+  const nonceHash = toHex(await crypto.subtle.digest("SHA-256", encodeText(body.nonce)));
   if (nonceHash !== challenge.challenge_hash) return json(403, { error: "challenge_mismatch" });
 
   const device = Array.isArray(challenge.sync_devices) ? challenge.sync_devices[0] : challenge.sync_devices;
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
   }
 
   const canonical = JSON.stringify({ crv: "P-256", kty: "EC", x: jwk.x, y: jwk.y });
-  const thumbprint = toHex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical)));
+  const thumbprint = toHex(await crypto.subtle.digest("SHA-256", encodeText(canonical)));
   if (thumbprint !== device.device_key_thumbprint) return json(403, { error: "key_thumbprint_mismatch" });
 
   const signedMessage = [challenge.id, body.nonce, challenge.business_id, challenge.device_id, challenge.user_id].join(".");
