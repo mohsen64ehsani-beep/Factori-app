@@ -1,10 +1,10 @@
-import { verifyP256Proof, toBase64Url } from "./crypto.ts";
+import { verifyP256Proof, toBase64Url, encodeText } from "./crypto.ts";
 
 Deno.test("P-256 challenge signature accepts the matching private key", async () => {
   const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
   const publicJwk = await crypto.subtle.exportKey("jwk", pair.publicKey);
   const message = "challenge.nonce.business.device.user";
-  const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, pair.privateKey, new TextEncoder().encode(message));
+  const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, pair.privateKey, encodeText(message));
   if (!await verifyP256Proof(publicJwk, message, toBase64Url(signature))) throw new Error("Expected valid device signature to verify");
 });
 
