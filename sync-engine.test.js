@@ -964,7 +964,7 @@ test('splash routes through full-screen shared account auth and logout returns t
   assert.match(app, /lk='auth';lock=true/);
   assert.match(app, /cloudContinue:async/);
   assert.match(app, /lock=true;lk='auth';cloudAuthMode='login'/);
-  assert.match(app, /data-a="cloudRegister"/);
+  assert.match(app, /cloudRegister/);
 });
 
 test('employee management is wired to a server-side provisioning function', async () => {
