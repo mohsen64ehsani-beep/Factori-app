@@ -203,6 +203,7 @@ end;
 $$;
 
 revoke all on function public.register_sync_device(uuid,text,text,jsonb) from public,anon,authenticated;
+revoke all on function private.register_sync_device(uuid,text,text,jsonb) from public,anon,authenticated;
 revoke all on function private.sync_push(uuid,uuid,jsonb) from public,anon,authenticated;
 revoke all on function private.sync_pull(uuid,uuid,bigint,integer) from public,anon,authenticated;
 revoke all on function public.register_sync_device_secure(uuid,text,text,jsonb) from public,anon;
