@@ -22,6 +22,65 @@ function unwrap(result) {
   return result?.data;
 }
 
+const DEVICE_KEY_DB = 'factoori-device-keys-v1';
+const DEVICE_KEY_STORE = 'keys';
+
+function openDeviceKeyStore() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DEVICE_KEY_DB, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(DEVICE_KEY_STORE)) {
+        request.result.createObjectStore(DEVICE_KEY_STORE, { keyPath: 'deviceId' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('ذخیره‌سازی امن کلید دستگاه در دسترس نیست.'));
+  });
+}
+
+async function saveDevicePrivateKey(deviceId, businessId, privateKey) {
+  const db = await openDeviceKeyStore();
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(DEVICE_KEY_STORE, 'readwrite');
+      tx.objectStore(DEVICE_KEY_STORE).put({ deviceId, businessId, privateKey, savedAt: Date.now() });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('ذخیره کلید دستگاه انجام نشد.'));
+    });
+  } finally { db.close(); }
+}
+
+async function getDevicePrivateKey(deviceId) {
+  const db = await openDeviceKeyStore();
+  try {
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(DEVICE_KEY_STORE, 'readonly');
+      const request = tx.objectStore(DEVICE_KEY_STORE).get(deviceId);
+      request.onsuccess = () => resolve(request.result?.privateKey || null);
+      request.onerror = () => reject(request.error);
+    });
+  } finally { db.close(); }
+}
+
+async function deleteDevicePrivateKey(deviceId) {
+  const db = await openDeviceKeyStore();
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(DEVICE_KEY_STORE, 'readwrite');
+      tx.objectStore(DEVICE_KEY_STORE).delete(deviceId);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } finally { db.close(); }
+}
+
+function toBase64Url(bytes) {
+  let binary = '';
+  for (const byte of new Uint8Array(bytes)) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
+}
+
 const api = {
   url: SUPABASE_URL,
   async getSession() {
@@ -86,6 +145,56 @@ const api = {
       p_items: payload.items || [],
       p_idempotency_key: payload.idempotencyKey
     }));
+  },
+  async registerSyncDevice(payload) {
+    if (!payload?.businessId) throw new Error('کسب‌وکار برای ثبت دستگاه مشخص نشده است.');
+    if (!globalThis.crypto?.subtle || !globalThis.indexedDB) {
+      throw new Error('این دستگاه از ذخیره‌سازی کلید و امضای رمزنگاری‌شده پشتیبانی نمی‌کند.');
+    }
+    const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    const publicJwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
+    const privateJwk = await crypto.subtle.exportKey('jwk', pair.privateKey);
+    const privateKey = await crypto.subtle.importKey('jwk', privateJwk,
+      { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    delete privateJwk.d;
+    const deviceId = unwrap(await client.rpc('register_sync_device_secure', {
+      p_business_id: payload.businessId,
+      p_device_name: payload.deviceName || 'Factoori device',
+      p_platform: payload.platform || 'android',
+      p_device_public_key: { kty: publicJwk.kty, crv: publicJwk.crv, x: publicJwk.x, y: publicJwk.y }
+    }));
+    try {
+      await saveDevicePrivateKey(deviceId, payload.businessId, privateKey);
+    } catch (error) {
+      await client.rpc('revoke_sync_device', { p_business_id: payload.businessId, p_device_id: deviceId });
+      throw error;
+    }
+    return { deviceId, businessId: payload.businessId, proofRequired: true };
+  },
+  async proveSyncDevice(payload) {
+    if (!payload?.businessId || !payload?.deviceId) throw new Error('دستگاه برای تأیید مشخص نشده است.');
+    const privateKey = await getDevicePrivateKey(payload.deviceId);
+    if (!privateKey) throw new Error('کلید خصوصی این دستگاه پیدا نشد؛ دستگاه را دوباره ثبت کنید.');
+    const challenge = unwrap(await client.rpc('create_sync_device_challenge', {
+      p_business_id: payload.businessId, p_device_id: payload.deviceId
+    }));
+    const signedMessage = [challenge.challenge_id, challenge.nonce, challenge.business_id,
+      challenge.device_id, challenge.user_id].join('.');
+    const signature = await crypto.subtle.sign(
+      { name: 'ECDSA', hash: 'SHA-256' }, privateKey, new TextEncoder().encode(signedMessage)
+    );
+    const proof = unwrap(await client.functions.invoke('prove-sync-device', {
+      body: { challenge_id: challenge.challenge_id, nonce: challenge.nonce, signature: toBase64Url(signature) }
+    }));
+    if (!proof?.verified) throw new Error('تأیید رمزنگاری‌شده دستگاه انجام نشد.');
+    return proof;
+  },
+  async revokeSyncDevice(businessId, deviceId) {
+    const result = unwrap(await client.rpc('revoke_sync_device', {
+      p_business_id: businessId, p_device_id: deviceId
+    }));
+    await deleteDevicePrivateKey(deviceId);
+    return result;
   },
   async postJournalEntry(payload) {
     if (!payload?.businessId || !payload?.entryDate || !payload?.idempotencyKey || !Array.isArray(payload?.lines)) {
