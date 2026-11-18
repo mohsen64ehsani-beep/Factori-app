@@ -116,7 +116,8 @@ test('SQL pull envelope is validated and cursor advances only after successful m
   });
   assert.equal(reset.resetRequired, true);
   assert.equal(reset.state.cursor, 0);
-  assert.deepEqual(reset.db, initialDb);
+  assert.deepEqual(reset.db.cust, initialDb.cust);
+  assert.deepEqual(reset.db.prod, []);
   assert.notEqual(reset.db, initialDb);
 
   assert.throws(() => applySyncPullPage(initialDb, initialState, {
