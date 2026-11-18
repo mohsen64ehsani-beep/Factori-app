@@ -151,11 +151,13 @@ begin
   raise exception using errcode='42501',message='Sales return posting is not permitted';
  end if;
  if p_original_document_id is null or p_return_date is null
-  or p_items is null or jsonb_typeof(p_items)<>'array'
-  or jsonb_array_length(p_items)<1 or jsonb_array_length(p_items)>500
+  or p_items is null
   or p_reason is null or length(btrim(p_reason)) not between 1 and 500
   or p_idempotency_key is null or length(p_idempotency_key) not between 8 and 160 then
   raise exception using errcode='22023',message='Invalid sales return request';
+ end if;
+ if jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items)<1 or jsonb_array_length(p_items)>500 then
+  raise exception using errcode='22023',message='Sales return must contain between one and 500 lines';
  end if;
 
  select count(*),count(distinct value->>'document_item_id')
@@ -184,7 +186,10 @@ begin
  select d.* into v_doc from public.documents d
  where d.business_id=p_business_id and d.id=p_original_document_id
  for update;
- if not found or v_doc.document_type<>'goods_sale' or v_doc.status<>'posted'
+ if not found then
+  raise exception using errcode='P0002',message='Original goods-sale document not found';
+ end if;
+ if v_doc.document_type<>'goods_sale' or v_doc.status<>'posted'
   or v_doc.contact_id is null or v_doc.warehouse_id is null then
   raise exception using errcode='22023',message='A posted goods-sale document with customer and warehouse is required';
  end if;
@@ -258,7 +263,10 @@ begin
   )
   select * into v_source from calculated where id=v_source_item_id;
 
-  if not found or v_source.item_type<>'goods' or v_source.product_id is null or v_source.service_id is not null then
+  if not found then
+   raise exception using errcode='22023',message='Return line does not belong to the original invoice';
+  end if;
+  if v_source.item_type<>'goods' or v_source.product_id is null or v_source.service_id is not null then
    raise exception using errcode='22023',message='Return line must reference a goods item on the original invoice';
   end if;
 
