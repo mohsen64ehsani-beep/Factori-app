@@ -33,7 +33,7 @@ async function completeAuthRedirect(rawUrl) {
   let callback;
   try { callback = new URL(rawUrl); } catch { return false; }
   if (callback.protocol !== 'com.factori.app:' || callback.hostname !== 'auth'
-    || callback.pathname.replace(/\\/$/, '') !== '/callback') return false;
+    || callback.pathname.replace(/\/$/, '') !== '/callback') return false;
 
   const params = new URLSearchParams(callback.search);
   const fragment = new URLSearchParams(callback.hash.replace(/^#/, ''));
