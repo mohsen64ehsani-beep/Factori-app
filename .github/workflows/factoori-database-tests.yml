@@ -108,7 +108,8 @@ jobs:
             023_inventory_wastage_posting.sql \
             024_legacy_reference_import.sql \
             025_legacy_catalog_warehouse_import.sql \
-            026_legacy_goods_invoice_draft_import.sql
+            026_legacy_goods_invoice_draft_import.sql \
+            027_legacy_service_invoice_draft_import.sql
           do
             echo "::group::Applying $migration"
             psql -v ON_ERROR_STOP=1 -f "supabase/drafts/$migration"
@@ -179,7 +180,8 @@ jobs:
             023_inventory_wastage_posting.sql \
             024_legacy_reference_import.sql \
             025_legacy_catalog_warehouse_import.sql \
-            026_legacy_goods_invoice_draft_import.sql
+            026_legacy_goods_invoice_draft_import.sql \
+            027_legacy_service_invoice_draft_import.sql
           do
             echo "::group::Testing $test_file"
             psql -v ON_ERROR_STOP=1 -f "supabase/tests/$test_file"
