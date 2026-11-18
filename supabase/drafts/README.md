@@ -15,6 +15,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 9. `008_transactional_posting.sql` — atomic balanced-journal posting and stock-transfer posting with permission checks, idempotency and row locking.
 10. `009_device_proof.sql` — P-256 challenge-response device verification, single-use nonces, device revocation and verified-device sync gate.
 11. `010_account_transfers.sql` — financial account mapping and atomic paired transfer records with a balanced journal entry.
+12. `013_account_bound_license_entitlements.sql` — authenticated account/business claim of verified perpetual licenses, idempotent same-owner claim, and server-derived Premium status. Requires the existing license-key schema.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -36,6 +37,8 @@ The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runn
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it will validate SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it will not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
+The CI workflow creates an isolated fixture matching the existing `factori_license_keys` and `factori_license_activations` production schema, installs pgcrypto in the `extensions` schema, then applies draft 013. This fixture is test-only and is not a production migration.
+
 The test scripts are:
 
 - `supabase/tests/001_identity_business_permissions.sql`
@@ -51,6 +54,7 @@ The test scripts are:
 - `supabase/tests/010_transactional_posting.sql`
 - `supabase/tests/011_device_proof.sql`
 - `supabase/tests/012_account_transfers.sql`
+- `supabase/tests/013_account_bound_license_entitlements.sql`
 
 ## Device proof deployment note
 
