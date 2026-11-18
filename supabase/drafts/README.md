@@ -35,6 +35,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 29. `028_legacy_reconciliation_gate.sql` — read-only reconciliation counts and cutover gate across supported imports and deferred financial collections.
 30. `029_legacy_supplier_contact_import.sql` — extends the private identity map and imports legacy supplier contacts; does not import purchase invoices or supplier payments.
 31. `030_legacy_fiscal_period_import.sql` — imports legacy fiscal lock ranges as closed normalized periods, preserving edit restrictions.
+32. `031_service_document_posting.sql` — atomically posts service sales and service purchases to the ledger without fabricating stock or service-cost allocations.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -53,7 +54,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all thirty-one draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all thirty-three SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all thirty-two draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all thirty-four SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -94,6 +95,7 @@ The test scripts are:
 - `supabase/tests/028_legacy_reconciliation_gate.sql`
 - `supabase/tests/029_legacy_supplier_contact_import.sql`
 - `supabase/tests/030_legacy_fiscal_period_import.sql`
+- `supabase/tests/031_service_document_posting.sql`
 - `supabase/tests/031_service_document_posting.sql`
 
 ## Device proof deployment note
@@ -210,3 +212,8 @@ Migration 030 adds `public.import_legacy_fiscal_periods(uuid,uuid)`. Legacy `fis
 ## Service document posting (031)
 
 Migration 031 adds `public.post_service_document(uuid,uuid,text)` for draft `service_sale` and `service_purchase` documents. It validates the same-business active customer/supplier and service catalog rows, exact line/header/tax totals, fiscal-period status, and idempotency. Service sales debit receivables and credit service revenue/output tax; service purchases debit direct service expense/recoverable input tax and credit supplier payable. Both create a contact-ledger entry and a balanced posted journal atomically. The RPC deliberately creates no stock movement or service-cost snapshot because the legacy app's service-cost fields remain excluded from import. Test 031 covers both directions, balanced journals, contact ledgers, replay, duplicate posting denial, tenant isolation, and absence of fabricated stock/cost data.
+
+
+## Service document posting (031)
+
+Migration 031 adds `public.post_service_document(uuid,uuid,text)` for normalized `service_sale` and `service_purchase` drafts. It validates service-only lines, customer/supplier role, document totals, tax and fiscal-period state; then atomically posts balanced journal lines and the appropriate customer/supplier ledger entry. Service sales debit receivables and credit service revenue/tax payable; service purchases debit service expense and recoverable tax and credit supplier payables. It intentionally creates no stock movements, inventory layers, item-cost allocations or cash transactions. Test 031 covers both directions, journal balance, contact ledgers, idempotent replay, rejection of reposting under a new key, cross-business denial and no fabricated inventory costs.
