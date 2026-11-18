@@ -606,7 +606,23 @@ begin
     where business_id=p_business_id and id=p_device_id;
     update public.sync_cursors set last_revision=0,last_synced_at=null
     where business_id=p_business_id and device_id=p_device_id;
-    return jsonb_build_object('records','[]'::jsonb,'next_cursor',0,'has_more',true,'reset_required',true);
+    return jsonb_build_object(
+      'records','[]'::jsonb,
+      'next_cursor',0,
+      'has_more',true,
+      'reset_required',true,
+      'cost_access',(select private.has_business_permission(p_business_id,'catalog.cost.read')),
+      'readable_collections',(
+        select coalesce(jsonb_agg(c.collection order by c.collection),'[]'::jsonb)
+        from unnest(array[
+          'cust','suppliers','debt','duedates','prod','services','categories','inv','serviceInv',
+          'returns','pay','creditors','purchases','supplierPayments','creditorPayments','expenses',
+          'otherincome','wastage','warehouses','stockMoves','warehouseStocks','transfers','accounts',
+          'moneytransfers','opening','bankAccounts','fiscal','smsHistory'
+        ]) as c(collection)
+        where private.can_sync_collection(p_business_id,c.collection,'read')
+      )
+    );
   end if;
   v_cost_allowed:=(select private.has_business_permission(p_business_id,'catalog.cost.read'));
 
