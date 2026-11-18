@@ -46,6 +46,12 @@ function resetAfterPermissionVersionChange(db, state) {
   // Pending payloads may contain data captured under the previous permission
   // set. Quarantine sanitized copies; local records remain in nextDb and can
   // be re-enqueued against their last acknowledged snapshot.
+  for (const operation of nextState.pending) {
+    if (WRITE_SET.has(operation.collection) && operation.legacy_id
+      && !nextState.permissionResetDirty.some(marker => marker.collection === operation.collection && String(marker.legacy_id) === String(operation.legacy_id))) {
+      nextState.permissionResetDirty.push({ collection: operation.collection, legacy_id: String(operation.legacy_id) });
+    }
+  }
   nextState.conflicts.push(...nextState.pending.map(operation => ({
     operation: stripSensitiveLocalValue(operation),
     reason: 'permission_version_changed',
@@ -97,7 +103,7 @@ function normalizeLocalRecord(collection, record) {
 function ensureState(state) {
   const next = state && typeof state === 'object' ? clone(state) : createSyncState();
   for (const key of ['versions', 'snapshots']) if (!next[key] || typeof next[key] !== 'object') next[key] = {};
-  for (const key of ['pending', 'conflicts', 'rejected', 'tombstones']) if (!Array.isArray(next[key])) next[key] = [];
+  for (const key of ['pending', 'conflicts', 'rejected', 'tombstones', 'permissionResetDirty']) if (!Array.isArray(next[key])) next[key] = [];
   next.cursor = Math.max(0, Number(next.cursor) || 0);
   return next;
 }
@@ -107,6 +113,27 @@ export function prepareSyncOperations(db, state, createOperationId) {
   const next = ensureState(state);
   const queued = new Set(next.pending.map(op => op.collection + ':' + op.legacy_id));
   const operations = next.pending.map(clone);
+  // A permission reset must preserve locally dirty rows while the server
+  // replays its full snapshot. Drop markers only when the local row already
+  // matches the last acknowledged snapshot or a new pending op takes over.
+  next.permissionResetDirty = next.permissionResetDirty.filter(marker => {
+    if (!marker || !WRITE_SET.has(marker.collection) || !marker.legacy_id) return false;
+    const id = String(marker.legacy_id);
+    if (queued.has(marker.collection + ':' + id)) return false;
+    const rows = Array.isArray(db?.[marker.collection]) ? db[marker.collection] : [];
+    const row = rows.find(value => {
+      const normalized = normalizeLocalRecord(marker.collection, value);
+      return normalized?.legacyId === id;
+    });
+    if (!row) return next.tombstones.some(t => t.collection === marker.collection && String(t.legacy_id) === id);
+    const normalized = normalizeLocalRecord(marker.collection, row);
+    return next.snapshots[marker.collection]?.[id] !== stableStringify(normalized.payload);
+  });
+  const clearPermissionResetDirty = (collection, legacyId) => {
+    next.permissionResetDirty = next.permissionResetDirty.filter(
+      marker => !(marker.collection === collection && String(marker.legacy_id) === String(legacyId))
+    );
+  };
 
   for (const collection of SYNC_WRITE_COLLECTIONS) {
     const rows = db?.[collection];
@@ -130,6 +157,7 @@ export function prepareSyncOperations(db, state, createOperationId) {
       next.pending.push(operation);
       operations.push(operation);
       queued.add(key);
+      clearPermissionResetDirty(collection, legacyId);
     }
   }
 
@@ -149,6 +177,7 @@ export function prepareSyncOperations(db, state, createOperationId) {
     next.pending.push(operation);
     operations.push(operation);
     queued.add(key);
+    clearPermissionResetDirty(tombstone.collection, tombstone.legacy_id);
   }
   return { state: next, operations };
 }
@@ -194,7 +223,10 @@ export function applyPulledRecords(db, state, records) {
   for (const collection of SYNC_READ_COLLECTIONS) {
     nextDb[collection] = Array.isArray(db[collection]) ? db[collection].map(clone) : [];
   }
-  const dirty = new Set(nextState.pending.map(op => op.collection + ':' + op.legacy_id));
+  const dirty = new Set([
+    ...nextState.pending.map(op => op.collection + ':' + op.legacy_id),
+    ...nextState.permissionResetDirty.map(marker => marker.collection + ':' + marker.legacy_id)
+  ]);
   for (const collection of SYNC_READ_COLLECTIONS) {
     if (!Array.isArray(nextDb[collection])) nextDb[collection] = [];
   }
