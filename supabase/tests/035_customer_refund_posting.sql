@@ -132,7 +132,7 @@ begin
  v_failed:=false;
  begin
   perform public.post_customer_refund(
-   v_business,v_return_id,v_account,0.1,current_date,'REF-3','over refund','customer-refund-key-003'
+   v_business,v_return_id,v_account,1,current_date,'REF-3','over refund','customer-refund-key-003'
   );
  exception when check_violation then v_failed:=true;
  end;
