@@ -36,6 +36,11 @@ These files are **not production migrations**. They live under `supabase/drafts/
 30. `029_legacy_supplier_contact_import.sql` — extends the private identity map and imports legacy supplier contacts; does not import purchase invoices or supplier payments.
 31. `030_legacy_fiscal_period_import.sql` — imports legacy fiscal lock ranges as closed normalized periods, preserving edit restrictions.
 32. `031_service_document_posting.sql` — atomically posts service sales and service purchases to the ledger without fabricating stock or service-cost allocations.
+33. `032_cheque_lifecycle_posting.sql` — creates cheques, records lifecycle events and posts settlement only on clearing.
+34. `033_cheque_reversal_posting.sql` — reverses cleared cheque settlements with linked, balanced journal entries.
+35. `034_sales_return_posting.sql` — posts invoice-linked goods sales returns and restores original FIFO costs.
+36. `035_customer_refund_posting.sql` — pays cash refunds against posted sales returns within customer credit.
+37. `036_purchase_return_posting.sql` — posts invoice-linked goods purchase returns from the original FIFO layer and caps supplier cash refunds.
 
 ## Recent static-review fixes (2026-11-18)
 
@@ -54,7 +59,7 @@ These files are **not production migrations**. They live under `supabase/drafts/
 
 GitHub Actions workflow: `.github/workflows/factoori-database-tests.yml`.
 
-The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all thirty-six draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all thirty-eight SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
+The workflow starts a disposable PostgreSQL 17 service in the GitHub-hosted runner, creates only the minimal `auth.users` table, `auth.uid()` function and Supabase role names needed by these drafts, applies all thirty-seven draft migrations in dependency order (013 is applied after a test-only license-schema fixture), then runs all thirty-nine SQL regression scripts. It does **not** connect to, create, or modify any Supabase project and does not require Supabase branching or a paid database.
 
 This is a PostgreSQL integration test with a minimal Auth compatibility shim, **not a complete Supabase emulator**. Passing it validates SQL parsing, migration ordering, object creation, grants/RLS metadata and the current regression assertions; it does not prove real Supabase Auth behavior, Edge Functions, JWT gateway behavior, Storage, production data migration, or every concurrent/runtime business scenario.
 
@@ -100,7 +105,7 @@ The test scripts are:
 - `supabase/tests/033_cheque_reversal_posting.sql`
 - `supabase/tests/034_sales_return_posting.sql`
 - `supabase/tests/035_customer_refund_posting.sql`
-- `supabase/tests/031_service_document_posting.sql`
+- `supabase/tests/036_purchase_return_posting.sql`
 
 ## Device proof deployment note
 
@@ -109,9 +114,9 @@ Migration 009, the `prove-sync-device` Edge Function source, and the Android/Web
 ## Deliberately not included yet
 
 - Invoice numbering sequences and complete fiscal close/reopen controls
-- Journal reversal RPC, cheque lifecycle posting/assignment, normalized invoice-to-ledger posting and purchase/expense/receipt RPCs
-- Full inventory adjustment/purchase/sale posting RPCs and materialized inventory balance projections
-- Sales returns, purchase returns, refunds, cheque lifecycle, (purchase posting is in 019, goods-sale posting in 020, FIFO-layer warehouse transfers in 021, valued opening-stock provisioning in 022, and FIFO-valued wastage posting in 023)
+- General journal reversal, cheque transfer/assignment, invoice numbering and complete fiscal close/reopen controls
+- Broader inventory adjustment workflows and materialized inventory balance projections
+- Service returns and legacy return records without original invoice-item links; goods sales returns and customer refunds are in 034–035, while goods purchase returns and supplier refunds are in 036
 - Owner transfer, account deletion/retention and owner recovery
 - Verified subscription upgrades, downgrades, grace periods and paid-plan entitlements
 - Full multi-device sync runtime tests and normalized financial sync operations
@@ -241,3 +246,8 @@ Migration 034 adds `public.post_sales_return(uuid,uuid,date,jsonb,text,text)`. E
 ## Customer cash refunds (035)
 
 Migration 035 adds `public.post_customer_refund(...)` for settling a posted goods-sales return. A refund is capped by both the unrefunded return amount and the customer's net credit balance, so an unpaid original invoice cannot be refunded prematurely. It validates a same-currency mapped cash/bank account, creates a customer-refund financial transaction, debits receivables, credits cash/bank, writes the customer-ledger debit, and updates `sales_return_documents.refunded_amount` in one idempotent transaction. Test 035 covers blocking refunds while the original sale remains unpaid, partial refund, retry, final refund, over-refund prevention, balanced journal, and tenant isolation.
+
+
+## Invoice-linked purchase returns and supplier cash refunds (036)
+
+Migration 036 adds `public.post_purchase_return(...)` and `public.post_supplier_refund(...)`. A purchase return must reference a line on the exact original posted goods-purchase invoice. Returned quantity is capped by both the unreturned invoice quantity and the remaining quantity in that invoice line's original FIFO layer in its source warehouse; stock already sold, transferred, wasted, or otherwise consumed cannot be returned through this path. Return value and tax are derived cumulatively from the original line and allocated header discount. The FIFO layer cost must reconcile exactly with the protected original item-cost snapshot; mismatches fail closed for manual review instead of creating a balancing plug. Posting writes the negative stock movement, original-layer cost allocation, supplier debit, and balanced payable/inventory/input-tax journal atomically. Supplier cash refunds are capped by both the unrefunded purchase-return amount and the supplier's net debit balance, require a same-currency mapped financial account, and write an idempotent financial transaction, balanced journal, and supplier-ledger credit. Test 036 covers FIFO reduction, tax/value reconciliation, retry, over-return prevention, premature and excessive supplier refunds, balanced journals, and tenant isolation.
