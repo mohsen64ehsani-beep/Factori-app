@@ -182,6 +182,20 @@ export function applyPulledRecords(db, state, records) {
   return { db: nextDb, state: nextState };
 }
 
+
+export function createSyncTombstone(collection, legacyId, state) {
+  if (!WRITE_SET.has(collection)) throw new Error('collection is not enabled for sync deletes');
+  const id = String(legacyId ?? '');
+  if (!id || id.length > 200) throw new Error('invalid tombstone legacy id');
+  const next = ensureState(state);
+  const knownVersion = Number(next.versions[collection]?.[id]) || 0;
+  if (knownVersion <= 0) return next;
+  if (!next.tombstones.some(item => item.collection === collection && String(item.legacy_id) === id)) {
+    next.tombstones.push({ collection, legacy_id: id, created_at: Date.now() });
+  }
+  return next;
+}
+
 export function advanceSyncCursor(state, cursor) {
   const next = ensureState(state);
   const value = Number(cursor);
