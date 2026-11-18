@@ -189,3 +189,31 @@ export function advanceSyncCursor(state, cursor) {
   next.cursor = value;
   return next;
 }
+
+// Apply one SQL sync_pull page. The cursor advances only after the records merge
+// has completed successfully; callers must persist the returned db and state
+// together before requesting the next page.
+export function applySyncPullPage(db, state, response) {
+  if (!response || typeof response !== 'object' || Array.isArray(response)) {
+    throw new Error('invalid sync pull response');
+  }
+  if (response.reset_required === true) {
+    return { db, state: ensureState(state), resetRequired: true, hasMore: true };
+  }
+  if (!Array.isArray(response.records)) throw new Error('sync pull response records must be an array');
+  if (typeof response.has_more !== 'boolean') throw new Error('sync pull response has_more must be boolean');
+  const currentState = ensureState(state);
+  const cursor = Number(response.next_cursor);
+  if (!Number.isSafeInteger(cursor) || cursor < currentState.cursor) {
+    throw new Error('sync pull response cursor is invalid or moved backwards');
+  }
+  const merged = applyPulledRecords(db, currentState, response.records);
+  const nextState = advanceSyncCursor(merged.state, cursor);
+  return {
+    db: merged.db,
+    state: nextState,
+    resetRequired: false,
+    hasMore: response.has_more
+  };
+}
+
