@@ -413,10 +413,11 @@ const api = {
       x: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
       y: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
     };
-    const [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
+    const [entitlementProbe, licenseClaimProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
       challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe,
       revokeDeviceProbe, journalPostProbe, stockTransferProbe, memberPermissionsProbe,
       memberRoleProbe, memberStatusProbe, memberPermissionProbe, clearMemberPermissionProbe] = await Promise.all([
+      client.rpc('claim_factori_license', { p_license_key: '', p_business_id: probeBusinessId }),
       client.rpc('get_business_entitlements', { p_business_id: probeBusinessId }),
       // Empty name is intentionally invalid; the function must reject it without creating a row.
       client.rpc('create_business', { p_name: '' }),
@@ -476,7 +477,7 @@ const api = {
         p_business_id: probeBusinessId, p_member_user_id: probeBusinessId, p_permission_code: 'invalid'
       })
     ]);
-    const rpcResults = [entitlementProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
+    const rpcResults = [entitlementProbe, licenseClaimProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
       challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe,
       revokeDeviceProbe, journalPostProbe, stockTransferProbe, memberPermissionsProbe,
       memberRoleProbe, memberStatusProbe, memberPermissionProbe, clearMemberPermissionProbe];
