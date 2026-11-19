@@ -3,10 +3,15 @@
 // dedicated normalized RPCs now exist. The app-side operation adapters must call
 // those RPCs explicitly and persist idempotent offline intents before any collection
 // is moved into SYNC_WRITE_COLLECTIONS.
+export const FINANCIAL_STAGE_COLLECTIONS = Object.freeze([
+  'pay', 'supplierPayments', 'expenses', 'otherincome'
+]);
+const FINANCIAL_STAGE_SET = new Set(FINANCIAL_STAGE_COLLECTIONS);
+
 export const SYNC_WRITE_COLLECTIONS = Object.freeze([
   'cust', 'suppliers', 'duedates', 'prod', 'services', 'categories',
   'inv', 'serviceInv', 'warehouses', 'bankAccounts', 'fiscal',
-  'smsHistory'
+  'smsHistory', ...FINANCIAL_STAGE_COLLECTIONS
 ]);
 
 export const SYNC_READ_COLLECTIONS = Object.freeze([
@@ -238,7 +243,8 @@ export function prepareSyncOperations(db, state, createOperationId) {
   }
 
   for (const tombstone of next.tombstones) {
-    if (!tombstone || !WRITE_SET.has(tombstone.collection) || !tombstone.legacy_id) continue;
+    if (!tombstone || FINANCIAL_STAGE_SET.has(tombstone.collection)
+      || !WRITE_SET.has(tombstone.collection) || !tombstone.legacy_id) continue;
     const key = tombstone.collection + ':' + String(tombstone.legacy_id);
     if (queued.has(key)) continue;
     const baseVersion = Math.max(0, Number(next.versions[tombstone.collection]?.[tombstone.legacy_id]) || 0);
@@ -376,6 +382,7 @@ export function applyPulledRecords(db, state, records) {
 
 
 export function createSyncTombstone(collection, legacyId, state) {
+  if (FINANCIAL_STAGE_SET.has(collection)) throw new Error('financial staging records are append/update only and cannot be deleted through generic sync');
   if (!WRITE_SET.has(collection)) throw new Error('collection is not enabled for sync deletes');
   const id = String(legacyId ?? '');
   if (!id || id.length > 200) throw new Error('invalid tombstone legacy id');
