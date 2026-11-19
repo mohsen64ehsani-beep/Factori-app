@@ -1,5 +1,5 @@
 -- Static security assertions for permission-aware product costs.
-do $
+do $test$
 declare v_bridge text; v_category_fn text;
 begin
  if not has_column_privilege('authenticated','public.products','cost_price','SELECT') then
@@ -24,4 +24,4 @@ begin
  if position('new.collection=''categories''' in v_bridge)=0 then raise exception 'Android categories must be adopted into normalized product categories'; end if;
  select pg_get_functiondef('public.web_create_product_category(uuid,text,uuid)'::regprocedure) into v_category_fn;
  if position('write_legacy_master_record' in v_category_fn)=0 then raise exception 'Web categories must be published to the Android sync stream'; end if;
-end $$;
+end $test$;
