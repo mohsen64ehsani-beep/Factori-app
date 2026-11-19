@@ -114,3 +114,7 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
   .fw-stat strong{font-size:16px}
   .fw-nav button{flex-basis:58px;min-width:58px;font-size:9px}
 }
+
+.fw-inline-form{display:flex;align-items:center;gap:6px;min-width:190px}
+.fw-inline-form select{min-width:100px;max-width:150px}
+@media(max-width:760px){.fw-inline-form{min-width:180px}.fw-inline-form select{min-height:38px}}
