@@ -275,6 +275,14 @@ const api = {
   getSyncDeviceId(businessId) {
     try { return localStorage.getItem('factoori:sync-device:' + businessId) || ''; } catch { return ''; }
   },
+  async syncCurrencyPreference(payload) {
+    if (!payload?.businessId) throw new Error('کسب‌وکار برای همگام‌سازی واحد پول مشخص نشده است.');
+    const displayUnit = String(payload?.database?.cu || 'ریال') === 'تومان' ? 'toman' : 'rial';
+    return unwrap(await client.rpc('web_sync_currency_display_unit', {
+      p_business_id: payload.businessId,
+      p_display_unit: displayUnit
+    }));
+  },
   async syncPush(payload) {
     if (!payload?.businessId || !payload?.deviceId || !Array.isArray(payload?.operations) || payload.operations.length > 100) {
       throw new Error('بسته همگام‌سازی معتبر نیست؛ حداکثر ۱۰۰ عملیات مجاز است.');
