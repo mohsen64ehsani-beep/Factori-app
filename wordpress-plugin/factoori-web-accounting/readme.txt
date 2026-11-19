@@ -23,21 +23,22 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Shared email/password sign-in and sign-up.
 * Business creation and business switching.
 * Management dashboard with sales, purchases, receipts, payments, pending cheques, low-stock indicators, estimated financial-account balances and current stock quantities.
-* Contact/customer/supplier creation, per-contact financial profile and recent document/transaction history.
+* Contact/customer/supplier creation, per-contact financial profile, shared contact-ledger balances, customer receivables and supplier payables.
 * Product creation and list with unit cost, sale price, live gross-margin preview and product categories; cost values are served only to members with the sensitive catalog.cost.read permission.
-* Multi-line sales and purchase invoice draft creation for goods and services.
+* Multi-line sales and purchase invoice draft creation for goods and services, with printable invoice / browser PDF output.
 * Bidirectional customer, supplier, product cost and category sync with the Android legacy sync stream; cost fields remain in the private sync payload and are permission-filtered in web reads.
 * Web-created goods-sale drafts are mirrored into the Android invoice stream; Android-origin invoice records are visible in the web invoice list.
 * Posting supported goods-sale and purchase drafts through validated database RPCs.
 * Shared financial transaction entry for customer receipts, supplier payments, expenses, other income and account-to-account transfers.
 * Dedicated expense/other-income register and supplier ledger with approximate purchase/payment balances.
-* Cheque register with normalized lifecycle transitions and accounting settlement.
+* Cheque register with deposit, settlement, bounce, cancellation, return and audited settlement-reversal actions plus event history.
 * Inventory balances from the complete movement history, FIFO stock transfers, opening stock and wastage posting.
+* Validated sales and purchase returns from original posted goods invoices, including stock, FIFO and ledger effects.
 * Read-only legacy data preview and guarded import of supported customers, suppliers, products, services, warehouses, fiscal periods, sales/service invoice drafts, purchase drafts, cash receipts, pending cheques, supplier payments, expenses and other income.
 * Web-origin financial, account-transfer and inventory operations mirrored to the Android sync collections.
 * Shared service catalog management and service-sale invoice drafts with Android `serviceInv` synchronization.
 * Web purchase invoice lines are mirrored to Android `purchases`; unit cost remains in the private sync payload partition.
-* Six-month sales/purchase report with responsive charts and monthly comparison (based on the currently loaded posted documents).
+* Six-month sales/purchase report with responsive charts and monthly comparison, including legacy Android sales history where available.
 * Business settings overview with currency, timezone, costing/tax settings and fiscal-period status.
 * Persian (Jalali) calendar display and date entry across invoice, financial, cheque, inventory and report screens; dates are converted to Gregorian ISO before database writes.
 * Responsive full-screen desktop and mobile interface with refreshed dashboard, cards, tables, touch-friendly navigation and compact forms.
