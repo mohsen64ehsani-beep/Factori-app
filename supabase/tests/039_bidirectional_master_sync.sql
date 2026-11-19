@@ -25,7 +25,7 @@ begin
  insert into private.business_state_records(business_id,collection,legacy_id,payload_public,updated_by)
  values
  (v_business,'cust',v_legacy_contact,'{"id":"mobile-contact-039","n":"Mobile Contact 039","ph":"09121111139","ad":"Mobile address"}'::jsonb,v_user),
- (v_business,'prod',v_legacy_product,'{"id":"mobile-product-039","n":"Mobile Product 039","sell":3900,"minQty":4,"barcode":"390039"}'::jsonb,v_user);
+ (v_business,'prod',v_legacy_product,'{"id":"mobile-product-039","n":"Mobile Product 039","sell":3900,"minQty":4,"barcode":"390040"}'::jsonb,v_user);
  if not exists(select 1 from public.contacts where business_id=v_business and legacy_id=v_legacy_contact and name='Mobile Contact 039') then
   raise exception 'Mobile customer record was not projected into normalized contacts';
  end if;
