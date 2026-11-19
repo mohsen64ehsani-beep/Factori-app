@@ -345,7 +345,7 @@
   }
   root.addEventListener('click',e=>{
     const section=e.target.closest('[data-section]');
-    if(section){state.section=section.dataset.section;render();return;}
+    if(section){state.section=section.dataset.section;root.classList.remove('fw-mobile-menu-open');render();return;}
     const btn=e.target.closest('[data-action]');if(!btn)return;
     const action=btn.dataset.action;
     if(action==='mobile-download-missing'){toast('لینک دانلود اپ هنوز در تنظیمات وردپرس ثبت نشده است.');return;}
