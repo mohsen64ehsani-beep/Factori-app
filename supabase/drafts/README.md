@@ -1,6 +1,6 @@
 # Shared database migration source and deployment status
 
-The SQL source files remain under `supabase/drafts/` as the tested development sequence. On 2026-11-18, all current database changes through migration 059 (including 004a and the later web/mobile bridge migrations) were applied successfully to the live Factoori Supabase project. Matching, timestamped copies are recorded under `supabase/migrations/` so the GitHub branch tracks the production migration history. The two earlier license migrations remain the pre-existing production baseline.
+The SQL source files remain under `supabase/drafts/` as the tested development sequence. On 2026-11-18, all current database changes through migration 062 (including 004a and the later web/mobile bridge migrations) were applied successfully to the live Factoori Supabase project. Matching, timestamped copies are recorded under `supabase/migrations/` so the GitHub branch tracks the production migration history. The two earlier license migrations remain the pre-existing production baseline.
 
 ## Draft order
 
@@ -353,3 +353,8 @@ Pending received and issued cheques with matched customer/supplier references an
 ## Adoption of synchronized supplier contacts (059)
 
 The supplier import path now recognizes and maps an exact supplier contact already created by the live sync bridge, avoiding false conflicts during the controlled historical-data import.
+
+
+## Account transfer bridge and import (060–062)
+
+Account-to-account transfers created in the web ledger are mirrored to Android's `moneytransfers` collection. Historical transfers are imported only when both source and destination financial accounts resolve to active normalized accounts with valid ledger mappings; the source fingerprint is mapped idempotently, and web-origin transfer records are adopted instead of duplicated.
