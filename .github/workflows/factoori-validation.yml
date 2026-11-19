@@ -8,6 +8,9 @@ on:
       - "sync-engine.js"
       - "sync-runtime.js"
       - "sync-engine.test.js"
+      - "cloud-client.js"
+      - "index.html"
+      - "supabase/migrations/**"
       - "wordpress-plugin/factoori-web-accounting/**"
       - ".github/workflows/factoori-validation.yml"
   workflow_dispatch:
