@@ -20,7 +20,7 @@ jobs:
         run: |
           mkdir -p dist
           cd wordpress-plugin
-          zip -r ../../dist/web-factoori.zip web-factoori
+          zip -r ../dist/web-factoori.zip web-factoori
       - name: Verify ZIP structure
         run: |
           unzip -l dist/web-factoori.zip
