@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Factoori Web Accounting
  * Description: Full-screen Factoori accounting workspace backed by the same Supabase account and business data as the Android app.
- * Version: 0.1.0
+ * Version: 0.1.1
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: Factoori
@@ -10,7 +10,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
-define('FACTOORI_WEB_VERSION', '0.1.0');
+define('FACTOORI_WEB_VERSION', '0.1.1');
 define('FACTOORI_WEB_FILE', __FILE__);
 define('FACTOORI_WEB_DIR', plugin_dir_path(__FILE__));
 
@@ -56,7 +56,12 @@ function factoori_web_settings_page() {
         </table>
         <?php submit_button('ذخیره تنظیمات'); ?>
       </form>
-      <hr><p>برای ساخت صفحه حسابداری، یک برگه وردپرس ایجاد کنید و کد <code>[factoori_web_accounting]</code> را داخل آن قرار دهید.</p>
+      <hr>
+      <?php if ($page_url) : ?>
+        <p><strong>صفحه حسابداری:</strong> <a href="<?php echo esc_url($page_url); ?>" target="_blank" rel="noopener">مشاهده فضای حسابداری آنلاین</a></p>
+      <?php else : ?>
+        <p>پس از فعال‌سازی افزونه، صفحه اختصاصی حسابداری به‌صورت خودکار ساخته می‌شود. در صورت حذف صفحه، یک برگه با کد <code>[factoori_web_accounting]</code> ایجاد کنید.</p>
+      <?php endif; ?>
     </div>
     <?php
 }
@@ -90,10 +95,8 @@ add_filter('template_include', function ($template) {
 
 function factoori_web_activate() {
     $page = get_page_by_path('factoori-accounting');
-    if ($page instanceof WP_Post) {
-        if (has_shortcode($page->post_content, 'factoori_web_accounting')) {
-            update_option('factoori_web_page_id', $page->ID);
-        }
+    if ($page instanceof WP_Post && has_shortcode($page->post_content, 'factoori_web_accounting')) {
+        update_option('factoori_web_page_id', $page->ID);
         return;
     }
     $page_id = wp_insert_post(array(
