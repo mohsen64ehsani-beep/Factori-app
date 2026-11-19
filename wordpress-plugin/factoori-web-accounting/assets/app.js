@@ -246,8 +246,28 @@
     const items=state.documentItems.filter(x=>x.document_id===d.id);
     const rows=items.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(x.description_snapshot)+'</td><td>'+money(x.quantity)+' '+esc(x.unit_name_snapshot||'')+'</td><td>'+money(x.unit_price)+'</td><td>'+money(x.line_total)+'</td></tr>');
     const status=d.status==='posted'?'ثبت نهایی':d.status==='voided'?'باطل / بایگانی‌شده':'پیش‌نویس';
-    const actions='<button class="fw-btn secondary" data-action="invoices-back">← بازگشت به فاکتورها</button> <button class="fw-btn secondary" data-action="print-invoice" data-id="'+esc(d.id)+'">چاپ / PDF</button>'+(d.status==='draft'?' <button class="fw-btn danger" data-action="archive-invoice" data-id="'+esc(d.id)+'">بایگانی پیش‌نویس</button>':'');
+    const actions='<button class="fw-btn secondary" data-action="invoices-back">← بازگشت به فاکتورها</button> '+(d.status==='draft'?'<button class="fw-btn secondary" data-action="edit-invoice" data-id="'+esc(d.id)+'">ویرایش پیش‌نویس</button> ':'')+'<button class="fw-btn secondary" data-action="print-invoice" data-id="'+esc(d.id)+'">چاپ / PDF</button>'+(d.status==='draft'?' <button class="fw-btn danger" data-action="archive-invoice" data-id="'+esc(d.id)+'">بایگانی پیش‌نویس</button>':'');
     shell(actions+'<section class="fw-hero" style="margin-top:14px"><div><span>جزئیات سند</span><h2>'+esc(d.document_number||'فاکتور بدون شماره')+'</h2><p>'+esc(contact?.name||'بدون شخص مرتبط')+' · '+dateFa(d.document_date)+' · '+status+'</p></div><div class="fw-hero-mark">▤</div></section><section class="fw-card" style="margin-top:14px"><h2>اقلام فاکتور</h2>'+table(rows,['ردیف','شرح کالا / خدمت','تعداد','قیمت واحد','جمع ردیف'],'برای این سند قلمی ثبت نشده است.')+'<div class="fw-summary-row"><span>جمع کل</span><strong>'+money(d.total_amount)+' '+currencyLabel()+'</strong></div>'+(d.notes?'<p class="fw-sub">توضیحات: '+esc(d.notes)+'</p>':'')+'</section>','جزئیات فاکتور','سوابق سند و اقلام ثبت‌شده');
+  }
+  function invoiceEdit(){
+    const d=state.documents.find(x=>x.id===state.selectedDocumentId);
+    if(!d||d.status!=='draft'){state.section='invoices';invoices();return;}
+    const isService=['service_sale','service_purchase'].includes(d.document_type);
+    const contactOptions=state.contacts.filter(c=>isService?['customer','both','supplier'].includes(c.contact_type):['customer','both','supplier'].includes(c.contact_type)).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===d.contact_id?'selected':'')+'>'+esc(c.name)+'</option>').join('');
+    const warehouseOptions='<option value="">بدون انبار</option>'+state.warehouses.map(w=>'<option value="'+esc(w.id)+'" '+(w.id===d.warehouse_id?'selected':'')+'>'+esc(w.name)+'</option>').join('');
+    const catalog=isService?state.services:state.products;
+    const itemRows=state.documentItems.filter(x=>x.document_id===d.id);
+    const lineDiscounts=itemRows.reduce((n,x)=>n+Number(x.discount_amount||0),0);
+    const headerDiscount=Math.max(0,Number(d.discount_amount||0)-lineDiscounts);
+    const rows=itemRows.map(x=>{
+      const ref=isService?x.service_id:x.product_id;
+      const options=catalog.map(item=>'<option value="'+esc(item.id)+'" '+(item.id===ref?'selected':'')+'>'+esc(item.name)+'</option>').join('');
+      const currentExists=catalog.some(item=>item.id===ref);
+      const currentOption=!currentExists&&ref?'<option value="'+esc(ref)+'" selected>'+esc(x.description_snapshot)+' (کالای قبلی)</option>':'';
+      return '<div data-invoice-edit-row class="fw-card" style="margin:10px 0;padding:12px"><div class="fw-field"><label>'+(isService?'خدمت':'کالا')+'</label><select name="item_ref" required>'+currentOption+options+'</select></div><div class="fw-form-grid"><div class="fw-field"><label>شرح</label><input name="description" required maxlength="500" value="'+esc(x.description_snapshot)+'"></div><div class="fw-field"><label>واحد</label><input name="unit_name" value="'+esc(x.unit_name_snapshot||'عدد')+'"></div><div class="fw-field"><label>تعداد</label><input name="quantity" type="number" min="0.0001" step="0.0001" required value="'+esc(x.quantity)+'"></div><div class="fw-field"><label>قیمت واحد ('+currencyLabel()+')</label><input name="unit_price" type="number" min="0" step="1" required value="'+esc(x.unit_price)+'"></div><div class="fw-field"><label>تخفیف قلم</label><input name="line_discount" type="number" min="0" step="1" value="'+esc(x.discount_amount||0)+'"></div><div class="fw-field"><label>مالیات درصدی</label><input name="tax_rate" type="number" min="0" max="100" step="0.01" value="'+esc(x.tax_rate_snapshot||0)+'"></div></div><button class="fw-link" type="button" data-action="remove-invoice-item">حذف قلم</button></div>';
+    }).join('');
+    const addItem='<button class="fw-btn secondary" type="button" data-action="add-invoice-item">افزودن قلم</button>';
+    shell('<button class="fw-btn secondary" data-action="invoice-detail-back">← بازگشت به جزئیات</button><section class="fw-card" style="margin-top:14px"><h2>ویرایش پیش‌نویس '+esc(d.document_number||'')+'</h2><form data-form="invoice-edit"><input type="hidden" name="document_id" value="'+esc(d.id)+'"><div class="fw-form-grid"><div class="fw-field"><label>شخص</label><select name="contact_id" required>'+contactOptions+'</select></div><div class="fw-field"><label>انبار</label><select name="warehouse_id">'+warehouseOptions+'</select></div><div class="fw-field"><label>تاریخ فاکتور</label><input name="document_date" type="date" required value="'+esc(d.document_date)+'"></div><div class="fw-field"><label>سررسید</label><input name="due_date" type="date" value="'+esc(d.due_date||'')+'"></div><div class="fw-field"><label>تخفیف کل فاکتور</label><input name="discount_amount" type="number" min="0" step="1" value="'+esc(headerDiscount)+'"></div></div><div class="fw-field"><label>توضیحات</label><textarea name="notes" rows="2">'+esc(d.notes||'')+'</textarea></div><h3>اقلام</h3>'+rows+addItem+'<p class="fw-sub">نوع سند و شماره فاکتور ثابت می‌مانند؛ تغییرات فقط روی پیش‌نویس انجام می‌شود.</p><button class="fw-btn" type="submit">ذخیره تغییرات فاکتور</button></form></section>','ویرایش فاکتور','شناسه و شماره فاکتور حفظ می‌شوند');
   }
   function invoices(){
     const rows=[...state.documents,...state.legacyDocuments].sort((a,b)=>String(b.created_at||b.document_date).localeCompare(String(a.created_at||a.document_date))).map(d=>'<tr><td>'+esc(d.document_number||'—')+'</td><td>'+({goods_sale:'فروش کالا',service_sale:'فروش خدمات',purchase:'خرید کالا',service_purchase:'خرید خدمات'}[d.document_type]||esc(d.document_type))+'</td><td>'+dateFa(d.document_date)+'</td><td>'+money(d.total_amount)+'</td><td><span class="fw-badge '+(d.legacy_source||d.status==='posted'?'green':'gray')+'">'+(d.legacy_source?'همگام از اپ':d.status==='posted'?'ثبت نهایی':d.status==='voided'?'باطل / بایگانی‌شده':'پیش‌نویس')+'</span></td><td>'+(d.legacy_source?'':'<button class="fw-link" data-action="invoice-detail" data-id="'+esc(d.id)+'">مشاهده</button> ')+'<button class="fw-link" data-action="print-invoice" data-id="'+esc(d.id)+'" data-legacy="'+(d.legacy_source?'1':'0')+'">چاپ / PDF</button> '+(d.legacy_source?'از اپلیکیشن':d.status==='draft'?'<button class="fw-link" data-action="post-invoice" data-id="'+esc(d.id)+'">ثبت نهایی</button> <button class="fw-link" data-action="archive-invoice" data-id="'+esc(d.id)+'">بایگانی</button>':'—')+'</td></tr>');
@@ -354,7 +374,7 @@
   function render(){
     if(!state.user){authView();return;}
     if(!state.business){root.innerHTML='<div class="fw-auth-wrap"><section class="fw-auth-card"><div class="fw-brand"><div class="fw-brand-mark">ف</div><div><b>فاکتوری</b><small>حسابداری آنلاین</small></div></div><h1>ساخت کسب‌وکار</h1><p class="fw-sub">برای شروع، نام کسب‌وکار خود را وارد کنید.</p><form data-form="business"><div class="fw-field"><label>نام کسب‌وکار</label><input name="name" required minlength="2" maxlength="160"></div><button class="fw-btn fw-full" type="submit">ایجاد فضای حسابداری</button></form><button class="fw-link" data-action="logout" style="margin-top:16px">خروج از حساب</button></section></div>';return;}
-    ({dashboard,invoices,invoiceDetail,contacts,receivables,contactDetail,contactEdit,products,productEdit,finance,expenses,creditors,cheques,inventory,reports,settings,legacy}[state.section]||dashboard)();
+    ({dashboard,invoices,invoiceDetail,invoiceEdit,contacts,receivables,contactDetail,contactEdit,products,productEdit,finance,expenses,creditors,cheques,inventory,reports,settings,legacy}[state.section]||dashboard)();
   }
   async function withBusy(fn){
     if(state.busy)return;state.busy=true;root.classList.add('fw-busy');
@@ -370,6 +390,8 @@
     if(action==='toggle-mobile-menu'){root.classList.toggle('fw-mobile-menu-open');return;}
     if(action==='contact-detail'){state.selectedContactId=btn.dataset.id;state.section='contactDetail';render();return;}
     if(action==='invoice-detail'){state.selectedDocumentId=btn.dataset.id;state.section='invoiceDetail';render();return;}
+    if(action==='edit-invoice'){state.selectedDocumentId=btn.dataset.id;state.section='invoiceEdit';render();return;}
+    if(action==='invoice-detail-back'){state.section='invoiceDetail';render();return;}
     if(action==='invoices-back'){state.section='invoices';render();return;}
     if(action==='archive-invoice')withBusy(async()=>{if(!confirm('این پیش‌نویس بایگانی شود؟ سند و اقلام آن حذف فیزیکی نمی‌شوند و سابقه حفظ خواهد شد.'))return;await rpc('web_void_document_draft',{p_business_id:state.business.id,p_document_id:btn.dataset.id,p_reason:'بایگانی از نسخه وب'});await loadData();state.section='invoices';render();toast('پیش‌نویس بایگانی شد؛ سابقه فاکتور حفظ شد.');});
     if(action==='contacts-back'){state.section='contacts';render();return;}
@@ -378,8 +400,8 @@
     if(action==='edit-product'){state.selectedProductId=btn.dataset.id;state.section='productEdit';render();return;}
     if(action==='archive-contact')withBusy(async()=>{if(!confirm('این شخص بایگانی شود؟ سوابق و اسناد قبلی حذف نمی‌شوند.'))return;await rpc('web_set_contact_active',{p_business_id:state.business.id,p_contact_id:btn.dataset.id,p_is_active:false});await loadData();state.section='contacts';render();toast('شخص بایگانی شد؛ سوابق مالی محفوظ ماند.');});
     if(action==='archive-product')withBusy(async()=>{if(!confirm('این کالا بایگانی شود؟ گردش انبار و فاکتورهای قبلی حذف نمی‌شوند.'))return;await rpc('web_set_product_active',{p_business_id:state.business.id,p_product_id:btn.dataset.id,p_is_active:false});await loadData();state.section='products';render();toast('کالا بایگانی شد؛ سوابق و گردش انبار محفوظ ماند.');});
-    if(action==='add-invoice-item'){const form=btn.closest('form[data-form="invoice"]');const first=form?.querySelector('[data-invoice-row]');if(first){const row=first.cloneNode(true);row.querySelectorAll('input').forEach(x=>x.value=x.name==='quantity'?'1':'');row.querySelectorAll('select').forEach(x=>x.selectedIndex=0);form.querySelector('.fw-form-grid')?.appendChild(row);}return;}
-    if(action==='remove-invoice-item'){const form=btn.closest('form[data-form="invoice"]');const rows=form?.querySelectorAll('[data-invoice-row]');if(rows?.length>1)btn.closest('[data-invoice-row]').remove();return;}
+    if(action==='add-invoice-item'){const form=btn.closest('form');if(form?.dataset.form==='invoice-edit'){const first=form.querySelector('[data-invoice-edit-row]');if(first){const row=first.cloneNode(true);row.querySelectorAll('input').forEach(x=>x.value=x.name==='quantity'?'1':'');row.querySelectorAll('select').forEach(x=>x.selectedIndex=0);form.insertBefore(row,btn);}return;}const first=form?.querySelector('[data-invoice-row]');if(first){const row=first.cloneNode(true);row.querySelectorAll('input').forEach(x=>x.value=x.name==='quantity'?'1':'');row.querySelectorAll('select').forEach(x=>x.selectedIndex=0);form.querySelector('.fw-form-grid')?.appendChild(row);}return;}
+    if(action==='remove-invoice-item'){const form=btn.closest('form');const editRows=form?.querySelectorAll('[data-invoice-edit-row]');const rows=editRows?.length?editRows:form?.querySelectorAll('[data-invoice-row]');if(rows?.length>1)btn.closest('[data-invoice-edit-row], [data-invoice-row]').remove();return;}
     if(action==='toggle-auth'){state.signup=!state.signup;render();}
     if(action==='logout')withBusy(async()=>{try{await request('/auth/v1/logout',{method:'POST'});}catch(_){}saveSession(null);state.user=null;state.business=null;state.businesses=[];clearData();render();});
     if(action==='refresh')withBusy(async()=>{await loadBusinesses();render();toast('اطلاعات بروزرسانی شد.');});
@@ -504,6 +526,26 @@
         const fn=kind==='sales-return'?'post_sales_return':'post_purchase_return';
         await rpc(fn,{p_business_id:state.business.id,p_original_document_id:data.original_document_id,p_return_date:data.return_date,p_items:[{document_item_id:data.document_item_id,quantity}],p_reason:data.reason,p_idempotency_key:idempotency()});
         await loadData();render();toast('مرجوعی با موفقیت ثبت و در حسابداری و موجودی اعمال شد.');
+      } else if(kind==='invoice-edit'){
+        const doc=state.documents.find(x=>x.id===data.document_id);
+        if(!doc||doc.status!=='draft')throw new Error('فقط پیش‌نویس قابل ویرایش است.');
+        const isService=['service_sale','service_purchase'].includes(doc.document_type);
+        const rows=Array.from(form.querySelectorAll('[data-invoice-edit-row]'));
+        if(!rows.length)throw new Error('حداقل یک قلم لازم است.');
+        const items=rows.map(row=>{
+          const ref=row.querySelector('[name="item_ref"]').value;
+          const quantity=Number(row.querySelector('[name="quantity"]').value);
+          const unitPrice=Number(row.querySelector('[name="unit_price"]').value);
+          const lineDiscount=Number(row.querySelector('[name="line_discount"]').value||0);
+          const taxRate=Number(row.querySelector('[name="tax_rate"]').value||0);
+          if(!(quantity>0)||!Number.isSafeInteger(unitPrice)||unitPrice<0||lineDiscount<0||taxRate<0||taxRate>100)throw new Error('مقادیر تعداد، قیمت، تخفیف یا مالیات معتبر نیستند.');
+          const catalogItem=(isService?state.services:state.products).find(x=>x.id===ref);
+          const oldItem=state.documentItems.find(x=>x.document_id===doc.id&&(isService?x.service_id:x.product_id)===ref);
+          if(!catalogItem&&!oldItem)throw new Error('کالا یا خدمت انتخاب‌شده معتبر نیست.');
+          return {item_type:isService?'service':'goods',product_id:isService?null:ref,service_id:isService?ref:null,description:row.querySelector('[name="description"]').value,quantity,unit_name:row.querySelector('[name="unit_name"]').value||'عدد',unit_price:unitPrice,discount_amount:lineDiscount,tax_rate:taxRate};
+        });
+        const editedId=await rpc('web_update_document_draft',{p_business_id:state.business.id,p_document_id:doc.id,p_document_type:doc.document_type,p_contact_id:data.contact_id||null,p_warehouse_id:data.warehouse_id||null,p_fiscal_period_id:doc.fiscal_period_id||null,p_document_date:data.document_date,p_due_date:data.due_date||null,p_notes:data.notes||null,p_discount_amount:Number(data.discount_amount||0),p_tax_rate:null,p_items:items,p_idempotency_key:null});
+        await loadData();state.selectedDocumentId=editedId;state.section='invoiceDetail';render();toast('پیش‌نویس با حفظ شماره و شناسه فاکتور به‌روزرسانی شد.');
       } else if(kind==='invoice'){
         const serviceSale=data.document_type==='service_sale';
         const itemRows=Array.from(form.querySelectorAll('[data-invoice-row]'));
