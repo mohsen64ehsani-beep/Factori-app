@@ -22,6 +22,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Validate plugin structure
         run: |
+          set -euo pipefail
           test -f wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php
           test -f wordpress-plugin/factoori-web-accounting/assets/app.js
           test -f wordpress-plugin/factoori-web-accounting/assets/app.css
@@ -29,22 +30,19 @@ jobs:
           php -l wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php
           php -l wordpress-plugin/factoori-web-accounting/templates/fullscreen.php
           node --check wordpress-plugin/factoori-web-accounting/assets/app.js
-      - name: Build installable ZIP
+      - name: Build and verify installable ZIP
         run: |
+          set -euo pipefail
           mkdir -p dist
           cd wordpress-plugin
           zip -r ../dist/factoori-web-accounting-0.1.1.zip factoori-web-accounting
           cd ../dist
           unzip -t factoori-web-accounting-0.1.1.zip
           unzip -Z1 factoori-web-accounting-0.1.1.zip | grep -qx 'factoori-web-accounting/factoori-web-accounting.php'
-          ! unzip -Z1 factoori-web-accounting-0.1.1.zip | grep -Eq '(^|/)\\.git(/|$)|\\.DS_Store
-        uses: actions/upload-artifact@v4
-        with:
-          name: factoori-web-accounting-0.1.1
-          path: dist/factoori-web-accounting-0.1.1.zip
-          if-no-files-found: error
-          retention-days: 30
-
+          if unzip -Z1 factoori-web-accounting-0.1.1.zip | grep -Eq '(^|/)\\.git(/|$)|\\.DS_Store$'; then
+            echo "Unexpected development files found in plugin archive" >&2
+            exit 1
+          fi
           php_version=$(grep -m1 -E '^ \\* Version:' ../wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php | awk '{print $3}')
           readme_version=$(awk '/^Stable tag:/ {print $3; exit}' ../wordpress-plugin/factoori-web-accounting/readme.txt)
           test "$php_version" = "$readme_version"
