@@ -14,8 +14,8 @@
   const gregorianToJalali = iso => { if(!iso)return ''; const d=new Date(iso+'T12:00:00Z'); if(Number.isNaN(d.getTime()))return iso; const p=persianParts(d); return String(p.year).padStart(4,'0')+'/'+String(p.month).padStart(2,'0')+'/'+String(p.day).padStart(2,'0'); };
   const jalaliToGregorian = value => {
     const raw=String(value||'').replace(/[۰-۹]/g,ch=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(ch)).replace(/[٠-٩]/g,ch=>'٠١٢٣٤٥٦٧٨٩'.indexOf(ch)).trim();
-    const m=raw.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/); if(!m)throw new Error('تاریخ را به شکل ۱۴۰۵/۰۸/۲۸ وارد کنید.');
-    const y=+m[1],mo=+m[2],day=+m[3]; if(mo<1||mo>12||day<1||day>(mo<=6?31:mo<=11?30:30))throw new Error('تاریخ شمسی معتبر نیست.');
+    const m=raw.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/); const compact=raw.match(/^(\d{4})(\d{2})(\d{2})$/); const parts=m||compact; if(!parts)throw new Error('تاریخ را به شکل ۱۴۰۵/۰۸/۲۸ یا ۱۴۰۵۰۸۲۸ وارد کنید.');
+    const y=+parts[1],mo=+parts[2],day=+parts[3]; if(mo<1||mo>12||day<1||day>(mo<=6?31:mo<=11?30:30))throw new Error('تاریخ شمسی معتبر نیست.');
     const anchor=Date.UTC(y+621,2,20); let start=null;
     for(let offset=-4;offset<=4;offset++){const d=new Date(anchor+offset*86400000),p=persianParts(d);if(p.year===y&&p.month===1&&p.day===1){start=d;break;}}
     if(!start)throw new Error('تبدیل تاریخ شمسی انجام نشد.');
@@ -26,7 +26,7 @@
   };
   const dateFa = v => { try { return v ? new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'UTC'}).format(new Date(v+'T12:00:00Z')) : '—'; } catch (_) { return v || '—'; } };
   const today = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-  function enhanceDateInputs(){ root.querySelectorAll('input[type="date"]').forEach(input=>{const iso=input.value;input.type='text';input.dataset.jalaliDate='1';input.inputMode='numeric';input.placeholder='۱۴۰۵/۰۸/۲۸';input.autocomplete='off';input.value=gregorianToJalali(iso);input.setAttribute('aria-label',(input.closest('.fw-field')?.querySelector('label')?.textContent||'تاریخ')+' به شمسی');}); }
+  function enhanceDateInputs(){ root.querySelectorAll('input[type="date"]').forEach(input=>{const iso=input.value;input.type='text';input.dataset.jalaliDate='1';input.inputMode='numeric';input.placeholder='۱۴۰۵۰۸۲۸';input.autocomplete='off';input.value=gregorianToJalali(iso);input.setAttribute('aria-label',(input.closest('.fw-field')?.querySelector('label')?.textContent||'تاریخ')+' به شمسی');}); }
   const idempotency = () => 'web-' + (crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(16).slice(2));
   const getStored = () => { try { return JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch (_) { return null; } };
   const saveSession = s => { state.session=s; if(s) sessionStorage.setItem(storageKey,JSON.stringify(s)); else sessionStorage.removeItem(storageKey); };
