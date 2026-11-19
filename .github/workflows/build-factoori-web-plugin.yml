@@ -39,11 +39,11 @@ jobs:
           cd ../dist
           unzip -t factoori-web-accounting-0.1.1.zip
           unzip -Z1 factoori-web-accounting-0.1.1.zip | grep -qx 'factoori-web-accounting/factoori-web-accounting.php'
-          if unzip -Z1 factoori-web-accounting-0.1.1.zip | grep -Eq '(^|/)\\.git(/|$)|\\.DS_Store$'; then
+          if unzip -Z1 factoori-web-accounting-0.1.1.zip | grep -Eq '(^|/)[.]git(/|$)|[.]DS_Store$'; then
             echo "Unexpected development files found in plugin archive" >&2
             exit 1
           fi
-          php_version=$(grep -m1 -E '^ \\* Version:' ../wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php | awk '{print $3}')
+          php_version=$(grep -m1 -F 'Version:' ../wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php | awk '{print $3}')
           readme_version=$(awk '/^Stable tag:/ {print $3; exit}' ../wordpress-plugin/factoori-web-accounting/readme.txt)
           test "$php_version" = "$readme_version"
       - name: Upload plugin ZIP
