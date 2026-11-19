@@ -148,10 +148,27 @@ export async function runBusinessSync({
     // a crash/retry cannot create a new logical operation.
     await persist();
     if (!prepared.operations.length) return 0;
-    const results = await api.syncPushBatches({
-      businessId, deviceId, operations: prepared.operations
-    });
-    if (!Array.isArray(results)) throw new Error('پاسخ ارسال همگام‌سازی معتبر نیست.');
+    const stagedCollections = new Set(['pay', 'supplierPayments', 'expenses', 'otherincome']);
+    const stagedOperations = prepared.operations.filter(operation => stagedCollections.has(operation.collection));
+    const standardOperations = prepared.operations.filter(operation => !stagedCollections.has(operation.collection));
+    const results = [];
+    if (standardOperations.length) {
+      const standardResults = await api.syncPushBatches({
+        businessId, deviceId, operations: standardOperations
+      });
+      if (!Array.isArray(standardResults)) throw new Error('پاسخ ارسال همگام‌سازی معتبر نیست.');
+      results.push(...standardResults);
+    }
+    if (stagedOperations.length) {
+      if (typeof api.syncStageFinancialRecords !== 'function') {
+        throw new Error('درگاه امن انتقال سوابق مالی در این نسخه سرور فعال نیست؛ عملیات مالی در صف باقی ماند.');
+      }
+      const stagedResults = await api.syncStageFinancialRecords({
+        businessId, deviceId, operations: stagedOperations
+      });
+      if (!Array.isArray(stagedResults)) throw new Error('پاسخ انتقال سوابق مالی معتبر نیست.');
+      results.push(...stagedResults);
+    }
     state = acknowledgeSyncResults(state, results);
     await persist();
     return prepared.operations.length;
