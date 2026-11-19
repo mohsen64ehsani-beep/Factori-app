@@ -28,11 +28,11 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Bidirectional customer, supplier and product sync with the Android legacy sync stream.
 * Web-created goods-sale drafts are mirrored into the Android invoice stream; Android-origin invoice records are visible in the web invoice list.
 * Posting supported goods-sale and purchase drafts through validated database RPCs.
-* Shared financial transaction entry for customer receipts, supplier payments, expenses and other income.
+* Shared financial transaction entry for customer receipts, supplier payments, expenses, other income and account-to-account transfers.
 * Cheque register with normalized lifecycle transitions and accounting settlement.
 * Inventory balances from the complete movement history, FIFO stock transfers, opening stock and wastage posting.
 * Read-only legacy data preview and guarded import of supported customers, suppliers, products, services, warehouses, fiscal periods, sales/service invoice drafts, purchase drafts, cash receipts, pending cheques, supplier payments, expenses and other income.
-* Web-origin financial and inventory operations mirrored to the Android sync collections.
+* Web-origin financial, account-transfer and inventory operations mirrored to the Android sync collections.
 * Shared service catalog management and service-sale invoice drafts with Android `serviceInv` synchronization.
 * Web purchase invoice lines are mirrored to Android `purchases`; unit cost remains in the private sync payload partition.
 * Responsive full-screen desktop and mobile interface.
