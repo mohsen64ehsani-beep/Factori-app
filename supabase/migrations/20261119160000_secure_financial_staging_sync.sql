@@ -74,6 +74,7 @@ begin
       v_payload := v_op->'payload';
 
       if v_operation_id is null
+         or v_collection is null
          or v_collection not in ('pay','supplierPayments','expenses','otherincome')
          or v_legacy_id is null or length(v_legacy_id) not between 1 and 200
          or coalesce(v_op->>'operation_type','')<>'upsert'
