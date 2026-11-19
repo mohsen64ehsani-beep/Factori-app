@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Web Factoori
  * Description: Factoori unified account bridge and product introduction page. Uses Supabase Auth as the single credential authority for Android, web accounting and the WordPress profile.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: Factoori
@@ -10,7 +10,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
-define('FACTOORI_INTRO_VERSION', '1.0.0');
+define('FACTOORI_INTRO_VERSION', '1.0.1');
 define('FACTOORI_INTRO_SUPABASE_URL', 'https://rtlwztotaolbnjdtsjqy.supabase.co');
 define('FACTOORI_INTRO_PUBLISHABLE_KEY', 'sb_publishable_GhG0h_Mco3UomLqxnhynnw_blPQ3ii-');
 
@@ -145,6 +145,7 @@ function factoori_intro_landing_shortcode() {
     $web = esc_url(factoori_intro_web_url());
     $buy = esc_url(factoori_intro_purchase_url());
     ob_start(); ?>
+    <style>.factoori-intro a{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 17px;margin:6px 4px;border-radius:12px;background:#0f766e;color:#fff!important;text-decoration:none!important;font-weight:800;box-shadow:0 5px 14px #0f766e22;transition:transform .18s,box-shadow .18s}.factoori-intro a:hover{transform:translateY(-2px);box-shadow:0 8px 18px #0f766e30}.factoori-intro section:first-child a{background:#fff;color:#0f766e!important}</style>
     <div class="factoori-intro" dir="rtl" lang="fa">
       <section style="padding:44px 20px;text-align:center;border-radius:26px;background:linear-gradient(135deg,#0f766e,#263b63);color:#fff">
         <h1 style="font-size:clamp(28px,5vw,46px);margin:0 0 14px">فاکتوری؛ یک حساب، همه‌جا همراه شما</h1>
