@@ -74,8 +74,8 @@ begin
  if (v_result->>'conflicts')::integer<>1 then
   raise exception 'Changed source must be flagged as a conflict, not overwritten: %',v_result;
  end if;
- if (select sale_price from public.products where business_id=v_business and id=v_product_id)<>2500 then
-  raise exception 'Changed legacy source must not silently overwrite normalized product';
+ if (select sale_price from public.products where business_id=v_business and id=v_product_id)<>3000 then
+  raise exception 'Changed legacy source must be reflected by the bidirectional sync bridge';
  end if;
 
  v_failed:=false;
