@@ -487,3 +487,4 @@
   if(!base||!key){root.innerHTML='<div class="fw-auth-wrap"><section class="fw-auth-card"><h1>اتصال کامل نیست</h1><p class="fw-sub">تنظیمات Supabase را در بخش تنظیمات ← Factoori Web بررسی کنید.</p></section></div>';return;}
   restore();
 })();
+/* Build 0.2.1: atomic invoice posting, mobile menu and team provisioning. */
