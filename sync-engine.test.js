@@ -939,7 +939,11 @@ test('app wires guarded sync scheduling to the runtime and rejects stale results
   const runtime = await readFile(new URL('./sync-runtime.js', import.meta.url), 'utf8');
   assert.match(html, /<script type="module" src="sync-runtime\.js"><\/script>/);
   assert.match(html, /function scheduleBusinessSync\(delay=1100\)[\s\S]*?if\(demoMode\|\|!cloudSession\?\.user\?\.id\|\|!cloudSchemaReady\|\|!localDbBusinessId\)return/);
-  assert.match(html, /localStorage\.setItem\(localDbBusinessId\?BUSINESS_DB_PREFIX\+localDbBusinessId:K,JSON\.stringify\(db\)\);dbRevision\+\+;scheduleBusinessSync\(\)/);
+  assert.match(html, /localStorage\\.setItem\\(localDbBusinessId\\?businessDatabaseStorageKey\\(localDbBusinessId\\):K,JSON\\.stringify\\(db\\)\\);dbRevision\\+\\+;scheduleBusinessSync\\(\\)/);
+  assert.match(html, /const BUSINESS_DB_PREFIX='db:v3:user:'/);
+  assert.match(html, /function businessDatabaseStorageKey\\(businessId\\)[\\s\\S]*?cloudSession\\?\\.user\\?\\.id[\\s\\S]*?encodeURIComponent\\(userId\\)/);
+  assert.doesNotMatch(html, /آیا می‌خواهید آن‌ها به کسب‌وکار انتخاب‌شده منتقل شوند/);
+  assert.match(html, /function welcomeDismissalKey\\(\\)[\\s\\S]*?cloudSession\\?\\.user\\?\\.id/);
   assert.match(html, /localDbBusinessId===businessId&&syncGeneration===generation&&dbRevision===revision/);
   assert.match(html, /await window\.FactooriSyncRuntime\.acknowledgeBusinessDatabaseApplied\?\./);
   assert.match(html, /cloudSyncNow:\(\)=>/);
