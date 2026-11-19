@@ -36,6 +36,11 @@ begin
     raise exception 'Warehouse RPC is missing permission or mobile sync mapping';
   end if;
 
+  if not exists(select 1 from pg_constraint where conrelid='private.legacy_normalized_record_map'::regclass and conname='legacy_normalized_record_map_legacy_collection_check' and pg_get_constraintdef(oid) ilike '%accounts%')
+     or not exists(select 1 from pg_constraint where conrelid='private.legacy_normalized_record_map'::regclass and conname='legacy_normalized_record_map_target_table_check' and pg_get_constraintdef(oid) ilike '%financial_accounts%') then
+    raise exception 'Legacy account mapping constraints are missing';
+  end if;
+
   select p.oid::regprocedure into v_oid
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   where n.nspname='public' and p.proname='web_import_legacy_financial_accounts';
