@@ -71,7 +71,7 @@
     state.business=selected;
     if(selected) await loadData(); else clearData();
   }
-  function clearData(){state.contacts=[];state.contactLedger=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.chequeEvents=[];state.dueDates=[];state.members=null;state.documentItems=[];state.salesReturns=[];state.purchaseReturns=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
+  function clearData(){state.contacts=[];state.contactLedger=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.chequeEvents=[];state.dueDates=[];state.members=null;state.documentItems=[];state.salesReturns=[];state.purchaseReturns=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;state.selectedContactId=null;state.selectedProductId=null;}
   async function loadData(){
     const b=state.business?.id;if(!b){clearData();return;}
     const f='business_id=eq.'+encodeURIComponent(b);
