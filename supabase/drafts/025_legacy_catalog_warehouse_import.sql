@@ -133,12 +133,16 @@ begin
    select c.id into v_target_id from public.product_categories c
    where c.business_id=p_business_id and c.legacy_id=v_legacy_id;
    if v_target_id is not null then
-    insert into private.legacy_normalized_record_map(
-     business_id,legacy_collection,legacy_id,target_table,normalized_id,
-     source_fingerprint,import_status,import_generation,note_code,created_by
-    ) values(p_business_id,'categories',v_legacy_id,'product_categories',v_target_id,
-     v_fingerprint,'conflict',p_import_generation,'target_conflict',v_user);
-    v_conflicts:=v_conflicts+1; continue;
+    if exists(select 1 from public.product_categories c where c.business_id=p_business_id and c.id=v_target_id and c.name=v_name) then
+     insert into private.legacy_normalized_record_map(business_id,legacy_collection,legacy_id,target_table,normalized_id,source_fingerprint,import_status,import_generation,created_by)
+     values(p_business_id,'categories',v_legacy_id,'product_categories',v_target_id,v_fingerprint,'mapped',p_import_generation,v_user);
+     v_imported_categories:=v_imported_categories+1;
+    else
+     insert into private.legacy_normalized_record_map(business_id,legacy_collection,legacy_id,target_table,normalized_id,source_fingerprint,import_status,import_generation,note_code,created_by)
+     values(p_business_id,'categories',v_legacy_id,'product_categories',v_target_id,v_fingerprint,'conflict',p_import_generation,'target_conflict',v_user);
+     v_conflicts:=v_conflicts+1;
+    end if;
+    continue;
    end if;
    begin
     insert into public.product_categories(business_id,name,legacy_id)
@@ -159,12 +163,16 @@ begin
    select s.id into v_target_id from public.services s
    where s.business_id=p_business_id and s.legacy_id=v_legacy_id;
    if v_target_id is not null then
-    insert into private.legacy_normalized_record_map(
-     business_id,legacy_collection,legacy_id,target_table,normalized_id,
-     source_fingerprint,import_status,import_generation,note_code,created_by
-    ) values(p_business_id,'services',v_legacy_id,'services',v_target_id,
-     v_fingerprint,'conflict',p_import_generation,'target_conflict',v_user);
-    v_conflicts:=v_conflicts+1; continue;
+    if exists(select 1 from public.services s where s.business_id=p_business_id and s.id=v_target_id and s.name=v_name) then
+     insert into private.legacy_normalized_record_map(business_id,legacy_collection,legacy_id,target_table,normalized_id,source_fingerprint,import_status,import_generation,created_by)
+     values(p_business_id,'services',v_legacy_id,'services',v_target_id,v_fingerprint,'mapped',p_import_generation,v_user);
+     v_imported_services:=v_imported_services+1;
+    else
+     insert into private.legacy_normalized_record_map(business_id,legacy_collection,legacy_id,target_table,normalized_id,source_fingerprint,import_status,import_generation,note_code,created_by)
+     values(p_business_id,'services',v_legacy_id,'services',v_target_id,v_fingerprint,'conflict',p_import_generation,'target_conflict',v_user);
+     v_conflicts:=v_conflicts+1;
+    end if;
+    continue;
    end if;
    begin
     insert into public.services(business_id,name,legacy_id,created_by)
