@@ -1,0 +1,33 @@
+name: Package Web Factoori Plugin
+on:
+  push:
+    branches:
+      - work/factoori-web-fixes-0.2.3
+    paths:
+      - 'wordpress-plugin/web-factoori/**'
+      - '.github/workflows/web-factoori-package.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate plugin PHP
+        run: php -l wordpress-plugin/web-factoori/web-factoori.php
+      - name: Build installable ZIP
+        run: |
+          mkdir -p dist
+          cd wordpress-plugin
+          zip -r ../../dist/web-factoori.zip web-factoori
+      - name: Verify ZIP structure
+        run: |
+          unzip -l dist/web-factoori.zip
+          unzip -t dist/web-factoori.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-factoori
+          path: dist/web-factoori.zip
+          if-no-files-found: error
+          retention-days: 30
