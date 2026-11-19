@@ -40,6 +40,7 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Web purchase invoice lines are mirrored to Android `purchases`; unit cost remains in the private sync payload partition.
 * Six-month sales/purchase report with responsive charts and monthly comparison, including legacy Android sales history where available.
 * Business settings overview with currency, timezone, costing/tax settings and fiscal-period status.
+* Create financial accounts with automatic chart-of-accounts mapping and create warehouses; both publish compatible master records for Android sync. Existing legacy app accounts can be adopted into normalized web accounts with conflict detection. Opening balances are deliberately not auto-imported.
 * Persian (Jalali) calendar display and date entry across invoice, financial, cheque, inventory and report screens; dates are converted to Gregorian ISO before database writes.
 * Responsive full-screen desktop and mobile interface with refreshed dashboard, cards, tables, touch-friendly navigation and compact forms.
 * Optional prominent professional-upgrade link.
