@@ -283,6 +283,20 @@ const api = {
       p_display_unit: displayUnit
     }));
   },
+  async syncStageFinancialRecords(payload) {
+    const allowed = new Set(['pay', 'supplierPayments', 'expenses', 'otherincome']);
+    if (!payload?.businessId || !payload?.deviceId || !Array.isArray(payload?.operations)
+      || payload.operations.length > 100
+      || payload.operations.some(operation => !allowed.has(operation?.collection)
+        || operation?.operation_type !== 'upsert')) {
+      throw new Error('بسته انتقال سوابق مالی نامعتبر است؛ فقط ثبت/به‌روزرسانی سوابق مجاز است.');
+    }
+    return unwrap(await client.rpc('sync_stage_financial_records', {
+      p_business_id: payload.businessId,
+      p_device_id: payload.deviceId,
+      p_operations: payload.operations
+    }));
+  },
   async syncPush(payload) {
     if (!payload?.businessId || !payload?.deviceId || !Array.isArray(payload?.operations) || payload.operations.length > 100) {
       throw new Error('بسته همگام‌سازی معتبر نیست؛ حداکثر ۱۰۰ عملیات مجاز است.');
