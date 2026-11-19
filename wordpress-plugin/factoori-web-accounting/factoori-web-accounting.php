@@ -10,7 +10,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
-define('FACTOORI_WEB_VERSION', '0.2.2');
+define('FACTOORI_WEB_VERSION', '0.2.3');
 define('FACTOORI_WEB_FILE', __FILE__);
 define('FACTOORI_WEB_DIR', plugin_dir_path(__FILE__));
 
