@@ -47,3 +47,6 @@ $function$;
 
 revoke all on function public.web_create_product_category(uuid,text,uuid) from public,anon;
 grant execute on function public.web_create_product_category(uuid,text,uuid) to authenticated;
+
+revoke all on function public.web_create_product(uuid,text,text,text,numeric,boolean,numeric,text,numeric,uuid) from public,anon;
+grant execute on function public.web_create_product(uuid,text,text,text,numeric,boolean,numeric,text,numeric,uuid) to authenticated;
