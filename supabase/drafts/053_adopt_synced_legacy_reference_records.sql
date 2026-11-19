@@ -155,96 +155,21 @@ begin
    v_imported_customers:=v_imported_customers+1;
   else
    v_barcode:=nullif(btrim(v_payload->>'barcode'),'');
-   if v_payload ? 'sell' and coalesce(v_payload->>'sell','') !~ '^[0-9]+([.][0-9]+)?
-   begin
-    insert into public.products(
-     business_id,name,barcode,sale_price,minimum_stock,track_inventory,legacy_id,created_by
-    ) values (
-     p_business_id,v_name,v_barcode,v_sale_price,v_minimum_stock,true,v_legacy_id,v_user
-    ) returning id into v_target_id;
-   exception when unique_violation then
-    v_conflicts:=v_conflicts+1;
-    continue;
-   when check_violation or string_data_right_truncation or numeric_value_out_of_range then
-    v_invalid:=v_invalid+1;
-    continue;
-   end;
-   insert into private.legacy_normalized_record_map(
-    business_id,legacy_collection,legacy_id,target_table,normalized_id,
-    source_fingerprint,import_status,import_generation,created_by
-   ) values (
-    p_business_id,'prod',v_legacy_id,'products',v_target_id,
-    v_fingerprint,'mapped',p_import_generation,v_user
-   );
-   v_imported_products:=v_imported_products+1;
-  end if;
- end loop;
-
- return jsonb_build_object(
-  'business_id',p_business_id,'generation',p_import_generation,
-  'mode','reference_data_import','source_collections',jsonb_build_array('cust','prod'),
-  'imported_customers',v_imported_customers,'imported_products',v_imported_products,
-  'unchanged',v_unchanged,'conflicts',v_conflicts,'invalid',v_invalid,
-  'orphaned_mappings',v_orphaned,'deleted_source_rows_skipped',v_deleted,
-  'stock_quantities_imported',false,'product_costs_imported',false,
-  'documents_imported',false,'financial_data_imported',false
- );
-end;
-$$;
-
-revoke all on function public.import_legacy_reference_data(uuid,uuid) from public,anon;
-grant execute on function public.import_legacy_reference_data(uuid,uuid) to authenticated;
-
-commit;
- then v_invalid:=v_invalid+1; continue; end if;
-   if v_payload ? 'minQty' and coalesce(v_payload->>'minQty','') !~ '^[0-9]+([.][0-9]{1,4})?
-   begin
-    insert into public.products(
-     business_id,name,barcode,sale_price,minimum_stock,track_inventory,legacy_id,created_by
-    ) values (
-     p_business_id,v_name,v_barcode,v_sale_price,v_minimum_stock,true,v_legacy_id,v_user
-    ) returning id into v_target_id;
-   exception when unique_violation then
-    v_conflicts:=v_conflicts+1;
-    continue;
-   when check_violation or string_data_right_truncation or numeric_value_out_of_range then
-    v_invalid:=v_invalid+1;
-    continue;
-   end;
-   insert into private.legacy_normalized_record_map(
-    business_id,legacy_collection,legacy_id,target_table,normalized_id,
-    source_fingerprint,import_status,import_generation,created_by
-   ) values (
-    p_business_id,'prod',v_legacy_id,'products',v_target_id,
-    v_fingerprint,'mapped',p_import_generation,v_user
-   );
-   v_imported_products:=v_imported_products+1;
-  end if;
- end loop;
-
- return jsonb_build_object(
-  'business_id',p_business_id,'generation',p_import_generation,
-  'mode','reference_data_import','source_collections',jsonb_build_array('cust','prod'),
-  'imported_customers',v_imported_customers,'imported_products',v_imported_products,
-  'unchanged',v_unchanged,'conflicts',v_conflicts,'invalid',v_invalid,
-  'orphaned_mappings',v_orphaned,'deleted_source_rows_skipped',v_deleted,
-  'stock_quantities_imported',false,'product_costs_imported',false,
-  'documents_imported',false,'financial_data_imported',false
- );
-end;
-$$;
-
-revoke all on function public.import_legacy_reference_data(uuid,uuid) from public,anon;
-grant execute on function public.import_legacy_reference_data(uuid,uuid) to authenticated;
-
-commit;
- then v_invalid:=v_invalid+1; continue; end if;
+   if v_payload ? 'sell' and coalesce(v_payload->>'sell','') !~ '^[0-9]+([.][0-9]+)?$' then
+    v_invalid:=v_invalid+1; continue;
+   end if;
+   if v_payload ? 'minQty' and coalesce(v_payload->>'minQty','') !~ '^[0-9]+([.][0-9]{1,4})?$' then
+    v_invalid:=v_invalid+1; continue;
+   end if;
    begin
     v_sale_price:=coalesce(nullif(v_payload->>'sell','')::numeric,0)::numeric(20,0);
     v_minimum_stock:=coalesce(nullif(v_payload->>'minQty','')::numeric,0)::numeric(20,4);
-   exception when numeric_value_out_of_range or invalid_text_representation then v_invalid:=v_invalid+1; continue; end;
+   exception when numeric_value_out_of_range or invalid_text_representation then
+    v_invalid:=v_invalid+1; continue;
+   end;
    if v_sale_price<0 or v_minimum_stock<0 then v_invalid:=v_invalid+1; continue; end if;
-   select p.id into v_target_id from public.products p where p.business_id=p_business_id and p.legacy_id=v_legacy_id;
+   select p.id into v_target_id from public.products p
+   where p.business_id=p_business_id and p.legacy_id=v_legacy_id;
    if v_target_id is not null then
     if exists(select 1 from public.products p where p.business_id=p_business_id and p.id=v_target_id
       and p.name=v_name and p.barcode is not distinct from v_barcode and p.sale_price=v_sale_price
