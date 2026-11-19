@@ -1,8 +1,7 @@
 // Factoori local/shared sync primitives wired to the db:v2 business-scoped runtime.
-// Financial and stock writes remain excluded from generic record sync even where
-// dedicated normalized RPCs now exist. The app-side operation adapters must call
-// those RPCs explicitly and persist idempotent offline intents before any collection
-// is moved into SYNC_WRITE_COLLECTIONS.
+// Financial records use a separate idempotent staging RPC; they never enter generic
+// sync_push and cannot be deleted through the generic tombstone path. Posting into
+// normalized ledgers remains an explicit, permission-checked import workflow.
 export const FINANCIAL_STAGE_COLLECTIONS = Object.freeze([
   'pay', 'supplierPayments', 'expenses', 'otherincome'
 ]);
@@ -15,9 +14,8 @@ export const SYNC_WRITE_COLLECTIONS = Object.freeze([
 ]);
 
 export const SYNC_READ_COLLECTIONS = Object.freeze([
-  ...SYNC_WRITE_COLLECTIONS, 'debt', 'returns', 'pay', 'creditors',
-  'creditorPayments', 'purchases', 'supplierPayments', 'expenses',
-  'otherincome', 'wastage', 'stockMoves', 'warehouseStocks',
+  ...SYNC_WRITE_COLLECTIONS, 'debt', 'returns', 'creditors',
+  'creditorPayments', 'purchases', 'wastage', 'stockMoves', 'warehouseStocks',
   'transfers', 'accounts', 'moneytransfers', 'opening'
 ]);
 
