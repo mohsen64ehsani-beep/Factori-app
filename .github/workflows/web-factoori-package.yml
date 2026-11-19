@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - work/factoori-web-fixes-0.2.3
+      - 'fix/email-confirmation-token-hash-*'
     paths:
       - 'wordpress-plugin/web-factoori/**'
       - '.github/workflows/web-factoori-package.yml'
@@ -27,7 +28,7 @@ jobs:
           unzip -t dist/web-factoori.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: web-factoori
+          name: web-factoori-1.0.4
           path: dist/web-factoori.zip
           if-no-files-found: error
           retention-days: 30
