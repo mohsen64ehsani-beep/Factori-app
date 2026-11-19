@@ -223,6 +223,13 @@
       await loadData();render();toast('فاکتور با موفقیت ثبت نهایی شد.');
     });
   });
+  root.addEventListener('input',e=>{
+    if(e.target.name==='cost_price'||e.target.name==='sale_price'){
+      const form=e.target.closest('form[data-form="product"]');if(!form)return;
+      const cost=Number(form.querySelector('[name="cost_price"]')?.value||0),sale=Number(form.querySelector('[name="sale_price"]')?.value||0);
+      const out=form.querySelector('[data-margin-preview]');if(out)out.textContent=money(sale-cost)+' ریال';
+    }
+  });
   root.addEventListener('change',e=>{
     if(e.target.id==='fw-business')withBusy(async()=>{state.business=state.businesses.find(b=>b.id===e.target.value)||null;await loadData();state.section='dashboard';render();});
     if(e.target.name==='product_id'){const opt=e.target.selectedOptions[0];const price=root.querySelector('[name="unit_price"]');if(price&&opt?.dataset.price)price.value=opt.dataset.price;}
