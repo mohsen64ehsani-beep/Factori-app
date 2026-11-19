@@ -4,7 +4,7 @@ Tags: accounting, invoice, supabase, factoori
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.3
+Stable tag: 0.1.4
 License: GPLv2 or later
 
 A full-screen, responsive Factoori accounting workspace that uses the same Supabase Auth account and business data as the Factoori Android app.
@@ -39,7 +39,8 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Web purchase invoice lines are mirrored to Android `purchases`; unit cost remains in the private sync payload partition.
 * Six-month sales/purchase report with responsive charts and monthly comparison (based on the currently loaded posted documents).
 * Business settings overview with currency, timezone, costing/tax settings and fiscal-period status.
-* Responsive full-screen desktop and mobile interface with refreshed dashboard, cards, tables and navigation.
+* Persian (Jalali) calendar display and date entry across invoice, financial, cheque, inventory and report screens; dates are converted to Gregorian ISO before database writes.
+* Responsive full-screen desktop and mobile interface with refreshed dashboard, cards, tables, touch-friendly navigation and compact forms.
 * Optional prominent professional-upgrade link.
 
 == Security ==
