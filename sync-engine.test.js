@@ -7,12 +7,12 @@ import {
 
 const ids = (() => { let n = 0; return () => '00000000-0000-4000-8000-' + String(++n).padStart(12, '0'); })();
 
-test('only explicitly write-enabled collections produce operations', () => {
+test('only generic writes and explicitly staged financial collections produce operations', () => {
   const { operations } = prepareSyncOperations({
     cust: [{ id: 1, n: 'A' }], pay: [{ id: 2, amount: 10 }],
     purchases: [{ id: 3, amount: 20 }], accounts: [{ id: 4, name: 'Cash' }]
   }, createSyncState(), ids);
-  assert.deepEqual(operations.map(op => op.collection), ['cust']);
+  assert.deepEqual(operations.map(op => op.collection), ['cust', 'pay']);
 });
 
 test('financial records are staged as upserts and cannot use generic deletes', async () => {
