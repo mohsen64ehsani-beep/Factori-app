@@ -212,6 +212,14 @@ export async function runBusinessSync({
     }
 
     await persist();
+    if (api.syncCurrencyPreference) {
+      try {
+        await api.syncCurrencyPreference({ businessId, database: localDb });
+      } catch (error) {
+        // Currency preference is presentation metadata; never block core data sync.
+        console.warn('[Factoori currency preference sync]', error);
+      }
+    }
     return {
       businessId,
       deviceId,
