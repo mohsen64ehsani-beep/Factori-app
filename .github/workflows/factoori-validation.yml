@@ -1,0 +1,55 @@
+name: Factoori validation and plugin package
+
+on:
+  push:
+    branches:
+      - "work/factoori-web-fixes-*"
+    paths:
+      - "sync-engine.js"
+      - "sync-runtime.js"
+      - "sync-engine.test.js"
+      - "wordpress-plugin/factoori-web-accounting/**"
+      - ".github/workflows/factoori-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check wordpress-plugin/factoori-web-accounting/assets/app.js
+          node --experimental-default-type=module --check sync-engine.js
+          node --experimental-default-type=module --check sync-runtime.js
+
+      - name: Run sync-engine tests
+        run: node --experimental-default-type=module --test sync-engine.test.js
+
+      - name: Validate PHP plugin syntax
+        run: php -l wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php
+
+      - name: Build installable WordPress plugin ZIP
+        run: |
+          cd wordpress-plugin
+          zip -r ../factoori-web-accounting-0.2.3.zip factoori-web-accounting
+          cd ..
+          unzip -t factoori-web-accounting-0.2.3.zip
+
+      - name: Upload plugin ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: factoori-web-accounting-0.2.3
+          path: factoori-web-accounting-0.2.3.zip
+          if-no-files-found: error
+          retention-days: 14
