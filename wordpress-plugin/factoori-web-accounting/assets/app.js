@@ -266,7 +266,7 @@
     const action=btn.dataset.action;
     if(action==='contact-detail'){state.selectedContactId=btn.dataset.id;state.section='contactDetail';render();return;}
     if(action==='contacts-back'){state.section='contacts';render();return;}
-    if(action==='add-invoice-item'){const form=btn.closest('form[data-form="invoice"]');const first=form?.querySelector('[data-invoice-row]');if(first){const row=first.cloneNode(true);row.querySelectorAll('input').forEach(x=>x.value=x.name==='quantity'?'1':'');row.querySelectorAll('select').forEach(x=>x.selectedIndex=0);form.querySelector('[data-invoice-items]')?.appendChild(row);}return;}
+    if(action==='add-invoice-item'){const form=btn.closest('form[data-form="invoice"]');const first=form?.querySelector('[data-invoice-row]');if(first){const row=first.cloneNode(true);row.querySelectorAll('input').forEach(x=>x.value=x.name==='quantity'?'1':'');row.querySelectorAll('select').forEach(x=>x.selectedIndex=0);form.querySelector('.fw-form-grid')?.appendChild(row);}return;}
     if(action==='remove-invoice-item'){const form=btn.closest('form[data-form="invoice"]');const rows=form?.querySelectorAll('[data-invoice-row]');if(rows?.length>1)btn.closest('[data-invoice-row]').remove();return;}
     if(action==='toggle-auth'){state.signup=!state.signup;render();}
     if(action==='logout')withBusy(async()=>{try{await request('/auth/v1/logout',{method:'POST'});}catch(_){}saveSession(null);state.user=null;state.business=null;state.businesses=[];clearData();render();});
