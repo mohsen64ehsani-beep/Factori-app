@@ -4,7 +4,7 @@ Tags: accounting, invoice, supabase, factoori
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.4
+Stable tag: 0.2.0
 License: GPLv2 or later
 
 A full-screen, responsive Factoori accounting workspace that uses the same Supabase Auth account and business data as the Factoori Android app.
@@ -24,7 +24,7 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Business creation and business switching.
 * Management dashboard with sales, purchases, receipts, payments, pending cheques, low-stock indicators, estimated financial-account balances and current stock quantities.
 * Contact/customer/supplier creation, per-contact financial profile, shared contact-ledger balances, customer receivables and supplier payables.
-* Product creation and list with unit cost, sale price, live gross-margin preview and product categories; cost values are served only to members with the sensitive catalog.cost.read permission.
+* Product creation and list with unit cost, sale price, live gross-margin preview, product categories and optional initial warehouse quantity posted through the FIFO opening-stock RPC; cost values are served only to members with the sensitive catalog.cost.read permission.
 * Multi-line sales and purchase invoice draft creation for goods and services, with printable invoice / browser PDF output. Print layouts support modern, classic and minimal styles with configurable HTTPS logo, signature and footer.
 * Bidirectional customer, supplier, product cost and category sync with the Android legacy sync stream; cost fields remain in the private sync payload and are permission-filtered in web reads.
 * Web-created goods-sale drafts are mirrored into the Android invoice stream; Android-origin invoice records are visible in the web invoice list.
@@ -40,13 +40,15 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Web-origin financial, account-transfer and inventory operations mirrored to the Android sync collections.
 * Shared service catalog management and service-sale invoice drafts with Android `serviceInv` synchronization.
 * Web purchase invoice lines are mirrored to Android `purchases`; unit cost remains in the private sync payload partition.
-* Six-month sales/purchase report with responsive charts and monthly comparison, including legacy Android sales history where available.
+* Six-month sales/purchase report with responsive charts and monthly comparison, including legacy Android sales history where available; dashboard adds six-month sales, purchases, receipts and payments visualization.
 * Editable business settings for currency, timezone, Jalali calendar, costing/tax policy and negative-stock rules, with safeguards against changing currency or costing after posted activity.
 * Permission-gated team member listing, role changes and suspend/reactivate controls; inviting a new member is not yet available in the web workspace.
 * Secure JSON business backup export, including normalized records and public Android sync records; private sync payloads and secret settings are excluded.
 * Create financial accounts with automatic chart-of-accounts mapping and create warehouses; both publish compatible master records for Android sync. Existing legacy app accounts can be adopted into normalized web accounts with conflict detection. Opening balances are deliberately not auto-imported.
 * Persian (Jalali) calendar display and date entry across invoice, financial, cheque, inventory and report screens; dates are converted to Gregorian ISO before database writes.
-* Responsive full-screen desktop and mobile interface with refreshed dashboard, cards, tables, touch-friendly navigation and compact forms.
+* Responsive full-screen desktop and mobile interface with refreshed dashboard, cards, tables, compact five-item mobile navigation with an expandable menu, touch-friendly forms and financial charts.
+* Invoice composer includes selectable visual styles and accent colors for print/PDF. The selected print appearance is saved locally in the browser.
+* Optional mobile-app download link configured in Settings > Factoori Web and displayed in the workspace navigation.
 * Optional prominent professional-upgrade link.
 
 == Security ==
