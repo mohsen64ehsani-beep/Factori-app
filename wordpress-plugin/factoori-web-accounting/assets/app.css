@@ -41,3 +41,27 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
 @media(max-width:1050px){.fw-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fw-two{grid-template-columns:1fr}}
 @media(max-width:760px){.fw-layout{display:block}.fw-sidebar{position:fixed;z-index:30;top:auto;bottom:0;left:0;right:0;width:100%;height:auto;padding:7px 8px calc(7px + env(safe-area-inset-bottom));display:block;background:#102a35}.fw-sidebar>.fw-brand,.fw-sidebar>.fw-business,.fw-side-bottom{display:none}.fw-nav{display:flex;justify-content:space-around;gap:2px}.fw-nav button{display:grid;justify-items:center;gap:1px;text-align:center;font-size:10px;padding:5px 7px;flex:1}.fw-nav i{font-size:18px}.fw-main{padding:18px 12px 100px}.fw-topbar{align-items:flex-start}.fw-topbar h1{font-size:19px}.fw-top-actions .fw-purchase{display:none}.fw-grid{gap:9px}.fw-card{padding:14px;border-radius:15px}.fw-stat strong{font-size:19px}.fw-form-grid{grid-template-columns:1fr}.fw-form-grid .wide{grid-column:auto}.fw-auth-card{padding:24px 20px;border-radius:22px}}
 @media(max-width:390px){.fw-grid{grid-template-columns:1fr 1fr}.fw-stat-icon{width:34px;height:34px}.fw-stat strong{font-size:17px}}
+
+/* Factoori 0.2 workspace refresh */
+:root{--fw-bg:#f3f6fb;--fw-primary:#087f78;--fw-shadow:0 12px 34px rgba(15,35,55,.055)}
+.fw-main{background:linear-gradient(180deg,#f8fafc 0,#f2f6fa 100%)}
+.fw-sidebar{background:linear-gradient(165deg,#102c38 0%,#0c202b 100%);box-shadow:8px 0 32px #0b263012}
+.fw-card{border-radius:22px;box-shadow:0 8px 28px rgba(20,40,65,.045);transition:transform .18s ease,box-shadow .18s ease}
+.fw-card:hover{box-shadow:0 14px 34px rgba(20,40,65,.075)}
+.fw-stat{min-height:116px;padding:20px;background:linear-gradient(145deg,#fff 0%,#fbfdff 100%)}
+.fw-stat strong{font-size:25px;color:#122b3a;line-height:1.5;overflow-wrap:anywhere}
+.fw-stat em{display:block;font-style:normal;color:#8996a6;font-size:10px;margin-top:3px}
+.fw-stat-icon{width:46px;height:46px;border-radius:16px;background:linear-gradient(145deg,#e5f7f3,#edf5ff);font-size:21px}
+.fw-hero{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:24px 28px;margin-bottom:17px;border-radius:24px;color:#fff;background:radial-gradient(circle at 12% 10%,#ffffff24,transparent 30%),linear-gradient(115deg,#0d5558,#12364b 65%,#1d4260);box-shadow:0 16px 38px #103d4c24}
+.fw-hero span{font-size:11px;color:#b8e4df}.fw-hero h2{font-size:24px;margin:5px 0}.fw-hero p{font-size:12px;color:#c6dce1;margin:0}
+.fw-hero-mark{width:58px;height:58px;border-radius:19px;background:#ffffff18;border:1px solid #ffffff35;display:grid;place-items:center;font-size:30px;font-weight:900}
+.fw-quick{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:16px}.fw-quick .fw-btn{min-height:42px}
+.fw-dashboard-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,.8fr);gap:16px}
+.fw-health{display:grid;gap:0;margin:8px 0 16px}.fw-health>div{display:flex;justify-content:space-between;padding:12px 2px;border-bottom:1px solid #edf1f5;font-size:12px}.fw-health span{color:#718096}.fw-health b{font-size:14px;color:#193747}
+.fw-margin-preview{display:block;border:1px dashed #b8d9d2;background:#f0faf7;border-radius:12px;padding:10px 13px;color:#087f60;font-weight:900;direction:rtl}
+.fw-profit{color:#07865d!important;font-weight:800}.fw-loss{color:#d14343!important;font-weight:800}
+.fw-table th{background:#f6f9fc;color:#6b7a8c}.fw-table td{padding:14px 11px}.fw-table tbody tr:hover{background:#f8fbfd}
+.fw-field input,.fw-field select{border-radius:14px;min-height:48px;background:#fff}
+.fw-btn{border-radius:14px;box-shadow:0 5px 13px #0f766e18}.fw-btn.secondary{box-shadow:none}
+@media(max-width:1050px){.fw-dashboard-grid{grid-template-columns:1fr}}
+@media(max-width:760px){.fw-hero{padding:18px;border-radius:19px}.fw-hero h2{font-size:20px}.fw-hero-mark{width:46px;height:46px;font-size:24px}.fw-dashboard-grid{gap:10px}.fw-stat{min-height:100px;padding:13px}.fw-stat strong{font-size:19px}.fw-quick{display:grid;grid-template-columns:1fr 1fr}.fw-quick .fw-btn{font-size:11px;padding:9px 7px}.fw-card:hover{transform:none}}
