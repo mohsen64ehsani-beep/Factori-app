@@ -6,7 +6,8 @@ import {
   prepareSyncOperations,
   acknowledgeSyncResults,
   applySyncPullPage,
-  createSyncTombstone
+  createSyncTombstone,
+  FINANCIAL_STAGE_COLLECTIONS
 } from './sync-engine.js';
 import { saveLocalDatabaseCheckpoint, loadLocalDatabaseCheckpoint, createLocalDatabaseSnapshot, mergeLocalChangesOntoCheckpoint, acknowledgeLocalDatabaseApplied } from './sync-db-adapter.js';
 
@@ -148,7 +149,7 @@ export async function runBusinessSync({
     // a crash/retry cannot create a new logical operation.
     await persist();
     if (!prepared.operations.length) return 0;
-    const stagedCollections = new Set(['pay', 'supplierPayments', 'expenses', 'otherincome']);
+    const stagedCollections = new Set(FINANCIAL_STAGE_COLLECTIONS);
     const stagedOperations = prepared.operations.filter(operation => stagedCollections.has(operation.collection));
     const standardOperations = prepared.operations.filter(operation => !stagedCollections.has(operation.collection));
     const results = [];
