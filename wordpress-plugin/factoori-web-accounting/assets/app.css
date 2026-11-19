@@ -118,3 +118,23 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
 .fw-inline-form{display:flex;align-items:center;gap:6px;min-width:190px}
 .fw-inline-form select{min-width:100px;max-width:150px}
 @media(max-width:760px){.fw-inline-form{min-width:180px}.fw-inline-form select{min-height:38px}}
+
+/* Factoori 0.2.0 mobile-first redesign */
+.fw-layout{min-height:100dvh}.fw-sidebar{width:250px;flex:0 0 250px}.fw-nav{gap:5px}.fw-nav button{border-radius:13px;min-height:44px}.fw-nav button.active{background:linear-gradient(100deg,#087f78,#0d625f);box-shadow:0 7px 18px #087f7833}.fw-nav-extra{display:contents}.fw-nav-more{display:none!important}
+.fw-mobile-download{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:12px;background:#e7f7f2;color:#087f78;font-weight:900;text-decoration:none;font-size:12px}
+.fw-stock-start{background:linear-gradient(135deg,#effaf6,#f3f7ff);border:1px solid #d9eee7;border-radius:16px;padding:14px;margin:12px 0}.fw-stock-start>b{display:block;color:#087f78;margin-bottom:8px}.fw-stock-start small{display:block;color:#708394;margin-top:7px;font-size:11px}
+.fw-invoice-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px;background:#f5f9fc;border-radius:16px;margin-bottom:14px}
+.fw-financial-chart{margin:16px 0}.fw-fin-chart{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end;min-height:150px;padding:12px 2px 0}.fw-fin-month{display:grid;gap:7px;justify-items:center;min-width:0}.fw-fin-bars{height:120px;display:flex;align-items:flex-end;gap:3px;border-bottom:1px solid #e6edf2;padding:0 3px}.fw-fin-bars i{display:block;width:9px;min-height:0;border-radius:6px 6px 1px 1px}.fw-fin-bars .sales{background:#0e9b81}.fw-fin-bars .purchases{background:#5483b5}.fw-fin-bars .receipts{background:#e5a33a}.fw-fin-bars .payments{background:#9b6bd3}.fw-fin-month small{font-size:10px;color:#708092}.fw-fin-legend{display:flex;gap:12px;flex-wrap:wrap;color:#718096;font-size:10px}.receipt-dot,.payment-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e5a33a}.payment-dot{background:#9b6bd3}
+@media(max-width:760px){
+ .fw-sidebar{position:fixed;inset:auto 0 0;width:100%;height:auto;z-index:1000;padding:6px 7px calc(7px + env(safe-area-inset-bottom));border-radius:18px 18px 0 0;box-shadow:0 -8px 28px #102a3526}
+ .fw-sidebar>.fw-brand,.fw-sidebar>.fw-business,.fw-side-bottom{display:none}
+ .fw-nav{display:flex;align-items:center;justify-content:space-around;gap:2px;overflow:visible;padding:0}
+ .fw-nav>button{display:grid;justify-items:center;align-content:center;gap:3px;flex:1;min-width:0;min-height:54px;padding:4px 2px;font-size:9px;white-space:nowrap}
+ .fw-nav>button i{font-size:19px;font-style:normal}.fw-nav>button.active{background:#174b50}
+ .fw-nav-more{display:grid!important}.fw-nav-extra{display:none;position:absolute;bottom:calc(68px + env(safe-area-inset-bottom));right:10px;left:10px;padding:10px;background:#102a35;border:1px solid #ffffff20;border-radius:17px;box-shadow:0 14px 35px #071c2c55;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+ .fw-mobile-menu-open .fw-nav-extra{display:grid}.fw-nav-extra button{display:flex;align-items:center;justify-content:flex-start;gap:8px;min-width:0;padding:10px 7px;font-size:10px}
+ .fw-main{padding:12px 10px calc(90px + env(safe-area-inset-bottom))}
+ .fw-top-actions .fw-mobile-download{display:none}
+ .fw-invoice-options{grid-template-columns:1fr}.fw-fin-chart{gap:4px}.fw-fin-bars{gap:2px}.fw-fin-bars i{width:7px}.fw-fin-month small{font-size:9px}
+}
+@media(max-width:390px){.fw-nav>button{font-size:8px}.fw-nav>button i{font-size:17px}.fw-fin-bars i{width:5px}}
