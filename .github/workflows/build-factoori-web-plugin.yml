@@ -34,6 +34,20 @@ jobs:
           mkdir -p dist
           cd wordpress-plugin
           zip -r ../dist/factoori-web-accounting-0.1.1.zip factoori-web-accounting
+          cd ../dist
+          unzip -t factoori-web-accounting-0.1.1.zip
+          unzip -Z1 factoori-web-accounting-0.1.1.zip | grep -qx 'factoori-web-accounting/factoori-web-accounting.php'
+          ! unzip -Z1 factoori-web-accounting-0.1.1.zip | grep -Eq '(^|/)\\.git(/|$)|\\.DS_Store
+        uses: actions/upload-artifact@v4
+        with:
+          name: factoori-web-accounting-0.1.1
+          path: dist/factoori-web-accounting-0.1.1.zip
+          if-no-files-found: error
+          retention-days: 30
+
+          php_version=$(grep -m1 -E '^ \\* Version:' ../wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php | awk '{print $3}')
+          readme_version=$(awk '/^Stable tag:/ {print $3; exit}' ../wordpress-plugin/factoori-web-accounting/readme.txt)
+          test "$php_version" = "$readme_version"
       - name: Upload plugin ZIP
         uses: actions/upload-artifact@v4
         with:
