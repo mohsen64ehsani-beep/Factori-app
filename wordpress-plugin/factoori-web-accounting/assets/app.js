@@ -6,7 +6,7 @@
   const base = String(cfg.supabaseUrl || '').replace(/\/$/, '');
   const key = String(cfg.publishableKey || '');
   const storageKey = 'factoori_web_session_v1';
-  const state = {session:null,user:null,businesses:[],business:null,contacts:[],contactLedger:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],chequeEvents:[],dueDates:[],members:[],documentItems:[],salesReturns:[],purchaseReturns:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
+  const state = {session:null,user:null,businesses:[],business:null,contacts:[],contactLedger:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],chequeEvents:[],dueDates:[],members:null,documentItems:[],salesReturns:[],purchaseReturns:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => new Intl.NumberFormat('fa-IR').format(Number(v || 0));
   const persianDateFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn',{year:'numeric',month:'numeric',day:'numeric',timeZone:'UTC'});
@@ -70,7 +70,7 @@
     state.business=selected;
     if(selected) await loadData(); else clearData();
   }
-  function clearData(){state.contacts=[];state.contactLedger=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.chequeEvents=[];state.dueDates=[];state.members=[];state.documentItems=[];state.salesReturns=[];state.purchaseReturns=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
+  function clearData(){state.contacts=[];state.contactLedger=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.chequeEvents=[];state.dueDates=[];state.members=null;state.documentItems=[];state.salesReturns=[];state.purchaseReturns=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
   async function loadData(){
     const b=state.business?.id;if(!b){clearData();return;}
     const f='business_id=eq.'+encodeURIComponent(b);
@@ -101,7 +101,7 @@
       rest('business_settings','select=currency_code,currency_scale,timezone,date_calendar,costing_method,tax_enabled,default_tax_rate,negative_stock_allowed&'+f+'&limit=1'),
       rest('fiscal_periods','select=id,title,date_from,date_to,status&'+f+'&order=date_from.desc&limit=50'),
       rest('business_due_dates','select=id,created_date,due_date,title,person,amount,due_type,status,note&'+f+'&order=due_date.asc&limit=500'),
-      rpc('web_list_business_members',{p_business_id:b}).catch(()=>[])
+      rpc('web_list_business_members',{p_business_id:b})
     ]);
     state.transactions=optional[0].status==='fulfilled'?(optional[0].value||[]):[];
     state.cheques=optional[1].status==='fulfilled'?(optional[1].value||[]):[];
@@ -116,7 +116,7 @@
     state.businessSettings=optional[10].status==='fulfilled'?(optional[10].value||[])[0]||null:null;
     state.fiscalPeriods=optional[11].status==='fulfilled'?(optional[11].value||[]):[];
     state.dueDates=optional[12].status==='fulfilled'?(optional[12].value||[]):[];
-    state.members=optional[13].status==='fulfilled'?(optional[13].value||[]):[];
+    state.members=optional[13].status==='fulfilled'?(optional[13].value||[]):null;
     const legacyGroups=[
       ['pay','debt','creditors','creditorPayments','expenses','otherincome','supplierPayments','moneytransfers'],
       ['serviceInv','purchases','returns','duedates','fiscal'],
@@ -289,9 +289,9 @@
 
   function settings(){
     const b=state.businessSettings||{};
-    const currentMember=state.members.find(m=>m.user_id===state.user?.id);
+    const currentMember=(state.members||[]).find(m=>m.user_id===state.user?.id);
     const isOwner=currentMember?.role_code==='owner';
-    const memberRows=state.members.map(m=>{const self=m.user_id===state.user?.id;const locked=m.role_code==='owner'||self;const roleForm=!locked&&m.status==='active'?'<form data-form="member-role" class="fw-inline-form"><input type="hidden" name="member_user_id" value="'+esc(m.user_id)+'"><select name="role_code"><option value="accountant" '+(m.role_code==='accountant'?'selected':'')+'>حسابدار</option><option value="sales" '+(m.role_code==='sales'?'selected':'')+'>فروش</option><option value="warehouse" '+(m.role_code==='warehouse'?'selected':'')+'>انباردار</option><option value="viewer" '+(m.role_code==='viewer'?'selected':'')+'>مشاهده‌گر</option>'+(isOwner?'<option value="admin" '+(m.role_code==='admin'?'selected':'')+'>مدیر</option>':'')+'</select><button class="fw-link" type="submit">ذخیره نقش</button></form>':'—';const statusAction=locked||m.status==='removed'?'—':'<button class="fw-link" data-action="member-status" data-id="'+esc(m.user_id)+'" data-status="'+(m.status==='active'?'suspended':'active')+'">'+(m.status==='active'?'تعلیق':'فعال‌سازی')+'</button>';return '<tr><td>'+esc(m.email||m.user_id)+'</td><td>'+esc(({owner:'مالک',admin:'مدیر',accountant:'حسابدار',sales:'فروش',warehouse:'انباردار',viewer:'مشاهده‌گر'}[m.role_code]||m.role_code))+'</td><td>'+esc(({active:'فعال',invited:'دعوت‌شده',suspended:'تعلیق‌شده',removed:'حذف‌شده'}[m.status]||m.status))+'</td><td>'+roleForm+'</td><td>'+statusAction+'</td></tr>';});
+    const memberRows=(state.members||[]).map(m=>{const self=m.user_id===state.user?.id;const locked=m.role_code==='owner'||self||m.role_code==='warehouse';const roleForm=!locked&&m.status==='active'?'<form data-form="member-role" class="fw-inline-form"><input type="hidden" name="member_user_id" value="'+esc(m.user_id)+'"><select name="role_code"><option value="accountant" '+(m.role_code==='accountant'?'selected':'')+'>حسابدار</option><option value="sales" '+(m.role_code==='sales'?'selected':'')+'>فروش</option><option value="viewer" '+(m.role_code==='viewer'?'selected':'')+'>مشاهده‌گر</option>'+(isOwner?'<option value="admin" '+(m.role_code==='admin'?'selected':'')+'>مدیر</option>':'')+'</select><button class="fw-link" type="submit">ذخیره نقش</button></form>':'—';const statusAction=locked||m.status==='removed'?'—':'<button class="fw-link" data-action="member-status" data-id="'+esc(m.user_id)+'" data-status="'+(m.status==='active'?'suspended':'active')+'">'+(m.status==='active'?'تعلیق':'فعال‌سازی')+'</button>';return '<tr><td>'+esc(m.email||m.user_id)+'</td><td>'+esc(({owner:'مالک',admin:'مدیر',accountant:'حسابدار',sales:'فروش',warehouse:'انباردار',viewer:'مشاهده‌گر'}[m.role_code]||m.role_code))+'</td><td>'+esc(({active:'فعال',invited:'دعوت‌شده',suspended:'تعلیق‌شده',removed:'حذف‌شده'}[m.status]||m.status))+'</td><td>'+roleForm+'</td><td>'+statusAction+'</td></tr>';});
 
     const accountRows=state.accounts.map(a=>'<tr><td>'+esc(a.name)+'</td><td>'+esc(({cash:'صندوق',bank:'بانک',wallet:'کیف پول',clearing:'وجوه در راه'}[a.account_type]||a.account_type))+'</td><td>'+money(a.opening_balance||0)+'</td><td>'+(a.is_default?'پیش‌فرض':'—')+'</td></tr>');
     const legacyAccountRows=(state.legacyCollections.accounts||[]).map(x=>'<tr><td>'+esc(x.payload?.name||x.legacy_id)+'</td><td>'+esc(x.payload?.type==='bank'?'بانک':'صندوق')+'</td><td>'+esc(x.payload?.note||'—')+'</td></tr>');
@@ -311,7 +311,7 @@
     '<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>انبارهای قدیمی اپ</h2></div></div>'+table(legacyWarehouseRows,['نام انبار','نشانی','توضیحات'],'انبار قدیمی وجود ندارد.')+'</section>'+
     '<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>ایجاد دوره مالی</h2><p>بازه‌ها نباید با دوره‌های قبلی هم‌پوشانی داشته باشند.</p></div></div><form data-form="fiscal-period"><div class="fw-form-grid"><div class="fw-field"><label>عنوان دوره</label><input name="title" maxlength="100" required placeholder="مثلاً سال مالی ۱۴۰۵"></div><div class="fw-field"><label>از تاریخ</label><input name="date_from" type="date" required></div><div class="fw-field"><label>تا تاریخ</label><input name="date_to" type="date" required></div></div><button class="fw-btn" type="submit">ایجاد دوره مالی</button></form></section>'+
     '<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>دوره‌های مالی</h2><p>وضعیت دوره‌های مالی ثبت‌شده</p></div></div>'+table(periods,['دوره مالی','از تاریخ','تا تاریخ','وضعیت','عملیات'],'دوره مالی ثبت نشده است.')+'</section>'+
-    '<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>مدیریت اعضای تیم</h2><p>تغییر نقش و تعلیق اعضا با کنترل مجوز سمت سرور انجام می‌شود. دعوت عضو جدید از نسخه فعلی وب پشتیبانی نمی‌شود.</p></div></div>'+table(memberRows,['ایمیل عضو','نقش','وضعیت','تغییر نقش','عملیات'],'عضوی برای نمایش وجود ندارد.')+'</section>'+
+    (state.members?'<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>مدیریت اعضای تیم</h2><p>تغییر نقش و تعلیق اعضا با کنترل مجوز سمت سرور انجام می‌شود. دعوت عضو جدید از نسخه فعلی وب پشتیبانی نمی‌شود.</p></div></div>'+table(memberRows,['ایمیل عضو','نقش','وضعیت','تغییر نقش','عملیات'],'عضوی برای نمایش وجود ندارد.')+'</section>':'')+
 '<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>امنیت و نسخه وب</h2></div></div><div class="fw-setting-row"><span>نسخه افزونه</span><b>0.1.4</b></div><div class="fw-setting-row"><span>ورود مشترک اپ و وب</span><b>فعال</b></div><div class="fw-setting-row"><span>ذخیره کلید محرمانه در مرورگر</span><b>انجام نمی‌شود</b></div><p class="fw-sub">پشتیبان کامل داده‌های مشترک را می‌توانید به‌صورت JSON دریافت کنید. بازیابی خودکار نسخه پشتیبان، بارگذاری لوگو و امضا و مدیریت کارکنان هنوز در نسخه وب تکمیل نشده‌اند.</p><button class="fw-btn" data-action="backup-export">دریافت نسخه پشتیبان JSON</button> <button class="fw-btn secondary" data-section="legacy">مشاهده وضعیت همگام‌سازی</button></section>',
     'تنظیمات کسب‌وکار','مشخصات، سیاست‌های حسابداری و دوره‌های مالی');
   }
