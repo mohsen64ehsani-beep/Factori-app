@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Factoori Web Accounting
  * Description: Full-screen Factoori accounting workspace backed by the same Supabase account and business data as the Android app.
- * Version: 0.1.3
+ * Version: 0.1.4
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: Factoori
@@ -10,7 +10,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
-define('FACTOORI_WEB_VERSION', '0.1.3');
+define('FACTOORI_WEB_VERSION', '0.1.4');
 define('FACTOORI_WEB_FILE', __FILE__);
 define('FACTOORI_WEB_DIR', plugin_dir_path(__FILE__));
 
