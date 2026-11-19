@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Web Factoori
  * Description: Factoori unified account bridge and product introduction page. Uses Supabase Auth as the single credential authority for Android, web accounting and the WordPress profile.
- * Version: 1.0.2
+ * Version: 1.0.3
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: Factoori
@@ -10,11 +10,12 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
-define('FACTOORI_INTRO_VERSION', '1.0.2');
+define('FACTOORI_INTRO_VERSION', '1.0.3');
 define('FACTOORI_INTRO_SUPABASE_URL', 'https://rtlwztotaolbnjdtsjqy.supabase.co');
 define('FACTOORI_INTRO_PUBLISHABLE_KEY', 'sb_publishable_GhG0h_Mco3UomLqxnhynnw_blPQ3ii-');
 
 function factoori_intro_account_url() { return home_url('/account/'); }
+function factoori_intro_confirmation_url() { return home_url('/email-confirmation/'); }
 function factoori_intro_web_url() { return home_url('/factoori-accounting/'); }
 function factoori_intro_purchase_url() { return home_url('/buy/'); }
 
@@ -106,6 +107,7 @@ function factoori_intro_auth_shortcode() {
         'key' => FACTOORI_INTRO_PUBLISHABLE_KEY,
         'bridge' => esc_url_raw(rest_url('factoori-auth/v1/session')),
         'profile' => esc_url_raw(factoori_intro_account_url()),
+        'confirmation' => esc_url_raw(factoori_intro_confirmation_url()),
     );
     ob_start(); ?>
     <section class="fi-auth" dir="rtl" lang="fa">
@@ -129,11 +131,54 @@ function factoori_intro_auth_shortcode() {
       .fi-auth{max-width:620px;margin:28px auto;padding:14px;font-family:inherit}.fi-auth-card{background:#fff;border:1px solid #e2e8f0;border-radius:22px;padding:26px;box-shadow:0 12px 36px #0f172a12;color:#14212b}.fi-brand{font-size:22px;font-weight:900;color:#0f766e}.fi-auth-card h2{margin:12px 0 6px;font-size:23px}.fi-auth-card p,.fi-auth-card small{color:#64748b;line-height:2}.fi-tabs{display:flex;gap:8px;margin:20px 0}.fi-tabs button{flex:1;padding:11px;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;color:#334155;font:inherit}.fi-tabs button.active,.fi-submit{background:#0f766e;color:#fff;border-color:#0f766e}.fi-form label{display:block;margin:12px 0;font-size:13px;font-weight:700}.fi-form input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #cbd5e1;border-radius:11px;font:inherit;box-sizing:border-box}.fi-submit{width:100%;padding:13px;border:0;border-radius:12px;font:inherit;font-weight:800;cursor:pointer}.fi-message{margin-top:12px;line-height:1.9;font-size:13px}.fi-message.error{color:#b91c1c}.fi-message.success{color:#047857}
     </style>
     <script>
-    (()=>{const root=document.currentScript.previousElementSibling.previousElementSibling; if(!root||root.dataset.ready)return;root.dataset.ready='1';const cfg=<?php echo wp_json_encode($config); ?>;let mode='login',signupBusy=false;const form=root.querySelector('.fi-form'),msg=root.querySelector('.fi-message'),submit=root.querySelector('.fi-submit'),nameWrap=root.querySelector('[data-fi-name-wrap]'),pass=root.querySelector('[name=password]');const show=(text,type='')=>{msg.textContent=text;msg.className='fi-message '+type};const setMode=m=>{mode=m;nameWrap.hidden=m!=='signup';pass.autocomplete=m==='signup'?'new-password':'current-password';root.querySelectorAll('[data-fi-mode]').forEach(b=>b.classList.toggle('active',b.dataset.fiMode===m));submit.textContent=m==='signup'?'ایجاد حساب واحد':'ورود به حساب';show('')};root.querySelectorAll('[data-fi-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.fiMode)));form.addEventListener('submit',async e=>{e.preventDefault();const email=form.elements.email.value.trim().toLowerCase(),password=form.elements.password.value,name=form.elements.name.value.trim();if(!email||!password||(mode==='signup'&&!name))return show('همه اطلاعات لازم را وارد کنید.','error');const guardKey='factoori_signup_guard_'+email;if(mode==='signup'){if(signupBusy)return;if(Date.now()<Number(localStorage.getItem(guardKey)||0))return show('درخواست ثبت‌نام همین ایمیل اخیراً ارسال شده است. صندوق ورودی را بررسی کنید و فعلاً دوباره ثبت‌نام نزنید.','error');signupBusy=true;localStorage.setItem(guardKey,String(Date.now()+120000));}submit.disabled=true;submit.textContent='لطفاً صبر کنید…';try{const endpoint=mode==='signup'?'/auth/v1/signup':'/auth/v1/token?grant_type=password';const body=mode==='signup'?{email,password,data:{display_name:name}}:{email,password};const res=await fetch(cfg.url+endpoint,{method:'POST',headers:{apikey:cfg.key,'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json().catch(()=>({}));if(!res.ok){const code=data.code||data.error_code||'';const raw=(data.msg||data.message||data.error_description||data.error||'').toString();if(mode==='signup'&&(/already registered|already exists|user_already_exists|email_exists/i.test(raw+' '+code))){localStorage.removeItem(guardKey);throw new Error('این ایمیل قبلاً در فاکتوری ثبت‌نام شده است؛ از بخش ورود استفاده کنید.')}if(mode==='signup'&&[502,503,504].includes(res.status))throw new Error('سرویس ایمیل فاکتوری پاسخ کامل نداده است. ممکن است پیام تأیید ارسال شده باشد؛ فعلاً دوباره ثبت‌نام نزنید. ایمیل‌های قبلی را ملاک قرار ندهید؛ پس از رفع اختلال، فقط یک ایمیل جدید معتبر صادر می‌شود.');localStorage.removeItem(guardKey);throw new Error(raw||'درخواست انجام نشد.')}if(mode==='signup'&&Array.isArray(data.user?.identities)&&data.user.identities.length===0)throw new Error('این ایمیل قبلاً در فاکتوری ثبت‌نام شده است؛ از بخش ورود استفاده کنید.');if(mode==='signup'&&!data.access_token){show('حساب مرکزی ساخته شد. ایمیل خود را تأیید کنید؛ سپس با همین ایمیل و رمز در اپ، نسخه وب و پروفایل سایت وارد شوید.','success');setMode('login');return}const token=data.access_token;if(!token)throw new Error('توکن ورود دریافت نشد.');const session={access_token:token,refresh_token:data.refresh_token||null,token_type:data.token_type||'bearer',expires_in:data.expires_in||3600,expires_at:data.expires_at||Math.floor(Date.now()/1000)+(data.expires_in||3600),user:data.user};try{localStorage.setItem('factoori_web_session_v1',JSON.stringify(session));sessionStorage.setItem('factoori_web_session_v1',JSON.stringify(session));}catch(_){}const bridge=await fetch(cfg.bridge,{method:'POST',credentials:'same-origin',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'}});const linked=await bridge.json().catch(()=>({}));if(!bridge.ok)throw new Error(linked.message||linked.code||'اتصال پروفایل سایت انجام نشد.');show('ورود موفق بود؛ در حال انتقال به پروفایل…','success');location.href=linked.profile_url||cfg.profile}catch(err){const raw=err&&err.message?err.message:'خطا در ارتباط با سرویس.';if(mode==='signup'&&/failed to fetch|network|timeout|timed out/i.test(raw))show('ارتباط با سرویس ثبت‌نام قطع شد و وضعیت ساخت حساب مشخص نیست. فعلاً دوباره ثبت‌نام نزنید؛ صندوق ایمیل را بررسی کنید. اگر ایمیل‌های متعدد رسیده، هیچ‌کدام را تا رفع اختلال معتبر فرض نکنید.','error');else show(raw,'error')}finally{signupBusy=false;submit.disabled=false;submit.textContent=mode==='signup'?'ایجاد حساب واحد':'ورود به حساب'}});setMode('login')})();
+    (()=>{const root=document.currentScript.previousElementSibling.previousElementSibling; if(!root||root.dataset.ready)return;root.dataset.ready='1';const cfg=<?php echo wp_json_encode($config); ?>;let mode='login',signupBusy=false;const form=root.querySelector('.fi-form'),msg=root.querySelector('.fi-message'),submit=root.querySelector('.fi-submit'),nameWrap=root.querySelector('[data-fi-name-wrap]'),pass=root.querySelector('[name=password]');const show=(text,type='')=>{msg.textContent=text;msg.className='fi-message '+type};const setMode=m=>{mode=m;nameWrap.hidden=m!=='signup';pass.autocomplete=m==='signup'?'new-password':'current-password';root.querySelectorAll('[data-fi-mode]').forEach(b=>b.classList.toggle('active',b.dataset.fiMode===m));submit.textContent=m==='signup'?'ایجاد حساب واحد':'ورود به حساب';show('')};root.querySelectorAll('[data-fi-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.fiMode)));form.addEventListener('submit',async e=>{e.preventDefault();const email=form.elements.email.value.trim().toLowerCase(),password=form.elements.password.value,name=form.elements.name.value.trim();if(!email||!password||(mode==='signup'&&!name))return show('همه اطلاعات لازم را وارد کنید.','error');const guardKey='factoori_signup_guard_'+email;if(mode==='signup'){if(signupBusy)return;if(Date.now()<Number(localStorage.getItem(guardKey)||0))return show('درخواست ثبت‌نام همین ایمیل اخیراً ارسال شده است. صندوق ورودی را بررسی کنید و فعلاً دوباره ثبت‌نام نزنید.','error');signupBusy=true;localStorage.setItem(guardKey,String(Date.now()+120000));}submit.disabled=true;submit.textContent='لطفاً صبر کنید…';try{const endpoint=mode==='signup'?'/auth/v1/signup':'/auth/v1/token?grant_type=password';const body=mode==='signup'?{email,password,data:{display_name:name},options:{emailRedirectTo:cfg.confirmation}}:{email,password};const res=await fetch(cfg.url+endpoint,{method:'POST',headers:{apikey:cfg.key,'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json().catch(()=>({}));if(!res.ok){const code=data.code||data.error_code||'';const raw=(data.msg||data.message||data.error_description||data.error||'').toString();if(mode==='signup'&&(/already registered|already exists|user_already_exists|email_exists/i.test(raw+' '+code))){localStorage.removeItem(guardKey);throw new Error('این ایمیل قبلاً در فاکتوری ثبت‌نام شده است؛ از بخش ورود استفاده کنید.')}if(mode==='signup'&&[502,503,504].includes(res.status))throw new Error('سرویس ایمیل فاکتوری پاسخ کامل نداده است. ممکن است پیام تأیید ارسال شده باشد؛ فعلاً دوباره ثبت‌نام نزنید. ایمیل‌های قبلی را ملاک قرار ندهید؛ پس از رفع اختلال، فقط یک ایمیل جدید معتبر صادر می‌شود.');localStorage.removeItem(guardKey);throw new Error(raw||'درخواست انجام نشد.')}if(mode==='signup'&&Array.isArray(data.user?.identities)&&data.user.identities.length===0)throw new Error('این ایمیل قبلاً در فاکتوری ثبت‌نام شده است؛ از بخش ورود استفاده کنید.');if(mode==='signup'&&!data.access_token){show('حساب مرکزی ساخته شد. ایمیل خود را تأیید کنید؛ سپس با همین ایمیل و رمز در اپ، نسخه وب و پروفایل سایت وارد شوید.','success');setMode('login');return}const token=data.access_token;if(!token)throw new Error('توکن ورود دریافت نشد.');const session={access_token:token,refresh_token:data.refresh_token||null,token_type:data.token_type||'bearer',expires_in:data.expires_in||3600,expires_at:data.expires_at||Math.floor(Date.now()/1000)+(data.expires_in||3600),user:data.user};try{localStorage.setItem('factoori_web_session_v1',JSON.stringify(session));sessionStorage.setItem('factoori_web_session_v1',JSON.stringify(session));}catch(_){}const bridge=await fetch(cfg.bridge,{method:'POST',credentials:'same-origin',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'}});const linked=await bridge.json().catch(()=>({}));if(!bridge.ok)throw new Error(linked.message||linked.code||'اتصال پروفایل سایت انجام نشد.');show('ورود موفق بود؛ در حال انتقال به پروفایل…','success');location.href=linked.profile_url||cfg.profile}catch(err){const raw=err&&err.message?err.message:'خطا در ارتباط با سرویس.';if(mode==='signup'&&/failed to fetch|network|timeout|timed out/i.test(raw))show('ارتباط با سرویس ثبت‌نام قطع شد و وضعیت ساخت حساب مشخص نیست. فعلاً دوباره ثبت‌نام نزنید؛ صندوق ایمیل را بررسی کنید. اگر ایمیل‌های متعدد رسیده، هیچ‌کدام را تا رفع اختلال معتبر فرض نکنید.','error');else show(raw,'error')}finally{signupBusy=false;submit.disabled=false;submit.textContent=mode==='signup'?'ایجاد حساب واحد':'ورود به حساب'}});setMode('login')})();
     </script>
     <?php return ob_get_clean();
 }
+
 add_shortcode('factoori_unified_account', 'factoori_intro_auth_shortcode');
+
+// Dedicated Supabase email-confirmation landing page.
+function factoori_intro_confirmation_shortcode() {
+    $config = array(
+        'url' => FACTOORI_INTRO_SUPABASE_URL,
+        'key' => FACTOORI_INTRO_PUBLISHABLE_KEY,
+        'bridge' => esc_url_raw(rest_url('factoori-auth/v1/session')),
+        'profile' => esc_url_raw(factoori_intro_account_url()),
+    );
+    ob_start(); ?>
+    <section class="fi-confirm" dir="rtl" lang="fa" style="max-width:620px;margin:40px auto;padding:20px;font-family:inherit">
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:22px;padding:32px 24px;text-align:center;box-shadow:0 12px 36px #0f172a12">
+        <div style="font-size:25px;font-weight:900;color:#0f766e">فاکتوری</div>
+        <div class="fi-confirm-status" style="margin:22px 0;color:#334155;line-height:2">در حال بررسی لینک تأیید ایمیل…</div>
+        <a class="fi-confirm-link" href="<?php echo esc_url(factoori_intro_account_url()); ?>" style="display:inline-block;background:#0f766e;color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800">ورود به حساب فاکتوری</a>
+      </div>
+    </section>
+    <script>
+    (()=>{const root=document.currentScript.previousElementSibling;if(!root||root.dataset.ready)return;root.dataset.ready='1';const cfg=<?php echo wp_json_encode($config); ?>;const status=root.querySelector('.fi-confirm-status');const params=new URLSearchParams(location.hash.replace(/^#/,''));const access=params.get('access_token');const error=params.get('error_description')||params.get('error');const say=(s,color)=>{status.textContent=s;status.style.color=color||'#334155'};if(error){say('تأیید ایمیل انجام نشد: '+error,'#b91c1c');return}if(!access){say('اگر روی لینک تأیید ایمیل کلیک کرده‌اید، وضعیت حساب را از بخش ورود بررسی کنید. در صورت نیاز، دوباره وارد شوید.');return}const session={access_token:access,refresh_token:params.get('refresh_token')||null,token_type:params.get('token_type')||'bearer',expires_in:Number(params.get('expires_in')||3600),expires_at:Math.floor(Date.now()/1000)+Number(params.get('expires_in')||3600)};try{localStorage.setItem('factoori_web_session_v1',JSON.stringify(session));sessionStorage.setItem('factoori_web_session_v1',JSON.stringify(session))}catch(_){}history.replaceState(null,document.title,location.pathname+location.search);fetch(cfg.bridge,{method:'POST',credentials:'same-origin',headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'}}).then(async r=>({ok:r.ok,data:await r.json().catch(()=>({}))})).then(result=>{if(result.ok){say('آدرس ایمیل شما با موفقیت تأیید شد و حساب فاکتوری فعال است. اکنون می‌توانید وارد پروفایل خود شوید.','#047857')}else{say('ایمیل شما تأیید شد و حساب فعال است. برای ورود به پروفایل، از دکمه زیر وارد شوید.','#047857')}}).catch(()=>say('ایمیل شما تأیید شد. برای ورود به حساب فاکتوری از دکمه زیر استفاده کنید.','#047857'))})();
+    </script>
+    <?php return ob_get_clean();
+}
+add_shortcode('factoori_email_confirmation', 'factoori_intro_confirmation_shortcode');
+
+// Create the dedicated confirmation page automatically after the plugin update.
+function factoori_intro_ensure_confirmation_page() {
+    $page = get_page_by_path('email-confirmation');
+    if (!$page) {
+        wp_insert_post(array(
+            'post_type' => 'page',
+            'post_status' => 'publish',
+            'post_title' => 'تأیید ایمیل فاکتوری',
+            'post_name' => 'email-confirmation',
+            'post_content' => '[factoori_email_confirmation]',
+            'comment_status' => 'closed',
+        ));
+    } elseif (strpos($page->post_content, '[factoori_email_confirmation]') === false) {
+        wp_update_post(array('ID' => $page->ID, 'post_content' => '[factoori_email_confirmation]'));
+    }
+}
+add_action('init', 'factoori_intro_ensure_confirmation_page', 30);
+
 
 // Prevent a second, unrelated WordPress-only registration path.
 add_filter('registration_errors', function ($errors) {
