@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Factoori Web Accounting
  * Description: Full-screen Factoori accounting workspace backed by the same Supabase account and business data as the Android app.
- * Version: 0.2.3
+ * Version: 0.2.4
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: Factoori
@@ -10,7 +10,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
-define('FACTOORI_WEB_VERSION', '0.2.3');
+define('FACTOORI_WEB_VERSION', '0.2.4');
 define('FACTOORI_WEB_FILE', __FILE__);
 define('FACTOORI_WEB_DIR', plugin_dir_path(__FILE__));
 
@@ -20,6 +20,7 @@ function factoori_web_defaults() {
         'publishable_key' => 'sb_publishable_GhG0h_Mco3UomLqxnhynnw_blPQ3ii-',
         'purchase_url' => '',
         'mobile_download_url' => '',
+        'web_intro_url' => '',
     );
 }
 function factoori_web_settings() {
@@ -32,6 +33,7 @@ function factoori_web_sanitize_settings($input) {
         'publishable_key' => sanitize_text_field(trim($input['publishable_key'] ?? '')),
         'purchase_url' => esc_url_raw(trim($input['purchase_url'] ?? '')),
         'mobile_download_url' => esc_url_raw(trim($input['mobile_download_url'] ?? '')),
+        'web_intro_url' => esc_url_raw(trim($input['web_intro_url'] ?? '')),
     );
 }
 add_action('admin_init', function () {
@@ -83,6 +85,7 @@ add_action('wp_enqueue_scripts', function () {
         'publishableKey' => $s['publishable_key'],
         'purchaseUrl' => $s['purchase_url'],
         'mobileDownloadUrl' => $s['mobile_download_url'],
+        'webIntroUrl' => $s['web_intro_url'] ?: home_url('/web-factoori/'),
         'version' => FACTOORI_WEB_VERSION,
     ));
 }, 20);
@@ -117,3 +120,4 @@ function factoori_web_activate() {
     }
 }
 register_activation_hook(__FILE__, 'factoori_web_activate');
+require_once FACTOORI_WEB_DIR . 'includes/landing.php';
