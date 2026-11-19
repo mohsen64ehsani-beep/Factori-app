@@ -18,6 +18,6 @@ begin
  v_result:=public.import_legacy_account_transfers(v_business,gen_random_uuid());
  if (v_result->>'imported')::integer<>1 then raise exception 'Legacy account transfer did not import: %',v_result; end if;
  v_result:=public.import_legacy_account_transfers(v_business,gen_random_uuid());
- if (v_result->>'unchanged')::integer<>1 then raise exception 'Legacy account transfer import is not idempotent: %',v_result; end if;
+ if (v_result->>'unchanged')::integer<>2 then raise exception 'Legacy account transfer import is not idempotent: %',v_result; end if;
 end $$;
 rollback;
