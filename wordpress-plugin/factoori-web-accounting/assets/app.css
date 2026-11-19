@@ -77,3 +77,40 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
 
 .fw-sidebar{gap:18px}.fw-nav{overflow-y:auto;min-height:0;overscroll-behavior:contain}
 @media(max-width:760px){.fw-sidebar{overflow:hidden}.fw-nav{display:flex;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;gap:4px}.fw-nav::-webkit-scrollbar{display:none}.fw-nav button{flex:0 0 66px;min-width:66px}}
+
+/* Persian calendar input and compact mobile workspace */
+.fw-field input[data-jalali-date]{direction:ltr;text-align:right;font-variant-numeric:tabular-nums;letter-spacing:.35px}
+.fw-field input[data-jalali-date]::placeholder{direction:ltr;text-align:right;color:#a1adba}
+.fw-table-wrap{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.fw-table{font-variant-numeric:tabular-nums}
+.fw-layout,.fw-main,.fw-content,.fw-card{min-width:0}
+.fw-nav button{white-space:nowrap}
+@media(max-width:760px){
+  .fw-main{padding:12px 10px calc(112px + env(safe-area-inset-bottom))}
+  .fw-topbar{gap:8px;margin-bottom:15px;flex-wrap:wrap}
+  .fw-topbar>div:first-child{min-width:0;flex:1}
+  .fw-top-actions{width:100%;justify-content:flex-end}
+  .fw-top-actions .fw-btn{min-height:40px}
+  .fw-card{padding:12px;border-radius:15px}
+  .fw-section-head{align-items:flex-start;flex-wrap:wrap}
+  .fw-section-head>.fw-btn{width:auto}
+  .fw-table-wrap{margin-inline:-3px}
+  .fw-table{min-width:520px}
+  .fw-table th,.fw-table td{padding:10px 8px;font-size:11px}
+  .fw-field label{font-size:12px}
+  .fw-field input,.fw-field select{min-height:45px;font-size:14px;max-width:100%}
+  .fw-btn{min-height:42px}
+  .fw-two,.fw-dashboard-grid{grid-template-columns:minmax(0,1fr)}
+  .fw-sidebar{padding-bottom:calc(7px + env(safe-area-inset-bottom))}
+  .fw-nav button{flex:0 0 64px;min-width:64px;padding:6px 3px}
+  .fw-auth-wrap{padding:14px}
+  .fw-auth-card{width:min(100%,440px)}
+}
+@media(max-width:360px){
+  .fw-main{padding-inline:8px}
+  .fw-grid{gap:7px}
+  .fw-stat{padding:10px}
+  .fw-stat small{font-size:10px}
+  .fw-stat strong{font-size:16px}
+  .fw-nav button{flex-basis:58px;min-width:58px;font-size:9px}
+}
