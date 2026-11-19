@@ -12,7 +12,23 @@ test('only explicitly write-enabled collections produce operations', () => {
     cust: [{ id: 1, n: 'A' }], pay: [{ id: 2, amount: 10 }],
     purchases: [{ id: 3, amount: 20 }], accounts: [{ id: 4, name: 'Cash' }]
   }, createSyncState(), ids);
-  assert.deepEqual(operations.map(op => op.collection), ['cust']);
+  assert.deepEqual(operations.map(op => op.collection), ['cust', 'pay']);
+});
+
+test('financial records are staged as upserts and cannot use generic deletes', async () => {
+  const { operations } = prepareSyncOperations({
+    pay: [{ id: 'receipt-1', amt: 10 }],
+    supplierPayments: [{ id: 'supplier-payment-1', amount: 20 }],
+    expenses: [{ id: 'expense-1', amt: 5 }],
+    otherincome: [{ id: 'income-1', amount: 3 }]
+  }, createSyncState(), ids);
+  assert.deepEqual(operations.map(op => op.collection), [
+    'pay', 'supplierPayments', 'expenses', 'otherincome'
+  ]);
+  assert.ok(operations.every(op => op.operation_type === 'upsert'));
+  const { createSyncTombstone } = await import('./sync-engine.js');
+  const known = { ...createSyncState(), versions: { pay: { 'receipt-1': 1 } } };
+  assert.throws(() => createSyncTombstone('pay', 'receipt-1', known));
 });
 
 test('new records use base version zero and stable legacy ids', () => {
