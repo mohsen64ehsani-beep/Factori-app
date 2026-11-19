@@ -22,7 +22,7 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 == Current web features ==
 * Shared email/password sign-in and sign-up.
 * Business creation and business switching.
-* Management dashboard with sales, purchases, receipts, payments, pending cheque and low-stock indicators.
+* Management dashboard with sales, purchases, receipts, payments, pending cheques, low-stock indicators, estimated financial-account balances and current stock quantities.
 * Contact/customer/supplier creation and list.
 * Product creation and list with unit cost, sale price, live gross-margin preview and product categories; cost values are served only to members with the sensitive catalog.cost.read permission.
 * Sales and purchase invoice draft creation.
@@ -36,6 +36,7 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Web-origin financial, account-transfer and inventory operations mirrored to the Android sync collections.
 * Shared service catalog management and service-sale invoice drafts with Android `serviceInv` synchronization.
 * Web purchase invoice lines are mirrored to Android `purchases`; unit cost remains in the private sync payload partition.
+* Six-month sales/purchase report with responsive charts and monthly comparison (based on the currently loaded posted documents).
 * Responsive full-screen desktop and mobile interface with refreshed dashboard, cards, tables and navigation.
 * Optional prominent professional-upgrade link.
 
