@@ -24,9 +24,9 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Business creation and business switching.
 * Management dashboard with sales, purchases, receipts, payments, pending cheque and low-stock indicators.
 * Contact/customer/supplier creation and list.
-* Product creation and list with unit cost, sale price, live gross-margin preview and product categories.
+* Product creation and list with unit cost, sale price, live gross-margin preview and product categories; cost values are served only to members with the sensitive catalog.cost.read permission.
 * Sales and purchase invoice draft creation.
-* Bidirectional customer, supplier and product sync with the Android legacy sync stream.
+* Bidirectional customer, supplier, product cost and category sync with the Android legacy sync stream; cost fields remain in the private sync payload and are permission-filtered in web reads.
 * Web-created goods-sale drafts are mirrored into the Android invoice stream; Android-origin invoice records are visible in the web invoice list.
 * Posting supported goods-sale and purchase drafts through validated database RPCs.
 * Shared financial transaction entry for customer receipts, supplier payments, expenses, other income and account-to-account transfers.
