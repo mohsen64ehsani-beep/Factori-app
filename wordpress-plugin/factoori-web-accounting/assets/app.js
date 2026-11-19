@@ -76,7 +76,7 @@
     const b=state.business?.id;if(!b){clearData();return;}
     const f='business_id=eq.'+encodeURIComponent(b);
     const results=await Promise.all([
-      rest('contacts','select=id,name,contact_type,phone,code,is_active&'+f+'&is_active=eq.true&order=name.asc&limit=200'),
+      rest('contacts','select=id,name,contact_type,phone,code,address,notes,is_active&'+f+'&is_active=eq.true&order=name.asc&limit=200'),
       rest('contact_ledger_entries','select=id,contact_id,entry_date,entry_type,debit,credit,document_id,transaction_id,description&'+f+'&order=entry_date.desc&limit=1000'),
       rpc('web_list_products',{p_business_id:b}),
       rest('product_categories','select=id,name,parent_id&'+f+'&order=name.asc&limit=200'),
@@ -208,7 +208,7 @@
   }
   function contactEdit(){
     const c=state.contacts.find(x=>x.id===state.selectedContactId);if(!c){state.section='contacts';contacts();return;}
-    shell('<button class="fw-btn secondary" data-action="contacts-back">← بازگشت</button><section class="fw-card" style="margin-top:14px"><h2>ویرایش شخص</h2><form data-form="contact-edit"><input type="hidden" name="contact_id" value="'+esc(c.id)+'"><div class="fw-field"><label>نام شخص / شرکت</label><input name="name" required maxlength="160" value="'+esc(c.name)+'"></div><div class="fw-field"><label>شماره تماس</label><input name="phone" value="'+esc(c.phone||'')+'" inputmode="tel"></div><div class="fw-field"><label>کد / شناسه</label><input name="code" value="'+esc(c.code||'')+'"></div><div class="fw-field"><label>نشانی</label><input name="address" value="'+esc(c.address||'')+'"></div><div class="fw-field"><label>یادداشت</label><textarea name="notes" rows="3"></textarea></div><button class="fw-btn" type="submit">ذخیره تغییرات</button></form></section>','ویرایش شخص','تغییرات در اپ و نسخه وب همگام می‌شوند');
+    shell('<button class="fw-btn secondary" data-action="contacts-back">← بازگشت</button><section class="fw-card" style="margin-top:14px"><h2>ویرایش شخص</h2><form data-form="contact-edit"><input type="hidden" name="contact_id" value="'+esc(c.id)+'"><div class="fw-field"><label>نام شخص / شرکت</label><input name="name" required maxlength="160" value="'+esc(c.name)+'"></div><div class="fw-field"><label>شماره تماس</label><input name="phone" value="'+esc(c.phone||'')+'" inputmode="tel"></div><div class="fw-field"><label>کد / شناسه</label><input name="code" value="'+esc(c.code||'')+'"></div><div class="fw-field"><label>نشانی</label><input name="address" value="'+esc(c.address||'')+'"></div><div class="fw-field"><label>یادداشت</label><textarea name="notes" rows="3">'+esc(c.notes||'')+'</textarea></div><button class="fw-btn" type="submit">ذخیره تغییرات</button></form></section>','ویرایش شخص','تغییرات در اپ و نسخه وب همگام می‌شوند');
   }
   function contactDetail(){
     const c=state.contacts.find(x=>x.id===state.selectedContactId);if(!c){state.section='contacts';contacts();return;}
