@@ -53,6 +53,7 @@
     const response=await fetch(base+path,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await response.json().catch(()=>({}));
     if(!response.ok){const raw=String(data.msg||data.message||data.error_description||data.error||'');const code=String(data.code||data.error_code||'');if(/already registered|already exists|user_already_exists|email_exists/i.test(raw+' '+code))throw new Error('این ایمیل قبلاً در فاکتوری ثبت‌نام شده است؛ از بخش ورود استفاده کنید.');throw new Error(raw||'ورود یا ثبت‌نام انجام نشد.');}
+    if(mode==='signup'&&Array.isArray(data.user?.identities)&&data.user.identities.length===0)throw new Error('این ایمیل قبلاً در فاکتوری ثبت‌نام شده است؛ از بخش ورود استفاده کنید.');
     if(data.access_token) saveSession(data); else if(mode==='signup') toast('حساب ساخته شد. ایمیل خود را برای تأیید بررسی کنید، سپس وارد شوید.');
     return data;
   }
