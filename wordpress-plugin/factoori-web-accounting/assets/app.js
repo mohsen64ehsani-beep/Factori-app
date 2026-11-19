@@ -6,7 +6,7 @@
   const base = String(cfg.supabaseUrl || '').replace(/\/$/, '');
   const key = String(cfg.publishableKey || '');
   const storageKey = 'factoori_web_session_v1';
-  const state = {session:null,user:null,businesses:[],business:null,contacts:[],contactLedger:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],chequeEvents:[],documentItems:[],salesReturns:[],purchaseReturns:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
+  const state = {session:null,user:null,businesses:[],business:null,contacts:[],contactLedger:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],chequeEvents:[],dueDates:[],documentItems:[],salesReturns:[],purchaseReturns:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => new Intl.NumberFormat('fa-IR').format(Number(v || 0));
   const persianDateFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn',{year:'numeric',month:'numeric',day:'numeric',timeZone:'UTC'});
@@ -70,7 +70,7 @@
     state.business=selected;
     if(selected) await loadData(); else clearData();
   }
-  function clearData(){state.contacts=[];state.contactLedger=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.chequeEvents=[];state.documentItems=[];state.salesReturns=[];state.purchaseReturns=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
+  function clearData(){state.contacts=[];state.contactLedger=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.chequeEvents=[];state.dueDates=[];state.documentItems=[];state.salesReturns=[];state.purchaseReturns=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
   async function loadData(){
     const b=state.business?.id;if(!b){clearData();return;}
     const f='business_id=eq.'+encodeURIComponent(b);
@@ -99,7 +99,8 @@
       rest('services','select=id,legacy_id,name,description,sale_price,is_active&'+f+'&is_active=eq.true&order=name.asc'),
       rest('account_transfers','select=id,from_account_id,to_account_id,amount,transfer_date,note,status&'+f+'&order=transfer_date.desc&limit=100'),
       rest('business_settings','select=currency_code,currency_scale,timezone,date_calendar,costing_method,tax_enabled,default_tax_rate,negative_stock_allowed&'+f+'&limit=1'),
-      rest('fiscal_periods','select=id,name,date_from,date_to,status&'+f+'&order=date_from.desc&limit=50')
+      rest('fiscal_periods','select=id,name,date_from,date_to,status&'+f+'&order=date_from.desc&limit=50'),
+      rest('business_due_dates','select=id,created_date,due_date,title,person,amount,due_type,status,note&'+f+'&order=due_date.asc&limit=500')
     ]);
     state.transactions=optional[0].status==='fulfilled'?(optional[0].value||[]):[];
     state.cheques=optional[1].status==='fulfilled'?(optional[1].value||[]):[];
@@ -113,6 +114,7 @@
     state.accountTransfers=optional[9].status==='fulfilled'?(optional[9].value||[]):[];
     state.businessSettings=optional[10].status==='fulfilled'?(optional[10].value||[])[0]||null:null;
     state.fiscalPeriods=optional[11].status==='fulfilled'?(optional[11].value||[]):[];
+    state.dueDates=optional[12].status==='fulfilled'?(optional[12].value||[]):[];
     const legacyGroups=[
       ['pay','debt','creditors','creditorPayments','expenses','otherincome','supplierPayments','moneytransfers'],
       ['serviceInv','purchases','returns','duedates','fiscal'],
@@ -184,12 +186,16 @@
     const customerRows=customers.map(c=>{const balance=balanceFor(c.id);return '<tr><td><button class="fw-link" data-action="contact-detail" data-id="'+esc(c.id)+'">'+esc(c.name)+'</button></td><td>'+esc(c.phone||'—')+'</td><td>'+money(Math.max(0,balance))+'</td><td>'+money(Math.max(0,-balance))+'</td></tr>';});
     const supplierRows=suppliers.map(c=>{const balance=balanceFor(c.id);return '<tr><td><button class="fw-link" data-action="contact-detail" data-id="'+esc(c.id)+'">'+esc(c.name)+'</button></td><td>'+esc(c.phone||'—')+'</td><td>'+money(Math.max(0,-balance))+'</td><td>'+money(Math.max(0,balance))+'</td></tr>';});
     const overdue=state.documents.filter(d=>d.status==='posted'&&d.due_date&&d.due_date<today()&&['goods_sale','service_sale'].includes(d.document_type)).map(d=>'<tr><td>'+esc(d.document_number||'—')+'</td><td>'+esc(state.contacts.find(c=>c.id===d.contact_id)?.name||'—')+'</td><td>'+dateFa(d.due_date)+'</td><td>'+money(d.total_amount)+'</td></tr>');
+    const dueRows=state.dueDates.map(d=>'<tr><td>'+dateFa(d.due_date)+'</td><td>'+esc(d.title)+'</td><td>'+esc(d.person||'—')+'</td><td>'+esc(({receivable:'طلب',payable:'بدهی',cheque:'چک'}[d.due_type]||d.due_type))+'</td><td>'+money(d.amount)+'</td><td>'+esc(d.status==='open'?'باز':d.status==='settled'?'تسویه‌شده':'لغوشده')+'</td></tr>');
+    const legacyDueRows=(state.legacyCollections.duedates||[]).map(d=>'<tr><td>'+dateFa(d.payload?.dueDate)+'</td><td>'+esc(d.payload?.title||'—')+'</td><td>'+esc(d.payload?.person||'—')+'</td><td>'+esc(({receivable:'طلب',payable:'بدهی',cheque:'چک'}[d.payload?.kind]||d.payload?.kind||'—'))+'</td><td>'+money(d.payload?.amount)+'</td><td><span class="fw-sub">سابقه قدیمی اپ</span></td></tr>');
+    const dueForm='<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>ثبت سررسید جدید</h2><p>یادآور طلب، بدهی یا چک در تقویم شمسی؛ رکورد برای اپ نیز همگام می‌شود.</p></div></div><form data-form="due-date"><div class="fw-form-grid"><div class="fw-field"><label>عنوان</label><input name="title" required maxlength="200"></div><div class="fw-field"><label>شخص / شرکت</label><input name="person" maxlength="200"></div><div class="fw-field"><label>نوع سررسید</label><select name="due_type"><option value="receivable">طلب / دریافتنی</option><option value="payable">بدهی / پرداختنی</option><option value="cheque">چک</option></select></div><div class="fw-field"><label>مبلغ (ریال)</label><input name="amount" type="number" min="0" step="1" value="0"></div><div class="fw-field"><label>تاریخ ثبت</label><input name="created_date" type="date" value="'+today()+'" required></div><div class="fw-field"><label>تاریخ سررسید</label><input name="due_date" type="date" required></div><div class="fw-field wide"><label>توضیحات</label><input name="note" maxlength="500"></div></div><button class="fw-btn" type="submit">ثبت سررسید</button></form></section>';
     const totalReceivable=customers.reduce((n,c)=>n+Math.max(0,balanceFor(c.id)),0);
     const totalPayable=suppliers.reduce((n,c)=>n+Math.max(0,-balanceFor(c.id)),0);
     shell('<div class="fw-grid"><section class="fw-card fw-stat"><div><small>مطالبات از مشتریان</small><strong>'+money(totalReceivable)+'</strong><em>مانده بدهکار دفتر اشخاص</em></div></section><section class="fw-card fw-stat"><div><small>بدهی به تأمین‌کنندگان</small><strong>'+money(totalPayable)+'</strong><em>مانده بستانکار دفتر اشخاص</em></div></section><section class="fw-card fw-stat"><div><small>مشتریان</small><strong>'+money(customers.length)+'</strong><em>مشتری و مشترک</em></div></section><section class="fw-card fw-stat"><div><small>تأمین‌کنندگان</small><strong>'+money(suppliers.length)+'</strong><em>تأمین‌کننده و مشترک</em></div></section></div>'+
     '<section class="fw-card"><div class="fw-section-head"><div><h2>دفتر بدهکاران مشتری</h2><p>مانده از گردش ثبت‌شده در دفتر حساب اشخاص؛ مبالغ بر اساس بدهکار منهای بستانکار</p></div><button class="fw-btn secondary" data-section="finance">ثبت دریافت</button></div>'+table(customerRows,['مشتری','تلفن','بدهکار (ریال)','بستانکار (ریال)'],'مشتری‌ای ثبت نشده است.')+'</section>'+
     '<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>دفتر بستانکاران تأمین‌کننده</h2><p>مانده بدهی به تأمین‌کنندگان</p></div><button class="fw-btn secondary" data-section="creditors">دفتر تأمین‌کنندگان</button></div>'+table(supplierRows,['تأمین‌کننده','تلفن','بدهی ما (ریال)','طلب ما (ریال)'],'تأمین‌کننده‌ای ثبت نشده است.')+'</section>'+
     '<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>فاکتورهای فروش سررسیدگذشته</h2><p>بر اساس تاریخ سررسید ثبت‌شده در اسناد</p></div></div>'+table(overdue,['شماره فاکتور','مشتری','سررسید','مبلغ (ریال)'],'فاکتور فروش سررسیدگذشته‌ای وجود ندارد.')+'</section>',
+    '<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>دفتر سررسیدها</h2><p>یادآورها و تعهدات ثبت‌شده از وب و اپ</p></div></div>'+table(dueRows,['سررسید','عنوان','شخص','نوع','مبلغ','وضعیت'],'سررسیدی ثبت نشده است.')+'</section>'+dueForm+'<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>سررسیدهای قدیمی اپ</h2><p>سوابق قدیمی تا زمان تطبیق، فقط‌خواندنی هستند.</p></div></div>'+table(legacyDueRows,['سررسید','عنوان','شخص','نوع','مبلغ','منبع'],'سررسید قدیمی وجود ندارد.')+'</section>',
     'دفتر بدهکاران و بستانکاران','مانده حساب اشخاص و پیگیری مطالبات');
   }
   function contactDetail(){
@@ -376,6 +382,9 @@
       } else if(kind==='business'){
         const id=await rpc('create_business',{p_name:data.name});
         await loadBusinesses();render();toast('فضای حسابداری ایجاد شد.');
+      } else if(kind==='due-date'){
+        await rpc('web_create_due_date',{p_business_id:state.business.id,p_created_date:data.created_date,p_due_date:data.due_date,p_title:data.title,p_person:data.person||null,p_amount:Number(data.amount||0),p_due_type:data.due_type,p_note:data.note||null});
+        await loadData();render();toast('سررسید ثبت و برای همگام‌سازی اپ منتشر شد.');
       } else if(kind==='financial-account'){
         await rpc('web_create_financial_account',{p_business_id:state.business.id,p_name:data.name,p_account_type:data.account_type,p_note:data.note||null});
         await loadData();render();toast('حساب مالی ساخته شد و برای همگام‌سازی اپ منتشر شد.');
