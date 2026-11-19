@@ -10,16 +10,17 @@ const FINANCIAL_STAGE_SET = new Set(FINANCIAL_STAGE_COLLECTIONS);
 export const SYNC_WRITE_COLLECTIONS = Object.freeze([
   'cust', 'suppliers', 'duedates', 'prod', 'services', 'categories',
   'inv', 'serviceInv', 'warehouses', 'bankAccounts', 'fiscal',
-  'smsHistory', ...FINANCIAL_STAGE_COLLECTIONS
+  'smsHistory'
 ]);
 
 export const SYNC_READ_COLLECTIONS = Object.freeze([
-  ...SYNC_WRITE_COLLECTIONS, 'debt', 'returns', 'creditors',
+  ...SYNC_WRITE_COLLECTIONS, ...FINANCIAL_STAGE_COLLECTIONS, 'debt', 'returns', 'creditors',
   'creditorPayments', 'purchases', 'wastage', 'stockMoves', 'warehouseStocks',
   'transfers', 'accounts', 'moneytransfers', 'opening'
 ]);
 
 const WRITE_SET = new Set(SYNC_WRITE_COLLECTIONS);
+const LOCAL_MUTATION_SET = new Set([...WRITE_SET, ...FINANCIAL_STAGE_SET]);
 const READ_SET = new Set(SYNC_READ_COLLECTIONS);
 
 export const SYNC_SENSITIVE_FIELDS = Object.freeze([
@@ -117,7 +118,7 @@ function resetAfterPermissionVersionChange(db, state, response) {
     nextState.conflicts = stripSensitiveLocalValue(nextState.conflicts);
     nextState.rejected = stripSensitiveLocalValue(nextState.rejected);
     for (const operation of nextState.pending) {
-      if (WRITE_SET.has(operation.collection) && readable.has(operation.collection) && operation.legacy_id
+      if (LOCAL_MUTATION_SET.has(operation.collection) && readable.has(operation.collection) && operation.legacy_id
         && !nextState.permissionResetDirty.some(marker =>
           marker.collection === operation.collection && String(marker.legacy_id) === String(operation.legacy_id))) {
         nextState.permissionResetDirty.push({ collection: operation.collection, legacy_id: String(operation.legacy_id) });
@@ -196,7 +197,7 @@ export function prepareSyncOperations(db, state, createOperationId) {
   // replays its full snapshot. Drop markers only when the local row already
   // matches the last acknowledged snapshot or a new pending op takes over.
   next.permissionResetDirty = next.permissionResetDirty.filter(marker => {
-    if (!marker || !WRITE_SET.has(marker.collection) || !marker.legacy_id) return false;
+    if (!marker || !LOCAL_MUTATION_SET.has(marker.collection) || !marker.legacy_id) return false;
     const id = String(marker.legacy_id);
     if (queued.has(marker.collection + ':' + id)) return false;
     const rows = Array.isArray(db?.[marker.collection]) ? db[marker.collection] : [];
@@ -214,7 +215,7 @@ export function prepareSyncOperations(db, state, createOperationId) {
     );
   };
 
-  for (const collection of SYNC_WRITE_COLLECTIONS) {
+  for (const collection of [...SYNC_WRITE_COLLECTIONS, ...FINANCIAL_STAGE_COLLECTIONS]) {
     const rows = db?.[collection];
     if (!Array.isArray(rows)) continue;
     for (const row of rows) {
