@@ -33,11 +33,11 @@ jobs:
         run: |
           mkdir -p dist
           cd wordpress-plugin
-          zip -r ../dist/factoori-web-accounting-0.1.0.zip factoori-web-accounting
+          zip -r ../dist/factoori-web-accounting-0.1.1.zip factoori-web-accounting
       - name: Upload plugin ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: factoori-web-accounting-0.1.0
-          path: dist/factoori-web-accounting-0.1.0.zip
+          name: factoori-web-accounting-0.1.1
+          path: dist/factoori-web-accounting-0.1.1.zip
           if-no-files-found: error
           retention-days: 30
