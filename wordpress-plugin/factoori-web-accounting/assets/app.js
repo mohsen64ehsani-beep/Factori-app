@@ -80,7 +80,7 @@
       rest('contact_ledger_entries','select=id,contact_id,entry_date,entry_type,debit,credit,document_id,transaction_id,description&'+f+'&order=entry_date.desc&limit=1000'),
       rpc('web_list_products',{p_business_id:b}),
       rest('product_categories','select=id,name,parent_id&'+f+'&order=name.asc&limit=200'),
-      rest('documents','select=id,document_type,document_number,document_date,due_date,subtotal,discount_amount,taxable_amount,tax_amount,total_amount,notes,status,contact_id,warehouse_id,fiscal_period_id,created_at&'+f+'&order=created_at.desc&limit=50'),
+      rest('documents','select=id,document_type,document_number,document_date,due_date,subtotal,discount_amount,taxable_amount,tax_amount,total_amount,notes,status,contact_id,warehouse_id,fiscal_period_id,contacts(name),created_at&'+f+'&order=created_at.desc&limit=50'),
       rest('warehouses','select=id,name,is_default,is_active&'+f+'&is_active=eq.true&order=is_default.desc,name.asc'),
       rest('financial_accounts','select=id,name,account_type,opening_balance,is_default,is_active&'+f+'&is_active=eq.true&order=is_default.desc,name.asc'),
       rpc('web_list_legacy_invoices',{p_business_id:b})
@@ -247,15 +247,19 @@
     const rows=items.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(x.description_snapshot)+'</td><td>'+money(x.quantity)+' '+esc(x.unit_name_snapshot||'')+'</td><td>'+money(x.unit_price)+'</td><td>'+money(x.line_total)+'</td></tr>');
     const status=d.status==='posted'?'ثبت نهایی':d.status==='voided'?'باطل / بایگانی‌شده':'پیش‌نویس';
     const actions='<button class="fw-btn secondary" data-action="invoices-back">← بازگشت به فاکتورها</button> '+(d.status==='draft'?'<button class="fw-btn secondary" data-action="edit-invoice" data-id="'+esc(d.id)+'">ویرایش پیش‌نویس</button> ':'')+'<button class="fw-btn secondary" data-action="print-invoice" data-id="'+esc(d.id)+'">چاپ / PDF</button>'+(d.status==='draft'?' <button class="fw-btn danger" data-action="archive-invoice" data-id="'+esc(d.id)+'">بایگانی پیش‌نویس</button>':'');
-    shell(actions+'<section class="fw-hero" style="margin-top:14px"><div><span>جزئیات سند</span><h2>'+esc(d.document_number||'فاکتور بدون شماره')+'</h2><p>'+esc(contact?.name||'بدون شخص مرتبط')+' · '+dateFa(d.document_date)+' · '+status+'</p></div><div class="fw-hero-mark">▤</div></section><section class="fw-card" style="margin-top:14px"><h2>اقلام فاکتور</h2>'+table(rows,['ردیف','شرح کالا / خدمت','تعداد','قیمت واحد','جمع ردیف'],'برای این سند قلمی ثبت نشده است.')+'<div class="fw-summary-row"><span>جمع کل</span><strong>'+money(d.total_amount)+' '+currencyLabel()+'</strong></div>'+(d.notes?'<p class="fw-sub">توضیحات: '+esc(d.notes)+'</p>':'')+'</section>','جزئیات فاکتور','سوابق سند و اقلام ثبت‌شده');
+    shell(actions+'<section class="fw-hero" style="margin-top:14px"><div><span>جزئیات سند</span><h2>'+esc(d.document_number||'فاکتور بدون شماره')+'</h2><p>'+esc(contact?.name||d.contacts?.name||'بدون شخص مرتبط')+' · '+dateFa(d.document_date)+' · '+status+'</p></div><div class="fw-hero-mark">▤</div></section><section class="fw-card" style="margin-top:14px"><h2>اقلام فاکتور</h2>'+table(rows,['ردیف','شرح کالا / خدمت','تعداد','قیمت واحد','جمع ردیف'],'برای این سند قلمی ثبت نشده است.')+'<div class="fw-summary-row"><span>جمع کل</span><strong>'+money(d.total_amount)+' '+currencyLabel()+'</strong></div>'+(d.notes?'<p class="fw-sub">توضیحات: '+esc(d.notes)+'</p>':'')+'</section>','جزئیات فاکتور','سوابق سند و اقلام ثبت‌شده');
   }
   function invoiceEdit(){
     const d=state.documents.find(x=>x.id===state.selectedDocumentId);
     if(!d||d.status!=='draft'){state.section='invoices';invoices();return;}
     const isService=['service_sale','service_purchase'].includes(d.document_type);
     const isSale=['goods_sale','service_sale'].includes(d.document_type);
-    const contactOptions=state.contacts.filter(c=>isSale?['customer','both'].includes(c.contact_type):['supplier','both'].includes(c.contact_type)).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===d.contact_id?'selected':'')+'>'+esc(c.name)+'</option>').join('');
-    const warehouseOptions='<option value="">بدون انبار</option>'+state.warehouses.map(w=>'<option value="'+esc(w.id)+'" '+(w.id===d.warehouse_id?'selected':'')+'>'+esc(w.name)+'</option>').join('');
+    const existingContact=state.contacts.find(c=>c.id===d.contact_id);
+    const contactFallback=!existingContact&&d.contact_id?'<option value="'+esc(d.contact_id)+'" selected>'+esc(d.contacts?.name||'شخص قبلی (بایگانی‌شده)')+'</option>':'';
+    const contactOptions=contactFallback+state.contacts.filter(c=>isSale?['customer','both'].includes(c.contact_type):['supplier','both'].includes(c.contact_type)).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===d.contact_id?'selected':'')+'>'+esc(c.name)+'</option>').join('');
+    const hasWarehouse=state.warehouses.some(w=>w.id===d.warehouse_id);
+    const warehouseFallback=!hasWarehouse&&d.warehouse_id?'<option value="'+esc(d.warehouse_id)+'" selected>انبار فعلی (غیرفعال)</option>':'';
+    const warehouseOptions='<option value="">بدون انبار</option>'+warehouseFallback+state.warehouses.map(w=>'<option value="'+esc(w.id)+'" '+(w.id===d.warehouse_id?'selected':'')+'>'+esc(w.name)+'</option>').join('');
     const catalog=isService?state.services:state.products;
     const itemRows=state.documentItems.filter(x=>x.document_id===d.id);
     const lineDiscounts=itemRows.reduce((n,x)=>n+Number(x.discount_amount||0),0);
