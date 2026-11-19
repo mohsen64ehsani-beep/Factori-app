@@ -6,7 +6,7 @@
   const base = String(cfg.supabaseUrl || '').replace(/\/$/, '');
   const key = String(cfg.publishableKey || '');
   const storageKey = 'factoori_web_session_v1';
-  const state = {session:null,user:null,businesses:[],business:null,contacts:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
+  const state = {session:null,user:null,businesses:[],business:null,contacts:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],documentItems:[],salesReturns:[],purchaseReturns:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => new Intl.NumberFormat('fa-IR').format(Number(v || 0));
   const persianDateFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn',{year:'numeric',month:'numeric',day:'numeric',timeZone:'UTC'});
@@ -70,7 +70,7 @@
     state.business=selected;
     if(selected) await loadData(); else clearData();
   }
-  function clearData(){state.contacts=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
+  function clearData(){state.contacts=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.documentItems=[];state.salesReturns=[];state.purchaseReturns=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
   async function loadData(){
     const b=state.business?.id;if(!b){clearData();return;}
     const f='business_id=eq.'+encodeURIComponent(b);
@@ -78,7 +78,7 @@
       rest('contacts','select=id,name,contact_type,phone,code,is_active&'+f+'&is_active=eq.true&order=name.asc&limit=200'),
       rpc('web_list_products',{p_business_id:b}),
       rest('product_categories','select=id,name,parent_id&'+f+'&order=name.asc&limit=200'),
-      rest('documents','select=id,document_type,document_number,document_date,total_amount,status,contact_id,created_at&'+f+'&order=created_at.desc&limit=50'),
+      rest('documents','select=id,document_type,document_number,document_date,total_amount,status,contact_id,warehouse_id,created_at&'+f+'&order=created_at.desc&limit=50'),
       rest('warehouses','select=id,name,is_default,is_active&'+f+'&is_active=eq.true&order=is_default.desc,name.asc'),
       rest('financial_accounts','select=id,name,account_type,opening_balance,is_default,is_active&'+f+'&is_active=eq.true&order=is_default.desc,name.asc'),
       rpc('web_list_legacy_invoices',{p_business_id:b})
@@ -89,6 +89,9 @@
     const optional=await Promise.allSettled([
       rest('financial_transactions','select=id,transaction_type,direction,amount,transaction_date,reference_number,description,status,account_id,contact_id,financial_accounts(name),contacts(name)&'+f+'&order=transaction_date.desc&limit=100'),
       rest('cheques','select=id,cheque_direction,cheque_number,sayad_id,bank_name,amount,issue_date,due_date,status,contact_id,contacts(name),note&'+f+'&order=due_date.asc&limit=100'),
+      rest('document_items','select=id,document_id,item_type,product_id,description_snapshot,quantity,unit_price&'+f+'&order=sort_order.asc&limit=1000'),
+      rest('sales_return_documents','select=id,original_document_id,return_date,total_amount,status,reason&'+f+'&order=return_date.desc&limit=100'),
+      rest('purchase_return_documents','select=id,original_document_id,return_date,total_amount,status,reason&'+f+'&order=return_date.desc&limit=100'),
       rest('stock_movements','select=id,product_id,warehouse_id,movement_type,quantity_delta,movement_date,note,products(name),warehouses(name)&'+f+'&order=movement_date.desc&limit=150'),
       rpc('web_list_inventory_balances',{p_business_id:b}),
       rest('services','select=id,legacy_id,name,description,sale_price,is_active&'+f+'&is_active=eq.true&order=name.asc'),
@@ -98,6 +101,9 @@
     ]);
     state.transactions=optional[0].status==='fulfilled'?(optional[0].value||[]):[];
     state.cheques=optional[1].status==='fulfilled'?(optional[1].value||[]):[];
+    state.documentItems=optional[2].status==='fulfilled'?(optional[2].value||[]):[];
+    state.salesReturns=optional[3].status==='fulfilled'?(optional[3].value||[]):[];
+    state.purchaseReturns=optional[4].status==='fulfilled'?(optional[4].value||[]):[];
     state.stockMovements=optional[2].status==='fulfilled'?(optional[2].value||[]):[];
     state.inventoryBalances=optional[3].status==='fulfilled'?(optional[3].value||[]):[];
     state.services=optional[4].status==='fulfilled'?(optional[4].value||[]):[];
@@ -198,7 +204,13 @@
     const customers=state.contacts;
     const products=state.products;
     const form='<section class="fw-card"><div class="fw-section-head"><div><h2>صدور پیش‌نویس فاکتور فروش</h2><p>فاکتور در پایگاه داده مشترک ذخیره می‌شود</p></div></div><form data-form="invoice"><div class="fw-form-grid"><div class="fw-field"><label>نوع سند</label><select name="document_type"><option value="goods_sale">فاکتور فروش کالا</option><option value="service_sale">فاکتور فروش خدمات</option><option value="purchase">فاکتور خرید کالا</option></select></div><div class="fw-field"><label>مشتری / تأمین‌کننده</label><select name="contact_id" required><option value="">انتخاب شخص</option>'+customers.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+({customer:"مشتری",supplier:"تأمین‌کننده",both:"هر دو"}[c.contact_type]||"") +'</option>').join('')+'</select></div><div class="fw-field"><label>انبار</label><select name="warehouse_id"><option value="">بدون انتخاب انبار</option>'+state.warehouses.map(w=>'<option value="'+esc(w.id)+'">'+esc(w.name)+'</option>').join('')+'</select></div><div data-invoice-row><div class="fw-field"><label>کالا</label><select name="product_id"><option value="">انتخاب کالا</option>'+products.map(p=>'<option value="'+esc(p.id)+'" data-price="'+esc(p.sale_price)+'" data-cost="'+esc(p.cost_price??"")+'" data-unit="'+esc(p.unit_name)+'">'+esc(p.name)+'</option>').join('')+'</select></div><div class="fw-field"><label>خدمت (برای فاکتور خدمات)</label><select name="service_id"><option value="">انتخاب خدمت</option>'+state.services.map(x=>'<option value="'+esc(x.id)+'" data-price="'+esc(x.sale_price)+'">'+esc(x.name)+'</option>').join('')+'</select></div><div class="fw-field"><label>تعداد</label><input name="quantity" type="number" min="0.0001" step="0.0001" value="1" required></div><div class="fw-field"><label>قیمت واحد (ریال)</label><input name="unit_price" type="number" min="0" step="1" required></div><button class="fw-link" type="button" data-action="remove-invoice-item">حذف قلم</button></div><div class="fw-field"><label>تاریخ فاکتور</label><input name="document_date" type="date" value="'+today()+'" required></div><div class="fw-field wide"><label>توضیحات</label><input name="notes" maxlength="500"></div></div><button class="fw-btn secondary" type="button" data-action="add-invoice-item">＋ افزودن قلم</button><button class="fw-btn" type="submit">ایجاد پیش‌نویس فاکتور</button></form></section>';
-    shell(form+'<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>فاکتورهای کسب‌وکار</h2><p>'+money(state.documents.length+state.legacyDocuments.length)+' سند اخیر</p></div></div>'+table(rows,['شماره','نوع','تاریخ','مبلغ (ریال)','وضعیت','عملیات'],'فاکتوری ثبت نشده است.')+'</section><section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>سوابق فاکتور و مرجوعی قدیمی اپ</h2><p>این سوابق تا زمان تطبیق و ورود رسمی، فقط‌خواندنی هستند.</p></div></div>'+table(legacyHistoryRows,['نوع سابقه','شناسه','تاریخ','مبلغ','اطلاعات'],'سابقه قدیمی دیگری برای نمایش وجود ندارد.')+'</section>','فاکتورها','صدور و پیگیری اسناد فروش و خرید'); 
+    const saleReturnDocs=state.documents.filter(d=>d.status==='posted'&&d.document_type==='goods_sale'&&d.warehouse_id);
+    const purchaseReturnDocs=state.documents.filter(d=>d.status==='posted'&&d.document_type==='purchase'&&d.warehouse_id);
+    const returnItemOptions=(docs)=>state.documentItems.filter(i=>i.item_type==='goods'&&i.product_id&&docs.some(d=>d.id===i.document_id)).map(i=>{const doc=docs.find(d=>d.id===i.document_id);const product=state.products.find(p=>p.id===i.product_id);return '<option value="'+esc(i.id)+'" data-document-id="'+esc(i.document_id)+'">'+esc((doc?.document_number||'سند')+' · '+(product?.name||i.description_snapshot||'کالا')+' · '+money(i.quantity)+' عدد')+'</option>';}).join('');
+    const returnForm=(kind,docs)=>'<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>'+(kind==='sales-return'?'ثبت مرجوعی فروش':'ثبت مرجوعی خرید')+'</h2><p>مرجوعی فقط از فاکتور ثبت نهایی‌شده و اقلام همان فاکتور قابل ثبت است.</p></div></div><form data-form="'+kind+'"><div class="fw-form-grid"><div class="fw-field"><label>فاکتور اصلی</label><select name="original_document_id" required><option value="">انتخاب فاکتور</option>'+docs.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.document_number||'بدون شماره')+' · '+dateFa(d.document_date)+' · '+money(d.total_amount)+'</option>').join('')+'</select></div><div class="fw-field"><label>قلم فاکتور</label><select name="document_item_id" data-return-item required><option value="">ابتدا فاکتور را انتخاب کنید</option>'+returnItemOptions(docs)+'</select></div><div class="fw-field"><label>مقدار مرجوعی</label><input name="quantity" type="number" min="0.0001" step="0.0001" required></div><div class="fw-field"><label>تاریخ مرجوعی</label><input name="return_date" type="date" value="'+today()+'" required></div><div class="fw-field wide"><label>علت مرجوعی</label><input name="reason" maxlength="500" required></div></div><button class="fw-btn" type="submit">ثبت و نهایی‌سازی مرجوعی</button></form></section>';
+    const salesReturnRows=state.salesReturns.map(x=>'<tr><td>'+esc(state.documents.find(d=>d.id===x.original_document_id)?.document_number||'—')+'</td><td>'+dateFa(x.return_date)+'</td><td>'+money(x.total_amount)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.reason||'—')+'</td></tr>');
+    const purchaseReturnRows=state.purchaseReturns.map(x=>'<tr><td>'+esc(state.documents.find(d=>d.id===x.original_document_id)?.document_number||'—')+'</td><td>'+dateFa(x.return_date)+'</td><td>'+money(x.total_amount)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.reason||'—')+'</td></tr>');
+    shell(form+'<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>فاکتورهای کسب‌وکار</h2><p>'+money(state.documents.length+state.legacyDocuments.length)+' سند اخیر</p></div></div>'+table(rows,['شماره','نوع','تاریخ','مبلغ (ریال)','وضعیت','عملیات'],'فاکتوری ثبت نشده است.')+'</section>'+returnForm('sales-return',saleReturnDocs)+returnForm('purchase-return',purchaseReturnDocs)+'<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>مرجوعی‌های ثبت‌شده</h2><p>مرجوعی فروش</p></div></div>'+table(salesReturnRows,['فاکتور اصلی','تاریخ','مبلغ','وضعیت','علت'],'مرجوعی فروشی ثبت نشده است.')+'</section><section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>مرجوعی خرید ثبت‌شده</h2></div></div>'+table(purchaseReturnRows,['فاکتور اصلی','تاریخ','مبلغ','وضعیت','علت'],'مرجوعی خریدی ثبت نشده است.')+'</section><section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>سوابق فاکتور و مرجوعی قدیمی اپ</h2><p>این سوابق تا زمان تطبیق و ورود رسمی، فقط‌خواندنی هستند.</p></div></div>'+table(legacyHistoryRows,['نوع سابقه','شناسه','تاریخ','مبلغ','اطلاعات'],'سابقه قدیمی دیگری برای نمایش وجود ندارد.')+'</section>','فاکتورها','صدور و پیگیری اسناد فروش و خرید'); 
   }
 
   function finance(){
@@ -310,6 +322,7 @@
   });
   root.addEventListener('change',e=>{
     if(e.target.id==='fw-business')withBusy(async()=>{state.business=state.businesses.find(b=>b.id===e.target.value)||null;await loadData();state.section='dashboard';render();});
+    if(e.target.name==='original_document_id'){const form=e.target.closest('form[data-form$="-return"]');const items=form?.querySelector('[data-return-item]');if(items){items.value='';items.querySelectorAll('option[data-document-id]').forEach(o=>{o.hidden=o.dataset.documentId!==e.target.value;});}}
     if(e.target.name==='document_type'){const form=e.target.closest('form[data-form="invoice"]');form?.querySelectorAll('[data-invoice-row]').forEach(row=>{const opt=row.querySelector('[name="product_id"]')?.selectedOptions[0];const price=row.querySelector('[name="unit_price"]');const suggested=e.target.value==='purchase'?opt?.dataset.cost:opt?.dataset.price;if(price&&suggested)price.value=suggested;});}
     if(e.target.name==='product_id'||e.target.name==='service_id'){const opt=e.target.selectedOptions[0];const row=e.target.closest('[data-invoice-row]');const form=e.target.closest('form[data-form="invoice"]');const price=row?.querySelector('[name="unit_price"]');const docType=form?.querySelector('[name="document_type"]')?.value;const suggested=e.target.name==='service_id'?opt?.dataset.price:(docType==='purchase'?opt?.dataset.cost:opt?.dataset.price);if(price&&suggested)price.value=suggested;}
   });
@@ -346,6 +359,11 @@
         await loadData();render();toast('دسته‌بندی ایجاد شد.');
       } else if(kind==='service'){
         const price=Number(data.sale_price);if(!Number.isSafeInteger(price)||price<0)throw new Error('قیمت خدمت باید عدد صحیح و غیرمنفی باشد.');await rpc('web_create_service',{p_business_id:state.business.id,p_name:data.name,p_description:data.description||null,p_sale_price:price});await loadData();render();toast('خدمت ذخیره و با اپ همگام شد.');
+      } else if(kind==='sales-return'||kind==='purchase-return'){
+        const quantity=Number(data.quantity);if(!(quantity>0)||!Number.isFinite(quantity))throw new Error('مقدار مرجوعی باید معتبر و مثبت باشد.');if(!data.original_document_id||!data.document_item_id)throw new Error('فاکتور اصلی و قلم مرجوعی را انتخاب کنید.');
+        const fn=kind==='sales-return'?'post_sales_return':'post_purchase_return';
+        await rpc(fn,{p_business_id:state.business.id,p_original_document_id:data.original_document_id,p_return_date:data.return_date,p_items:[{document_item_id:data.document_item_id,quantity}],p_reason:data.reason,p_idempotency_key:idempotency()});
+        await loadData();render();toast('مرجوعی با موفقیت ثبت و در حسابداری و موجودی اعمال شد.');
       } else if(kind==='invoice'){
         const serviceSale=data.document_type==='service_sale';
         const itemRows=Array.from(form.querySelectorAll('[data-invoice-row]'));
