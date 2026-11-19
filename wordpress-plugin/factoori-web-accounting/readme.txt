@@ -31,7 +31,7 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Shared financial transaction entry for customer receipts, supplier payments, expenses and other income.
 * Cheque register with normalized lifecycle transitions and accounting settlement.
 * Inventory balances from the complete movement history, FIFO stock transfers, opening stock and wastage posting.
-* Read-only legacy data preview and guarded import of supported customers, suppliers, products, services, warehouses, fiscal periods, invoice drafts, cash receipts, supplier payments, expenses and other income.
+* Read-only legacy data preview and guarded import of supported customers, suppliers, products, services, warehouses, fiscal periods, sales/service invoice drafts, purchase drafts, cash receipts, supplier payments, expenses and other income.
 * Web-origin financial and inventory operations mirrored to the Android sync collections.
 * Shared service catalog management and service-sale invoice drafts with Android `serviceInv` synchronization.
 * Web purchase invoice lines are mirrored to Android `purchases`; unit cost remains in the private sync payload partition.
