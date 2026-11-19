@@ -159,7 +159,7 @@
   }
   function reports(){
     const now=new Date();const months=[];
-    for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:new Intl.DateTimeFormat('fa-IR',{month:'short'}).format(d),sales:0,purchases:0});}
+    for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:new Intl.DateTimeFormat('fa-IR-u-ca-persian',{month:'short',year:'numeric'}).format(d),sales:0,purchases:0});}
     [...state.documents,...state.legacyDocuments].filter(d=>d.legacy_source||d.status==='posted').forEach(d=>{const m=months.find(x=>x.key===String(d.document_date||'').slice(0,7));if(!m)return;if(['goods_sale','service_sale'].includes(d.document_type))m.sales+=Number(d.total_amount||0);if(['purchase','service_purchase'].includes(d.document_type))m.purchases+=Number(d.total_amount||0);});
     const max=Math.max(1,...months.flatMap(m=>[m.sales,m.purchases]));
     const bars=months.map(m=>'<div class="fw-bar-group"><div class="fw-bar-pair"><span class="fw-bar sales" style="height:'+Math.max(3,m.sales/max*150)+'px" title="فروش '+money(m.sales)+'"></span><span class="fw-bar purchases" style="height:'+Math.max(3,m.purchases/max*150)+'px" title="خرید '+money(m.purchases)+'"></span></div><small>'+m.label+'</small></div>').join('');
@@ -167,7 +167,7 @@
     const purchases=state.documents.filter(d=>['purchase','service_purchase'].includes(d.document_type)&&d.status==='posted').reduce((n,d)=>n+Number(d.total_amount||0),0);
     const receipts=state.transactions.filter(t=>t.direction==='in'&&t.status==='posted').reduce((n,t)=>n+Number(t.amount||0),0);
     const payments=state.transactions.filter(t=>t.direction==='out'&&t.status==='posted').reduce((n,t)=>n+Number(t.amount||0),0);
-    const rows=months.slice().reverse().map(m=>'<tr><td>'+m.label+' '+m.key.slice(0,4)+'</td><td>'+money(m.sales)+'</td><td>'+money(m.purchases)+'</td><td>'+money(m.sales-m.purchases)+'</td></tr>');
+    const rows=months.slice().reverse().map(m=>'<tr><td>'+m.label+'</td><td>'+money(m.sales)+'</td><td>'+money(m.purchases)+'</td><td>'+money(m.sales-m.purchases)+'</td></tr>');
     shell('<div class="fw-grid"><section class="fw-card fw-stat"><div><small>مجموع فروش اسناد بارگذاری‌شده</small><strong>'+money(sales)+'</strong><em>ریال</em></div></section><section class="fw-card fw-stat"><div><small>مجموع خرید</small><strong>'+money(purchases)+'</strong><em>ریال</em></div></section><section class="fw-card fw-stat"><div><small>دریافت‌های ثبت‌شده</small><strong>'+money(receipts)+'</strong><em>ریال</em></div></section><section class="fw-card fw-stat"><div><small>پرداخت‌های ثبت‌شده</small><strong>'+money(payments)+'</strong><em>ریال</em></div></section></div>'+
     '<section class="fw-card"><div class="fw-section-head"><div><h2>روند شش‌ماهه فروش و خرید</h2><p>بر اساس اسناد ثبت نهایی موجود در فضای حسابداری</p></div><div class="fw-legend"><span class="sales-dot"></span> فروش <span class="purchase-dot"></span> خرید</div></div><div class="fw-bars">'+bars+'</div></section>'+
     '<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>خلاصه ماهانه</h2><p>اختلاف فروش و خرید، سود خالص محسوب نمی‌شود.</p></div></div>'+table(rows,['ماه','فروش (ریال)','خرید (ریال)','اختلاف (ریال)'],'داده‌ای برای گزارش موجود نیست.')+'</section>',
