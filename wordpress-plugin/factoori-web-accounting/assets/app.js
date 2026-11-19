@@ -6,7 +6,7 @@
   const base = String(cfg.supabaseUrl || '').replace(/\/$/, '');
   const key = String(cfg.publishableKey || '');
   const storageKey = 'factoori_web_session_v1';
-  const state = {session:null,user:null,businesses:[],business:null,contacts:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],documentItems:[],salesReturns:[],purchaseReturns:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
+  const state = {session:null,user:null,businesses:[],business:null,contacts:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],chequeEvents:[],documentItems:[],salesReturns:[],purchaseReturns:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => new Intl.NumberFormat('fa-IR').format(Number(v || 0));
   const persianDateFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn',{year:'numeric',month:'numeric',day:'numeric',timeZone:'UTC'});
@@ -70,7 +70,7 @@
     state.business=selected;
     if(selected) await loadData(); else clearData();
   }
-  function clearData(){state.contacts=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.documentItems=[];state.salesReturns=[];state.purchaseReturns=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
+  function clearData(){state.contacts=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.chequeEvents=[];state.documentItems=[];state.salesReturns=[];state.purchaseReturns=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
   async function loadData(){
     const b=state.business?.id;if(!b){clearData();return;}
     const f='business_id=eq.'+encodeURIComponent(b);
@@ -89,6 +89,7 @@
     const optional=await Promise.allSettled([
       rest('financial_transactions','select=id,transaction_type,direction,amount,transaction_date,reference_number,description,status,account_id,contact_id,financial_accounts(name),contacts(name)&'+f+'&order=transaction_date.desc&limit=100'),
       rest('cheques','select=id,cheque_direction,cheque_number,sayad_id,bank_name,amount,issue_date,due_date,status,contact_id,contacts(name),note&'+f+'&order=due_date.asc&limit=100'),
+      rest('cheque_events','select=id,cheque_id,event_type,event_date,from_status,to_status,amount,note&'+f+'&order=event_date.desc&limit=200'),
       rest('document_items','select=id,document_id,item_type,product_id,description_snapshot,quantity,unit_price&'+f+'&order=sort_order.asc&limit=1000'),
       rest('sales_return_documents','select=id,original_document_id,return_date,total_amount,status,reason&'+f+'&order=return_date.desc&limit=100'),
       rest('purchase_return_documents','select=id,original_document_id,return_date,total_amount,status,reason&'+f+'&order=return_date.desc&limit=100'),
@@ -101,15 +102,16 @@
     ]);
     state.transactions=optional[0].status==='fulfilled'?(optional[0].value||[]):[];
     state.cheques=optional[1].status==='fulfilled'?(optional[1].value||[]):[];
-    state.documentItems=optional[2].status==='fulfilled'?(optional[2].value||[]):[];
-    state.salesReturns=optional[3].status==='fulfilled'?(optional[3].value||[]):[];
-    state.purchaseReturns=optional[4].status==='fulfilled'?(optional[4].value||[]):[];
-    state.stockMovements=optional[5].status==='fulfilled'?(optional[5].value||[]):[];
-    state.inventoryBalances=optional[6].status==='fulfilled'?(optional[6].value||[]):[];
-    state.services=optional[7].status==='fulfilled'?(optional[7].value||[]):[];
-    state.accountTransfers=optional[8].status==='fulfilled'?(optional[8].value||[]):[];
-    state.businessSettings=optional[9].status==='fulfilled'?(optional[9].value||[])[0]||null:null;
-    state.fiscalPeriods=optional[10].status==='fulfilled'?(optional[10].value||[]):[];
+    state.chequeEvents=optional[2].status==='fulfilled'?(optional[2].value||[]):[];
+    state.documentItems=optional[3].status==='fulfilled'?(optional[2].value||[]):[];
+    state.salesReturns=optional[4].status==='fulfilled'?(optional[3].value||[]):[];
+    state.purchaseReturns=optional[5].status==='fulfilled'?(optional[4].value||[]):[];
+    state.stockMovements=optional[6].status==='fulfilled'?(optional[6].value||[]):[];
+    state.inventoryBalances=optional[7].status==='fulfilled'?(optional[7].value||[]):[];
+    state.services=optional[8].status==='fulfilled'?(optional[8].value||[]):[];
+    state.accountTransfers=optional[9].status==='fulfilled'?(optional[9].value||[]):[];
+    state.businessSettings=optional[10].status==='fulfilled'?(optional[10].value||[])[0]||null:null;
+    state.fiscalPeriods=optional[11].status==='fulfilled'?(optional[11].value||[]):[];
     const legacyGroups=[
       ['pay','debt','creditors','creditorPayments','expenses','otherincome','supplierPayments','moneytransfers'],
       ['serviceInv','purchases','returns','duedates','fiscal'],
@@ -239,12 +241,13 @@
     'تأمین‌کنندگان و بستانکاران','مدیریت حساب و گردش تأمین‌کنندگان');
   }
   function cheques(){
-    const rows=state.cheques.map(q=>'<tr><td>'+esc(q.cheque_number)+'</td><td>'+esc(q.cheque_direction==='received'?'دریافتی':'پرداختی')+'</td><td>'+esc(q.contacts?.name||'—')+'</td><td>'+dateFa(q.due_date)+'</td><td>'+money(q.amount)+'</td><td>'+esc(({pending:'در انتظار',deposited:'واگذار شده',cleared:'وصول شده',bounced:'برگشتی',cancelled:'لغو شده',returned:'عودت شده'}[q.status]||q.status))+'</td><td>'+(q.status==='pending'||q.status==='deposited'?'<button class="fw-link" data-action="cheque-status" data-id="'+esc(q.id)+'" data-status="'+(q.cheque_direction==='received'&&q.status==='pending'?'deposited':'cleared')+'">'+(q.cheque_direction==='received'&&q.status==='pending'?'واگذاری':'تسویه')+'</button>':'—')+'</td></tr>');
+    const rows=state.cheques.map(q=>{const options=q.cheque_direction==='received'?(q.status==='pending'?['deposited','cleared','bounced','cancelled','returned']:q.status==='deposited'?['cleared','bounced','cancelled','returned']:[]):(q.status==='pending'?['cleared','bounced','cancelled']:[]);const actions=options.map(status=>'<button class="fw-link" data-action="cheque-status" data-id="'+esc(q.id)+'" data-status="'+status+'">'+({deposited:'واگذاری',cleared:'تسویه',bounced:'برگشتی',cancelled:'لغو',returned:'عودت'}[status])+'</button>').join(' ')+(q.status==='cleared'?'<button class="fw-link" data-action="cheque-reverse" data-id="'+esc(q.id)+'">برگشت تسویه</button>':'');return '<tr><td>'+esc(q.cheque_number)+'</td><td>'+esc(q.cheque_direction==='received'?'دریافتی':'پرداختی')+'</td><td>'+esc(q.contacts?.name||'—')+'</td><td>'+dateFa(q.due_date)+'</td><td>'+money(q.amount)+'</td><td>'+esc(({pending:'در انتظار',deposited:'واگذار شده',cleared:'وصول شده',bounced:'برگشتی',cancelled:'لغو شده',returned:'عودت شده'}[q.status]||q.status))+'</td><td>'+actions+'</td></tr>';});
     const legacyCheques=(state.legacyCollections.pay||[]).filter(r=>r.payload?.kind==='cheque').map(r=>'<tr><td>'+esc(r.payload?.no||r.legacy_id)+'</td><td>دریافتی قدیمی اپ</td><td>'+esc(state.contacts.find(x=>x.legacy_id===r.payload?.cid)?.name||r.payload?.cid||'—')+'</td><td>'+dateFa(r.payload?.cdt)+'</td><td>'+money(r.payload?.amt)+'</td><td>'+esc(({pending:'در انتظار',received:'وصول شده',returned:'برگشتی'}[r.payload?.status]||r.payload?.status||'—'))+'</td><td><span class="fw-sub">سوابق قدیمی · فقط‌خواندنی</span></td></tr>');
     const people=state.contacts.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
     const accounts=state.accounts.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
+    const eventRows=state.chequeEvents.map(ev=>{const q=state.cheques.find(x=>x.id===ev.cheque_id);return '<tr><td>'+esc(q?.cheque_number||'—')+'</td><td>'+dateFa(ev.event_date?.slice(0,10))+'</td><td>'+esc(({deposited:'واگذاری',cleared:'تسویه',bounced:'برگشتی',cancelled:'لغو',returned:'عودت',reversed:'برگشت تسویه'}[ev.event_type]||ev.event_type))+'</td><td>'+money(ev.amount)+'</td><td>'+esc(ev.note||'—')+'</td></tr>';});
     const form='<section class="fw-card"><div class="fw-section-head"><div><h2>ثبت چک جدید</h2><p>ثبت چک دریافتی یا پرداختی با گردش وضعیت</p></div></div><form data-form="cheque"><div class="fw-form-grid"><div class="fw-field"><label>نوع چک</label><select name="cheque_direction"><option value="received">چک دریافتی</option><option value="issued">چک پرداختی</option></select></div><div class="fw-field"><label>شخص</label><select name="contact_id" required><option value="">انتخاب شخص</option>'+people+'</select></div><div class="fw-field"><label>شماره چک</label><input name="cheque_number" required maxlength="80"></div><div class="fw-field"><label>شناسه صیادی</label><input name="sayad_id" inputmode="numeric" maxlength="16"></div><div class="fw-field"><label>بانک</label><input name="bank_name"></div><div class="fw-field"><label>شعبه</label><input name="branch_name"></div><div class="fw-field"><label>مبلغ (ریال)</label><input name="amount" type="number" min="1" step="1" required></div><div class="fw-field"><label>تاریخ صدور</label><input name="issue_date" type="date" value="'+today()+'"></div><div class="fw-field"><label>تاریخ سررسید</label><input name="due_date" type="date" required></div><div class="fw-field"><label>صاحب حساب</label><input name="account_holder"></div><div class="fw-field"><label>صادرکننده</label><input name="drawer_name"></div><div class="fw-field"><label>در وجه</label><input name="payee_name"></div><div class="fw-field wide"><label>توضیحات</label><input name="note" maxlength="500"></div></div><button class="fw-btn" type="submit">ذخیره چک</button></form></section>';
-    shell(form+'<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>دفتر چک‌ها</h2><p>'+money(state.cheques.length)+' چک ثبت‌شده</p></div></div>'+table(rows,['شماره','نوع','شخص','سررسید','مبلغ','وضعیت','عملیات'],'چکی ثبت نشده است.')+'</section><section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>چک‌های قدیمی اپلیکیشن</h2><p>برای حفظ سوابق، این موارد فقط‌خواندنی هستند.</p></div></div>'+table(legacyCheques,['شماره','نوع','شخص','سررسید','مبلغ','وضعیت','منبع'],'چک قدیمی ثبت نشده است.')+'</section>','مدیریت چک‌ها','ثبت و پیگیری چک‌های دریافتی و پرداختی');
+    shell(form+'<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>دفتر چک‌ها</h2><p>'+money(state.cheques.length)+' چک ثبت‌شده</p></div></div>'+table(rows,['شماره','نوع','شخص','سررسید','مبلغ','وضعیت','عملیات'],'چکی ثبت نشده است.')+'</section><section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>تاریخچه رویدادهای چک</h2><p>واگذاری، تسویه، برگشت و لغو</p></div></div>'+table(eventRows,['شماره چک','تاریخ رویداد','عملیات','مبلغ','شرح'],'رویدادی ثبت نشده است.')+'</section><section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>چک‌های قدیمی اپلیکیشن</h2><p>برای حفظ سوابق، این موارد فقط‌خواندنی هستند.</p></div></div>'+table(legacyCheques,['شماره','نوع','شخص','سررسید','مبلغ','وضعیت','منبع'],'چک قدیمی ثبت نشده است.')+'</section>','مدیریت چک‌ها','ثبت و پیگیری چک‌های دریافتی و پرداختی');
   }
   function inventory(){
     const rows=state.inventoryBalances.map(x=>'<tr><td>'+esc(x.product_name)+'</td><td>'+esc(x.warehouse_name)+'</td><td>'+money(x.quantity)+'</td></tr>');
@@ -303,6 +306,7 @@
     if(action==='refresh')withBusy(async()=>{await loadBusinesses();render();toast('اطلاعات بروزرسانی شد.');});
     if(action==='legacy-preview')withBusy(async()=>{const [preview,reconciliation]=await Promise.all([rpc('preview_legacy_normalization',{p_business_id:state.business.id}),rpc('reconcile_legacy_normalization',{p_business_id:state.business.id})]);state.legacyPreview=preview;state.legacyReconciliation=reconciliation;state.legacyImportResult=null;render();toast('پیش‌بررسی داده‌ها انجام شد.');});
     if(action==='legacy-import')withBusy(async()=>{if(state.legacyPreview?.safe_to_import!==true)throw new Error('ابتدا پیش‌بررسی موفق و بدون تعارض اجرا کنید.');const result=await rpc('web_import_legacy_supported_data',{p_business_id:state.business.id,p_import_generation:crypto.randomUUID()});state.legacyImportResult=result;state.legacyPreview=result.preflight||state.legacyPreview;state.legacyReconciliation=result.reconciliation||null;await loadData();render();toast(result.imported?'ورود داده‌های پشتیبانی‌شده انجام شد.':'ورود داده به دلیل وضعیت پیش‌بررسی متوقف شد.');});
+    if(action==='cheque-reverse')withBusy(async()=>{const reason=prompt('علت برگشت تسویه چک را وارد کنید:');if(!reason||!reason.trim())return;await rpc('reverse_cleared_cheque',{p_business_id:state.business.id,p_cheque_id:btn.dataset.id,p_event_date:today(),p_reason:reason.trim(),p_idempotency_key:idempotency()});await loadData();render();toast('برگشت تسویه چک با ثبت رویداد اصلاحی انجام شد.');});
     if(action==='cheque-status')withBusy(async()=>{const cheque=state.cheques.find(x=>x.id===btn.dataset.id);if(!cheque)return;let account=null;if(btn.dataset.status==='cleared'){account=state.accounts.find(x=>x.is_default)||state.accounts[0];if(!account)throw new Error('برای تسویه چک ابتدا حساب مالی بسازید.');}if(!confirm('وضعیت چک تغییر کند؟ در صورت تسویه، سند مالی ثبت می‌شود.'))return;await rpc('transition_cheque',{p_business_id:state.business.id,p_cheque_id:cheque.id,p_to_status:btn.dataset.status,p_event_date:today(),p_financial_account_id:account?.id||null,p_note:'تغییر وضعیت از نسخه وب',p_idempotency_key:idempotency()});await loadData();render();toast('وضعیت چک به‌روزرسانی شد.');});
     if(action==='post-invoice')withBusy(async()=>{
       const doc=state.documents.find(x=>x.id===btn.dataset.id);if(!doc)return;
