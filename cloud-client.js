@@ -495,7 +495,7 @@ const api = {
       y: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
     };
     const [entitlementProbe, licenseClaimProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
-      challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe, stageFinancialProbe,
+      challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe, currencyPreferenceProbe, stageFinancialProbe,
       revokeDeviceProbe, journalPostProbe, stockTransferProbe, memberPermissionsProbe,
       memberRoleProbe, memberStatusProbe, memberPermissionProbe, clearMemberPermissionProbe] = await Promise.all([
       client.rpc('claim_factori_license', { p_license_key: '', p_business_id: probeBusinessId }),
@@ -525,6 +525,9 @@ const api = {
       client.rpc('post_account_transfer', {
         p_business_id: probeBusinessId, p_from_account_id: probeBusinessId, p_to_account_id: probeBusinessId,
         p_amount: 1, p_transfer_date: '2000-01-01', p_note: null, p_idempotency_key: 'health-probe-001'
+      }),
+      client.rpc('web_sync_currency_display_unit', {
+        p_business_id: probeBusinessId, p_display_unit: 'toman'
       }),
       client.rpc('sync_stage_financial_records', {
         p_business_id: probeBusinessId, p_device_id: probeBusinessId, p_operations: []
@@ -562,7 +565,7 @@ const api = {
       })
     ]);
     const rpcResults = [entitlementProbe, licenseClaimProbe, createBusinessProbe, draftProbe, registerDeviceProbe,
-      challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe, stageFinancialProbe,
+      challengeProbe, pushProbe, pullProbe, accountMapProbe, accountTransferProbe, currencyPreferenceProbe, stageFinancialProbe,
       revokeDeviceProbe, journalPostProbe, stockTransferProbe, memberPermissionsProbe,
       memberRoleProbe, memberStatusProbe, memberPermissionProbe, clearMemberPermissionProbe];
     // A transport failure has no Postgres/PostgREST code and must never be
