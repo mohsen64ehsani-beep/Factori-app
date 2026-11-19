@@ -1,8 +1,0 @@
-[functions.send-faraz-sms]
-verify_jwt = false
-
-[functions.prove-sync-device]
-verify_jwt = true
-
-[functions.manage-business-members]
-verify_jwt = true
