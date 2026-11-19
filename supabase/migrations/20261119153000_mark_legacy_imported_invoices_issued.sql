@@ -6,8 +6,7 @@ set status = 'posted',
     posted_at = coalesce(d.posted_at, d.created_at),
     version = d.version + 1,
     updated_at = now()
-where d.business_id = '84c13f82-888d-4c8a-b9a9-655ca218dc86'::uuid
-  and d.status = 'draft'
+where d.status = 'draft'
   and (d.idempotency_key like 'legacy-inv:%' or d.idempotency_key like 'legacy-service-inv:%')
   and exists (
     select 1 from private.legacy_normalized_record_map m
