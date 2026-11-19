@@ -65,3 +65,7 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
 .fw-btn{border-radius:14px;box-shadow:0 5px 13px #0f766e18}.fw-btn.secondary{box-shadow:none}
 @media(max-width:1050px){.fw-dashboard-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.fw-hero{padding:18px;border-radius:19px}.fw-hero h2{font-size:20px}.fw-hero-mark{width:46px;height:46px;font-size:24px}.fw-dashboard-grid{gap:10px}.fw-stat{min-height:100px;padding:13px}.fw-stat strong{font-size:19px}.fw-quick{display:grid;grid-template-columns:1fr 1fr}.fw-quick .fw-btn{font-size:11px;padding:9px 7px}.fw-card:hover{transform:none}}
+
+.fw-bars{display:flex;align-items:flex-end;justify-content:space-around;gap:12px;min-height:205px;padding:20px 8px 4px;border-bottom:1px solid #edf1f5}
+.fw-bar-group{flex:1;display:grid;justify-items:center;gap:8px;min-width:0}.fw-bar-pair{height:165px;display:flex;align-items:flex-end;gap:5px}.fw-bar{display:block;width:15px;min-height:3px;border-radius:7px 7px 2px 2px}.fw-bar.sales{background:linear-gradient(180deg,#16a085,#0e746e)}.fw-bar.purchases{background:linear-gradient(180deg,#77a6d8,#416b9b)}.fw-bar-group small{font-size:10px;color:#728196}.fw-legend{display:flex;align-items:center;gap:7px;font-size:10px;color:#6c7a8c}.sales-dot,.purchase-dot{width:8px;height:8px;border-radius:50%;display:inline-block}.sales-dot{background:#0e9b81}.purchase-dot{background:#5483b5}
+@media(max-width:760px){.fw-bars{gap:5px;padding:14px 0 2px}.fw-bar-pair{gap:3px}.fw-bar{width:10px}.fw-legend{font-size:9px}}
