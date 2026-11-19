@@ -498,9 +498,13 @@ test('cloud startup always clears stale selection when schema readiness is false
 test('cloud client RPC argument names exist in the checked-in SQL contracts', async () => {
   const { readFile, readdir } = await import('node:fs/promises');
   const client = await readFile(new URL('./cloud-client.js', import.meta.url), 'utf8');
-  const draftFiles = await readdir(new URL('./supabase/drafts/', import.meta.url));
-  const sql = (await Promise.all(draftFiles.filter(name => name.endsWith('.sql'))
-    .map(name => readFile(new URL('./supabase/drafts/' + name, import.meta.url), 'utf8')))).join('\\n');
+  const contractDirs = ['./supabase/drafts/', './supabase/migrations/'];
+  const contractFiles = (await Promise.all(contractDirs.map(async directory => ({
+    directory, files: await readdir(new URL(directory, import.meta.url))
+  })))).flatMap(entry => entry.files.filter(name => name.endsWith('.sql'))
+    .map(name => entry.directory + name));
+  const sql = (await Promise.all(contractFiles
+    .map(path => readFile(new URL(path, import.meta.url), 'utf8')))).join('\\n');
   const used = new Map();
   for (const match of client.matchAll(/client\.rpc\('([^']+)'/g)) {
     const name = match[1];
