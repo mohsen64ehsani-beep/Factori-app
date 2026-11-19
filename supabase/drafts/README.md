@@ -1,6 +1,6 @@
 # Shared database migration source and deployment status
 
-The SQL source files remain under `supabase/drafts/` as the tested development sequence. On 2026-11-18, all current database changes through migration 055 (including 004a and the later web/mobile bridge migrations) were applied successfully to the live Factoori Supabase project. Matching, timestamped copies are recorded under `supabase/migrations/` so the GitHub branch tracks the production migration history. The two earlier license migrations remain the pre-existing production baseline.
+The SQL source files remain under `supabase/drafts/` as the tested development sequence. On 2026-11-18, all current database changes through migration 056 (including 004a and the later web/mobile bridge migrations) were applied successfully to the live Factoori Supabase project. Matching, timestamped copies are recorded under `supabase/migrations/` so the GitHub branch tracks the production migration history. The two earlier license migrations remain the pre-existing production baseline.
 
 ## Draft order
 
@@ -333,3 +333,8 @@ The controlled legacy import now adopts cash customer receipts, cash supplier pa
 ## Safe legacy purchase draft import (055)
 
 Historical purchase line records with matched supplier, product and warehouse references can now be converted into normalized purchase drafts. The import preserves unit cost in the protected private payload, remains idempotent, and leaves the draft unposted so historical stock is not double-counted. Original app purchase records are not duplicated back into the sync stream.
+
+
+## Legacy import echo protection (056)
+
+Documents imported from Android are marked by their legacy idempotency namespace and are not republished as new Android invoice records by the web-to-mobile document bridge. This prevents duplicate invoice rows when a historical import is followed by ordinary document updates.
