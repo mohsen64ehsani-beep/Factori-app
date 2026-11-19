@@ -23,13 +23,14 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Shared email/password sign-in and sign-up.
 * Business creation and business switching.
 * Management dashboard with sales, purchases, receipts, payments, pending cheques, low-stock indicators, estimated financial-account balances and current stock quantities.
-* Contact/customer/supplier creation and list.
+* Contact/customer/supplier creation, per-contact financial profile and recent document/transaction history.
 * Product creation and list with unit cost, sale price, live gross-margin preview and product categories; cost values are served only to members with the sensitive catalog.cost.read permission.
 * Sales and purchase invoice draft creation.
 * Bidirectional customer, supplier, product cost and category sync with the Android legacy sync stream; cost fields remain in the private sync payload and are permission-filtered in web reads.
 * Web-created goods-sale drafts are mirrored into the Android invoice stream; Android-origin invoice records are visible in the web invoice list.
 * Posting supported goods-sale and purchase drafts through validated database RPCs.
 * Shared financial transaction entry for customer receipts, supplier payments, expenses, other income and account-to-account transfers.
+* Dedicated expense/other-income register and supplier ledger with approximate purchase/payment balances.
 * Cheque register with normalized lifecycle transitions and accounting settlement.
 * Inventory balances from the complete movement history, FIFO stock transfers, opening stock and wastage posting.
 * Read-only legacy data preview and guarded import of supported customers, suppliers, products, services, warehouses, fiscal periods, sales/service invoice drafts, purchase drafts, cash receipts, pending cheques, supplier payments, expenses and other income.
@@ -37,6 +38,7 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Shared service catalog management and service-sale invoice drafts with Android `serviceInv` synchronization.
 * Web purchase invoice lines are mirrored to Android `purchases`; unit cost remains in the private sync payload partition.
 * Six-month sales/purchase report with responsive charts and monthly comparison (based on the currently loaded posted documents).
+* Business settings overview with currency, timezone, costing/tax settings and fiscal-period status.
 * Responsive full-screen desktop and mobile interface with refreshed dashboard, cards, tables and navigation.
 * Optional prominent professional-upgrade link.
 
