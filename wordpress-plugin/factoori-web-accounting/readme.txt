@@ -32,6 +32,8 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Shared financial transaction entry for customer receipts, supplier payments, expenses, other income and account-to-account transfers.
 * Dedicated expense/other-income register and supplier ledger with approximate purchase/payment balances.
 * Cheque register with deposit, settlement, bounce, cancellation, return and audited settlement-reversal actions plus event history.
+* Shared due-date register for receivables, payables and cheques, with settle/cancel actions and legacy Android synchronization.
+* Fiscal-period creation, overlap prevention, guarded close/reopen and Android legacy synchronization.
 * Inventory balances from the complete movement history, FIFO stock transfers, opening stock and wastage posting.
 * Validated sales and purchase returns from original posted goods invoices, including stock, FIFO and ledger effects.
 * Read-only legacy data preview and guarded import of supported customers, suppliers, products, services, warehouses, fiscal periods, sales/service invoice drafts, purchase drafts, cash receipts, pending cheques, supplier payments, expenses and other income.
