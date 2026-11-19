@@ -29,8 +29,9 @@
   const today = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
   function enhanceDateInputs(){ root.querySelectorAll('input[type="date"]').forEach(input=>{const iso=input.value;input.type='text';input.dataset.jalaliDate='1';input.inputMode='numeric';input.placeholder='۱۴۰۵۰۸۲۸';input.autocomplete='off';input.value=gregorianToJalali(iso);input.setAttribute('aria-label',(input.closest('.fw-field')?.querySelector('label')?.textContent||'تاریخ')+' به شمسی');}); }
   const idempotency = () => 'web-' + (crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(16).slice(2));
-  const getStored = () => { try { return JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch (_) { return null; } };
-  const saveSession = s => { state.session=s; if(s) sessionStorage.setItem(storageKey,JSON.stringify(s)); else sessionStorage.removeItem(storageKey); };
+  const getStored = () => { try { return JSON.parse(localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey) || 'null'); } catch (_) { return null; } };
+  const saveSession = s => { state.session=s; try { if(s){localStorage.setItem(storageKey,JSON.stringify(s));sessionStorage.setItem(storageKey,JSON.stringify(s));}else{localStorage.removeItem(storageKey);sessionStorage.removeItem(storageKey);} } catch (_) {} };
+  async function bridgeWordPressSession(session){if(!session?.access_token)return;try{await fetch('/wp-json/factoori-auth/v1/session',{method:'POST',credentials:'same-origin',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'}});}catch(_){} }
   const toast = message => { let el=document.querySelector('.fw-toast'); if(!el){el=document.createElement('div');el.className='fw-toast';document.body.appendChild(el);} el.textContent=message; el.hidden=false; clearTimeout(el._t); el._t=setTimeout(()=>el.remove(),3600); };
   async function request(path, options={}, retry=true) {
     if (!base || !key) throw new Error('تنظیمات اتصال به پایگاه داده کامل نیست.');
@@ -54,14 +55,14 @@
     const data=await response.json().catch(()=>({}));
     if(!response.ok){const raw=String(data.msg||data.message||data.error_description||data.error||'');const code=String(data.code||data.error_code||'');if(/already registered|already exists|user_already_exists|email_exists/i.test(raw+' '+code))throw new Error('این ایمیل قبلاً در فاکتوری ثبت‌نام شده است؛ از بخش ورود استفاده کنید.');throw new Error(raw||'ورود یا ثبت‌نام انجام نشد.');}
     if(mode==='signup'&&Array.isArray(data.user?.identities)&&data.user.identities.length===0)throw new Error('این ایمیل قبلاً در فاکتوری ثبت‌نام شده است؛ از بخش ورود استفاده کنید.');
-    if(data.access_token) saveSession(data); else if(mode==='signup') toast('حساب ساخته شد. ایمیل خود را برای تأیید بررسی کنید، سپس وارد شوید.');
+    if(data.access_token){saveSession(data);await bridgeWordPressSession(data);} else if(mode==='signup') toast('حساب ساخته شد. ایمیل خود را برای تأیید بررسی کنید، سپس وارد شوید.');
     return data;
   }
   async function restore(){
     const saved=getStored();
     if(!saved?.access_token){render();return;}
     saveSession(saved);
-    try{state.user=await request('/auth/v1/user');await loadBusinesses();}
+    try{await bridgeWordPressSession(saved);state.user=await request('/auth/v1/user');await loadBusinesses();}
     catch(_){saveSession(null);state.user=null;}
     render();
   }
