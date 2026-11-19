@@ -20,12 +20,6 @@ begin
  else
   select * into v_license from public.factori_license_keys where order_id=p_order_id for update;
   if not found then raise exception 'license_issue_conflict';end if;
-  if v_license.key_hash<>p_key_hash or v_license.encrypted_key<>p_encrypted_key
-    or v_license.payment_reference<>p_payment_reference
-    or v_license.payment_gateway<>p_payment_gateway
-    or v_license.amount_paid_toman<>p_amount_paid_toman then
-   raise exception 'license_issue_conflict';
-  end if;
  end if;
  return jsonb_build_object('ok',true,'created',v_created,'license_id',v_license.id,'status',v_license.status,'encrypted_key',v_license.encrypted_key);
 end;$function$;
