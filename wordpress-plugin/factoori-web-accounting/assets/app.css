@@ -74,3 +74,6 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
 
 .fw-invoice-row{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 12px;padding:12px;margin:8px 0;border:1px solid #e8eef3;border-radius:16px;background:#fbfdff}.fw-invoice-row>.fw-link{grid-column:1/-1;justify-self:start}
 @media(max-width:760px){.fw-invoice-row{grid-template-columns:1fr 1fr;gap:0 9px;padding:9px}.fw-invoice-row .fw-field{min-width:0}}
+
+.fw-sidebar{gap:18px}.fw-nav{overflow-y:auto;min-height:0;overscroll-behavior:contain}
+@media(max-width:760px){.fw-sidebar{overflow:hidden}.fw-nav{display:flex;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;gap:4px}.fw-nav::-webkit-scrollbar{display:none}.fw-nav button{flex:0 0 66px;min-width:66px}}
