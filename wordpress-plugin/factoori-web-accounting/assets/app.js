@@ -103,9 +103,9 @@
     state.transactions=optional[0].status==='fulfilled'?(optional[0].value||[]):[];
     state.cheques=optional[1].status==='fulfilled'?(optional[1].value||[]):[];
     state.chequeEvents=optional[2].status==='fulfilled'?(optional[2].value||[]):[];
-    state.documentItems=optional[3].status==='fulfilled'?(optional[2].value||[]):[];
-    state.salesReturns=optional[4].status==='fulfilled'?(optional[3].value||[]):[];
-    state.purchaseReturns=optional[5].status==='fulfilled'?(optional[4].value||[]):[];
+    state.documentItems=optional[3].status==='fulfilled'?(optional[3].value||[]):[];
+    state.salesReturns=optional[4].status==='fulfilled'?(optional[4].value||[]):[];
+    state.purchaseReturns=optional[5].status==='fulfilled'?(optional[5].value||[]):[];
     state.stockMovements=optional[6].status==='fulfilled'?(optional[6].value||[]):[];
     state.inventoryBalances=optional[7].status==='fulfilled'?(optional[7].value||[]):[];
     state.services=optional[8].status==='fulfilled'?(optional[8].value||[]):[];
