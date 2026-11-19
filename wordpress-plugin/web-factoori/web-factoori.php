@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Web Factoori
  * Description: Factoori unified account bridge and product introduction page. Uses Supabase Auth as the single credential authority for Android, web accounting and the WordPress profile.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: Factoori
@@ -10,7 +10,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
-define('FACTOORI_INTRO_VERSION', '1.0.1');
+define('FACTOORI_INTRO_VERSION', '1.0.2');
 define('FACTOORI_INTRO_SUPABASE_URL', 'https://rtlwztotaolbnjdtsjqy.supabase.co');
 define('FACTOORI_INTRO_PUBLISHABLE_KEY', 'sb_publishable_GhG0h_Mco3UomLqxnhynnw_blPQ3ii-');
 
@@ -55,7 +55,17 @@ function factoori_intro_bridge_session(WP_REST_Request $request) {
         return new WP_Error('factoori_auth_email_unconfirmed', 'برای ورود به پروفایل سایت، ابتدا ایمیل حساب فاکتوری را تأیید کنید.', array('status' => 403));
     }
 
-    $user = get_user_by('email', $email);
+    // If a visitor already has a legacy WordPress session, only link it when
+    // the verified Supabase email matches that exact profile.
+    if (is_user_logged_in()) {
+        $current_user = wp_get_current_user();
+        if (strtolower((string) $current_user->user_email) !== strtolower($email)) {
+            return new WP_Error('factoori_profile_email_mismatch', 'برای اتصال پروفایل قبلی، با همان ایمیلی وارد شوید که در پروفایل سایت ثبت شده است.', array('status' => 409));
+        }
+        $user = $current_user;
+    } else {
+        $user = get_user_by('email', $email);
+    }
     if (!$user) {
         $display = '';
         if (!empty($identity['user_metadata']['display_name'])) $display = sanitize_text_field($identity['user_metadata']['display_name']);
@@ -135,8 +145,14 @@ add_filter('registration_errors', function ($errors) {
 // Existing WordPress user records are preserved and linked by their verified email on first login.
 add_filter('the_content', function ($content) {
     if (is_admin() || !is_page('account') || !in_the_loop() || !is_main_query()) return $content;
-    // Once the Supabase bridge has created the WP session, let the site's native profile page render.
-    if (is_user_logged_in()) return $content;
+    if (is_user_logged_in()) {
+        $current_user = wp_get_current_user();
+        $linked_id = get_user_meta($current_user->ID, 'factoori_supabase_user_id', true);
+        // Legacy WordPress-only accounts get a one-time secure linking screen.
+        // Once linked, the original site profile content is restored.
+        if ($linked_id) return $content;
+        return '<div class="fi-auth-link-notice" dir="rtl"><p>برای اتصال پروفایل قبلی به حساب یکپارچه فاکتوری، با همان ایمیل پروفایل خود وارد شوید. پس از اتصال، این مرحله دیگر نمایش داده نمی‌شود.</p>' . do_shortcode('[factoori_unified_account]') . '</div>';
+    }
     return do_shortcode('[factoori_unified_account]');
 }, 99);
 
