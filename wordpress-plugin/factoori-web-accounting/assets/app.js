@@ -6,7 +6,7 @@
   const base = String(cfg.supabaseUrl || '').replace(/\/$/, '');
   const key = String(cfg.publishableKey || '');
   const storageKey = 'factoori_web_session_v1';
-  const state = {session:null,user:null,businesses:[],business:null,contacts:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],cheques:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',signup:false,busy:false};
+  const state = {session:null,user:null,businesses:[],business:null,contacts:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],cheques:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',signup:false,busy:false};
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => new Intl.NumberFormat('fa-IR').format(Number(v || 0));
   const dateFa = v => { try { return new Intl.DateTimeFormat('fa-IR').format(new Date(v+'T12:00:00')); } catch (_) { return v || '—'; } };
@@ -54,21 +54,22 @@
     state.business=selected;
     if(selected) await loadData(); else clearData();
   }
-  function clearData(){state.contacts=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.cheques=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
+  function clearData(){state.contacts=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.cheques=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
   async function loadData(){
     const b=state.business?.id;if(!b){clearData();return;}
     const f='business_id=eq.'+encodeURIComponent(b);
     const results=await Promise.all([
       rest('contacts','select=id,name,contact_type,phone,code,is_active&'+f+'&is_active=eq.true&order=name.asc&limit=200'),
-      rest('products','select=id,name,sku,unit_name,sale_price,track_inventory,is_active&'+f+'&is_active=eq.true&order=name.asc&limit=200'),
+      rest('products','select=id,name,sku,unit_name,sale_price,cost_price,category_id,track_inventory,is_active&'+f+'&is_active=eq.true&order=name.asc&limit=200'),
+      rest('product_categories','select=id,name,parent_id&'+f+'&order=name.asc&limit=200'),
       rest('documents','select=id,document_type,document_number,document_date,total_amount,status,contact_id,created_at&'+f+'&order=created_at.desc&limit=50'),
       rest('warehouses','select=id,name,is_default,is_active&'+f+'&is_active=eq.true&order=is_default.desc,name.asc'),
       rest('financial_accounts','select=id,name,account_type,is_default,is_active&'+f+'&is_active=eq.true&order=is_default.desc,name.asc'),
       rpc('web_list_legacy_invoices',{p_business_id:b})
     ]);
-    [state.contacts,state.products,state.documents,state.warehouses,state.accounts]=results.slice(0,5).map(x=>x||[]);
+    [state.contacts,state.products,state.categories,state.documents,state.warehouses,state.accounts]=results.slice(0,6).map(x=>x||[]);
     const normalizedIds=new Set(state.documents.map(d=>d.id));
-    state.legacyDocuments=(results[5]||[]).map(row=>{const p=row.payload||{};const items=Array.isArray(p.items)?p.items:[];const subtotal=items.reduce((sum,x)=>sum+Number(x.q||0)*Number(x.p||0),0);const discount=Number(p.ds||0);const tax=(subtotal-discount)*Number(p.tx||0)/100;return {id:row.legacy_id,document_type:'goods_sale',document_number:p.no,document_date:p.dt,total_amount:Math.max(0,subtotal-discount+tax),status:p.status||'legacy',legacy_source:true,created_at:row.updated_at};}).filter(d=>!normalizedIds.has(d.id));
+    state.legacyDocuments=(results[6]||[]).map(row=>{const p=row.payload||{};const items=Array.isArray(p.items)?p.items:[];const subtotal=items.reduce((sum,x)=>sum+Number(x.q||0)*Number(x.p||0),0);const discount=Number(p.ds||0);const tax=(subtotal-discount)*Number(p.tx||0)/100;return {id:row.legacy_id,document_type:'goods_sale',document_number:p.no,document_date:p.dt,total_amount:Math.max(0,subtotal-discount+tax),status:p.status||'legacy',legacy_source:true,created_at:row.updated_at};}).filter(d=>!normalizedIds.has(d.id));
     const optional=await Promise.allSettled([
       rest('financial_transactions','select=id,transaction_type,direction,amount,transaction_date,reference_number,description,status,account_id,contact_id,financial_accounts(name),contacts(name)&'+f+'&order=transaction_date.desc&limit=100'),
       rest('cheques','select=id,cheque_direction,cheque_number,sayad_id,bank_name,amount,issue_date,due_date,status,contact_id,contacts(name),note&'+f+'&order=due_date.asc&limit=100'),
