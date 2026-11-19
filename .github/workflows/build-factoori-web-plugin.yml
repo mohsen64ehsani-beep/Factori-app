@@ -43,10 +43,17 @@ jobs:
             echo "Unexpected development files found in plugin package" >&2
             exit 1
           fi
-      - name: Upload WordPress-installable plugin folder
+      - name: Create installable ZIP with plugin root folder
+        run: |
+          set -euo pipefail
+          cd dist
+          zip -qr factoori-web-accounting-0.1.4-install.zip factoori-web-accounting
+          unzip -Z1 factoori-web-accounting-0.1.4-install.zip | grep -qx 'factoori-web-accounting/factoori-web-accounting.php'
+          unzip -Z1 factoori-web-accounting-0.1.4-install.zip | grep -qx 'factoori-web-accounting/assets/app.js'
+      - name: Upload WordPress-installable ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: factoori-web-accounting-0.1.4
-          path: dist/factoori-web-accounting/
+          name: factoori-web-accounting-0.1.4-install
+          path: dist/factoori-web-accounting-0.1.4-install.zip
           if-no-files-found: error
           retention-days: 30
