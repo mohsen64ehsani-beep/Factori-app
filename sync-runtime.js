@@ -112,6 +112,7 @@ export async function runBusinessSync({
   try {
     localDb = createLocalDatabaseSnapshot(database);
     const savedCheckpoint = syncState ? null : await loadLocalDatabaseCheckpoint({ businessId, indexedDBImpl });
+    const isFirstSyncForBusiness = !syncState && !savedCheckpoint;
     if (savedCheckpoint?.database && savedCheckpoint?.baseDatabase) {
       localDb = mergeLocalChangesOntoCheckpoint({
         localDatabase: localDb,
@@ -119,10 +120,25 @@ export async function runBusinessSync({
         checkpointDatabase: savedCheckpoint.database
       });
     }
-    baseDatabase = createLocalDatabaseSnapshot(localDb);
     state = syncState
       ? JSON.parse(JSON.stringify(syncState))
       : savedCheckpoint?.syncState ? JSON.parse(JSON.stringify(savedCheckpoint.syncState)) : createSyncState();
+    if (isFirstSyncForBusiness) {
+      // Never upload an unverified device cache into a newly linked business.
+      // Keep a recoverable copy in the durable checkpoint while the initial
+      // remote snapshot is pulled into a clean tenant-scoped database.
+      state.initialLocalRecovery = createLocalDatabaseSnapshot(localDb);
+      state.initialLocalRecoveryAt = Date.now();
+      for (const collection of [
+        'cust', 'suppliers', 'duedates', 'prod', 'services', 'categories',
+        'inv', 'serviceInv', 'warehouses', 'bankAccounts', 'fiscal',
+        'smsHistory', 'pay', 'supplierPayments', 'expenses', 'otherincome',
+        'debt', 'returns', 'creditors', 'creditorPayments', 'purchases',
+        'wastage', 'stockMoves', 'warehouseStocks', 'transfers', 'accounts',
+        'moneytransfers', 'opening'
+      ]) localDb[collection] = [];
+    }
+    baseDatabase = createLocalDatabaseSnapshot(localDb);
   } catch (error) {
     // Initialization also belongs to the run lock's lifetime. Otherwise an
     // IndexedDB failure permanently blocks subsequent retries for this business.
