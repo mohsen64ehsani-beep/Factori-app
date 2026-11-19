@@ -118,22 +118,25 @@ begin
   end if;
 
   if v_row.collection='cust' then
-   select c.id into v_target_id from public.contacts c
-   where c.business_id=p_business_id and c.legacy_id=v_legacy_id;
-   if v_target_id is not null then
-    insert into private.legacy_normalized_record_map(
-     business_id,legacy_collection,legacy_id,target_table,normalized_id,
-     source_fingerprint,import_status,import_generation,note_code,created_by
-    ) values (
-     p_business_id,'cust',v_legacy_id,'contacts',v_target_id,
-     v_fingerprint,'conflict',p_import_generation,'target_conflict',v_user
-    );
-    v_conflicts:=v_conflicts+1;
-    continue;
-   end if;
    v_phone:=nullif(btrim(v_payload->>'ph'),'');
    v_address:=nullif(btrim(v_payload->>'ad'),'');
    v_code:=nullif(btrim(v_payload->>'code'),'');
+   select c.id into v_target_id from public.contacts c
+   where c.business_id=p_business_id and c.legacy_id=v_legacy_id;
+   if v_target_id is not null then
+    if exists(select 1 from public.contacts c where c.business_id=p_business_id and c.id=v_target_id
+      and c.contact_type='customer' and c.name=v_name and c.phone is not distinct from v_phone
+      and c.address is not distinct from v_address and c.code is not distinct from v_code) then
+     insert into private.legacy_normalized_record_map(business_id,legacy_collection,legacy_id,target_table,normalized_id,source_fingerprint,import_status,import_generation,created_by)
+     values(p_business_id,'cust',v_legacy_id,'contacts',v_target_id,v_fingerprint,'mapped',p_import_generation,v_user);
+     v_imported_customers:=v_imported_customers+1;
+    else
+     insert into private.legacy_normalized_record_map(business_id,legacy_collection,legacy_id,target_table,normalized_id,source_fingerprint,import_status,import_generation,note_code,created_by)
+     values(p_business_id,'cust',v_legacy_id,'contacts',v_target_id,v_fingerprint,'conflict',p_import_generation,'target_conflict',v_user);
+     v_conflicts:=v_conflicts+1;
+    end if;
+    continue;
+   end if;
    begin
     insert into public.contacts(business_id,contact_type,name,phone,address,code,legacy_id,created_by)
     values(p_business_id,'customer',v_name,v_phone,v_address,v_code,v_legacy_id,v_user)
@@ -151,36 +154,110 @@ begin
    );
    v_imported_customers:=v_imported_customers+1;
   else
-   select p.id into v_target_id from public.products p
-   where p.business_id=p_business_id and p.legacy_id=v_legacy_id;
-   if v_target_id is not null then
-    insert into private.legacy_normalized_record_map(
-     business_id,legacy_collection,legacy_id,target_table,normalized_id,
-     source_fingerprint,import_status,import_generation,note_code,created_by
+   v_barcode:=nullif(btrim(v_payload->>'barcode'),'');
+   if v_payload ? 'sell' and coalesce(v_payload->>'sell','') !~ '^[0-9]+([.][0-9]+)?
+   begin
+    insert into public.products(
+     business_id,name,barcode,sale_price,minimum_stock,track_inventory,legacy_id,created_by
     ) values (
-     p_business_id,'prod',v_legacy_id,'products',v_target_id,
-     v_fingerprint,'conflict',p_import_generation,'target_conflict',v_user
-    );
+     p_business_id,v_name,v_barcode,v_sale_price,v_minimum_stock,true,v_legacy_id,v_user
+    ) returning id into v_target_id;
+   exception when unique_violation then
     v_conflicts:=v_conflicts+1;
     continue;
-   end if;
-
-   v_barcode:=nullif(btrim(v_payload->>'barcode'),'');
-   if v_payload ? 'sell' and coalesce(v_payload->>'sell','') !~ '^[0-9]+([.][0-9]+)?$' then
-    v_invalid:=v_invalid+1; continue;
-   end if;
-   if v_payload ? 'minQty' and coalesce(v_payload->>'minQty','') !~ '^[0-9]+([.][0-9]{1,4})?$' then
-    v_invalid:=v_invalid+1; continue;
-   end if;
-   begin
-    v_sale_price:=coalesce(nullif(v_payload->>'sell','')::numeric,0)::numeric(20,0);
-    v_minimum_stock:=coalesce(nullif(v_payload->>'minQty','')::numeric,0)::numeric(20,4);
-   exception when numeric_value_out_of_range or invalid_text_representation then
+   when check_violation or string_data_right_truncation or numeric_value_out_of_range then
     v_invalid:=v_invalid+1;
     continue;
    end;
-   if v_sale_price<0 or v_minimum_stock<0 then
-    v_invalid:=v_invalid+1; continue;
+   insert into private.legacy_normalized_record_map(
+    business_id,legacy_collection,legacy_id,target_table,normalized_id,
+    source_fingerprint,import_status,import_generation,created_by
+   ) values (
+    p_business_id,'prod',v_legacy_id,'products',v_target_id,
+    v_fingerprint,'mapped',p_import_generation,v_user
+   );
+   v_imported_products:=v_imported_products+1;
+  end if;
+ end loop;
+
+ return jsonb_build_object(
+  'business_id',p_business_id,'generation',p_import_generation,
+  'mode','reference_data_import','source_collections',jsonb_build_array('cust','prod'),
+  'imported_customers',v_imported_customers,'imported_products',v_imported_products,
+  'unchanged',v_unchanged,'conflicts',v_conflicts,'invalid',v_invalid,
+  'orphaned_mappings',v_orphaned,'deleted_source_rows_skipped',v_deleted,
+  'stock_quantities_imported',false,'product_costs_imported',false,
+  'documents_imported',false,'financial_data_imported',false
+ );
+end;
+$$;
+
+revoke all on function public.import_legacy_reference_data(uuid,uuid) from public,anon;
+grant execute on function public.import_legacy_reference_data(uuid,uuid) to authenticated;
+
+commit;
+ then v_invalid:=v_invalid+1; continue; end if;
+   if v_payload ? 'minQty' and coalesce(v_payload->>'minQty','') !~ '^[0-9]+([.][0-9]{1,4})?
+   begin
+    insert into public.products(
+     business_id,name,barcode,sale_price,minimum_stock,track_inventory,legacy_id,created_by
+    ) values (
+     p_business_id,v_name,v_barcode,v_sale_price,v_minimum_stock,true,v_legacy_id,v_user
+    ) returning id into v_target_id;
+   exception when unique_violation then
+    v_conflicts:=v_conflicts+1;
+    continue;
+   when check_violation or string_data_right_truncation or numeric_value_out_of_range then
+    v_invalid:=v_invalid+1;
+    continue;
+   end;
+   insert into private.legacy_normalized_record_map(
+    business_id,legacy_collection,legacy_id,target_table,normalized_id,
+    source_fingerprint,import_status,import_generation,created_by
+   ) values (
+    p_business_id,'prod',v_legacy_id,'products',v_target_id,
+    v_fingerprint,'mapped',p_import_generation,v_user
+   );
+   v_imported_products:=v_imported_products+1;
+  end if;
+ end loop;
+
+ return jsonb_build_object(
+  'business_id',p_business_id,'generation',p_import_generation,
+  'mode','reference_data_import','source_collections',jsonb_build_array('cust','prod'),
+  'imported_customers',v_imported_customers,'imported_products',v_imported_products,
+  'unchanged',v_unchanged,'conflicts',v_conflicts,'invalid',v_invalid,
+  'orphaned_mappings',v_orphaned,'deleted_source_rows_skipped',v_deleted,
+  'stock_quantities_imported',false,'product_costs_imported',false,
+  'documents_imported',false,'financial_data_imported',false
+ );
+end;
+$$;
+
+revoke all on function public.import_legacy_reference_data(uuid,uuid) from public,anon;
+grant execute on function public.import_legacy_reference_data(uuid,uuid) to authenticated;
+
+commit;
+ then v_invalid:=v_invalid+1; continue; end if;
+   begin
+    v_sale_price:=coalesce(nullif(v_payload->>'sell','')::numeric,0)::numeric(20,0);
+    v_minimum_stock:=coalesce(nullif(v_payload->>'minQty','')::numeric,0)::numeric(20,4);
+   exception when numeric_value_out_of_range or invalid_text_representation then v_invalid:=v_invalid+1; continue; end;
+   if v_sale_price<0 or v_minimum_stock<0 then v_invalid:=v_invalid+1; continue; end if;
+   select p.id into v_target_id from public.products p where p.business_id=p_business_id and p.legacy_id=v_legacy_id;
+   if v_target_id is not null then
+    if exists(select 1 from public.products p where p.business_id=p_business_id and p.id=v_target_id
+      and p.name=v_name and p.barcode is not distinct from v_barcode and p.sale_price=v_sale_price
+      and p.minimum_stock=v_minimum_stock and p.track_inventory=true) then
+     insert into private.legacy_normalized_record_map(business_id,legacy_collection,legacy_id,target_table,normalized_id,source_fingerprint,import_status,import_generation,created_by)
+     values(p_business_id,'prod',v_legacy_id,'products',v_target_id,v_fingerprint,'mapped',p_import_generation,v_user);
+     v_imported_products:=v_imported_products+1;
+    else
+     insert into private.legacy_normalized_record_map(business_id,legacy_collection,legacy_id,target_table,normalized_id,source_fingerprint,import_status,import_generation,note_code,created_by)
+     values(p_business_id,'prod',v_legacy_id,'products',v_target_id,v_fingerprint,'conflict',p_import_generation,'target_conflict',v_user);
+     v_conflicts:=v_conflicts+1;
+    end if;
+    continue;
    end if;
    begin
     insert into public.products(
