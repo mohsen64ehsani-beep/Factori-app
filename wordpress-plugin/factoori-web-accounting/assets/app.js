@@ -314,7 +314,7 @@
   });
   root.addEventListener('submit',e=>{
     const form=e.target.closest('form[data-form]');if(!form)return;e.preventDefault();
-    const data=Object.fromEntries(new FormData(form).entries());form.querySelectorAll('[data-jalali-date]').forEach(input=>{data[input.name]=jalaliToGregorian(input.value);});const kind=form.dataset.form;
+    const data=Object.fromEntries(new FormData(form).entries());form.querySelectorAll('[data-jalali-date]').forEach(input=>{data[input.name]=input.value.trim()?jalaliToGregorian(input.value):'';});const kind=form.dataset.form;
     withBusy(async()=>{
       if(kind==='auth'){
         await auth(state.signup?'signup':'signin',data.email,data.password,data.name||'');
