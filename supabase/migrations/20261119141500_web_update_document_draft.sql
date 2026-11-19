@@ -178,7 +178,7 @@ begin
 exception
   when unique_violation then raise;
 end;
-$function$
+$function$;
 
 
 revoke all on function public.web_update_document_draft(uuid,uuid,text,uuid,uuid,uuid,date,date,text,numeric,numeric,jsonb,text) from public,anon;
