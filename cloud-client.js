@@ -286,16 +286,22 @@ const api = {
   async syncStageFinancialRecords(payload) {
     const allowed = new Set(['pay', 'supplierPayments', 'expenses', 'otherincome']);
     if (!payload?.businessId || !payload?.deviceId || !Array.isArray(payload?.operations)
-      || payload.operations.length > 100
       || payload.operations.some(operation => !allowed.has(operation?.collection)
         || operation?.operation_type !== 'upsert')) {
       throw new Error('بسته انتقال سوابق مالی نامعتبر است؛ فقط ثبت/به‌روزرسانی سوابق مجاز است.');
     }
-    return unwrap(await client.rpc('sync_stage_financial_records', {
-      p_business_id: payload.businessId,
-      p_device_id: payload.deviceId,
-      p_operations: payload.operations
-    }));
+    const results = [];
+    for (let offset = 0; offset < payload.operations.length; offset += 100) {
+      const batch = payload.operations.slice(offset, offset + 100);
+      const response = unwrap(await client.rpc('sync_stage_financial_records', {
+        p_business_id: payload.businessId,
+        p_device_id: payload.deviceId,
+        p_operations: batch
+      }));
+      if (!Array.isArray(response)) throw new Error('پاسخ انتقال سوابق مالی معتبر نیست.');
+      results.push(...response);
+    }
+    return results;
   },
   async syncPush(payload) {
     if (!payload?.businessId || !payload?.deviceId || !Array.isArray(payload?.operations) || payload.operations.length > 100) {
