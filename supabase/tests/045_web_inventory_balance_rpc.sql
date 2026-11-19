@@ -7,8 +7,7 @@ begin
  perform set_config('request.jwt.claim.sub',v_user::text,true);
  v_business:=public.create_business('Stock Balance CI');
  v_product:=public.web_create_product(v_business,'Balance Product 045','BAL045','عدد',1000,true,0,null);
- select id into v_warehouse from public.warehouses where business_id=v_business and is_default limit 1;
- if v_warehouse is null then raise exception 'Default warehouse was not provisioned'; end if;
+ insert into public.warehouses(business_id,name,is_default,is_active) values(v_business,'Balance Warehouse 045',true,true) returning id into v_warehouse;
  insert into public.stock_movements(business_id,product_id,warehouse_id,movement_type,quantity_delta,movement_date,idempotency_key,created_by)
  values(v_business,v_product,v_warehouse,'opening',10,now(),'balance-045-a',v_user),
        (v_business,v_product,v_warehouse,'sale',-3,now(),'balance-045-b',v_user);
