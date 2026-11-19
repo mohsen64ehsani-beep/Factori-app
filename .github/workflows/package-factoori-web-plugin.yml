@@ -2,7 +2,7 @@ name: Package Factoori Web Accounting
 on:
   push:
     branches:
-      - factoori-web-plugin-0.2.1
+      - factoori-web-plugin-0.2.0
     paths:
       - '**'
       - '.github/workflows/package-factoori-web-plugin.yml'
