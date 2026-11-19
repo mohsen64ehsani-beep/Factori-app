@@ -9,8 +9,24 @@
   const state = {session:null,user:null,businesses:[],business:null,contacts:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => new Intl.NumberFormat('fa-IR').format(Number(v || 0));
-  const dateFa = v => { try { return new Intl.DateTimeFormat('fa-IR').format(new Date(v+'T12:00:00')); } catch (_) { return v || '—'; } };
-  const today = () => new Date().toISOString().slice(0,10);
+  const persianDateFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn',{year:'numeric',month:'numeric',day:'numeric',timeZone:'UTC'});
+  const persianParts = date => { const p=persianDateFormatter.formatToParts(date); return {year:+p.find(x=>x.type==='year').value,month:+p.find(x=>x.type==='month').value,day:+p.find(x=>x.type==='day').value}; };
+  const gregorianToJalali = iso => { if(!iso)return ''; const d=new Date(iso+'T12:00:00Z'); if(Number.isNaN(d.getTime()))return iso; const p=persianParts(d); return String(p.year).padStart(4,'0')+'/'+String(p.month).padStart(2,'0')+'/'+String(p.day).padStart(2,'0'); };
+  const jalaliToGregorian = value => {
+    const raw=String(value||'').replace(/[۰-۹]/g,ch=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(ch)).replace(/[٠-٩]/g,ch=>'٠١٢٣٤٥٦٧٨٩'.indexOf(ch)).trim();
+    const m=raw.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/); if(!m)throw new Error('تاریخ را به شکل ۱۴۰۵/۰۸/۲۸ وارد کنید.');
+    const y=+m[1],mo=+m[2],day=+m[3]; if(mo<1||mo>12||day<1||day>(mo<=6?31:mo<=11?30:30))throw new Error('تاریخ شمسی معتبر نیست.');
+    const anchor=Date.UTC(y+621,2,20); let start=null;
+    for(let offset=-4;offset<=4;offset++){const d=new Date(anchor+offset*86400000),p=persianParts(d);if(p.year===y&&p.month===1&&p.day===1){start=d;break;}}
+    if(!start)throw new Error('تبدیل تاریخ شمسی انجام نشد.');
+    const days=mo<=6?(mo-1)*31:186+(mo-7)*30;
+    const result=new Date(start.getTime()+(days+day-1)*86400000);
+    if(persianParts(result).year!==y||persianParts(result).month!==mo||persianParts(result).day!==day)throw new Error('روز واردشده در این ماه شمسی معتبر نیست.');
+    return result.getUTCFullYear()+'-'+String(result.getUTCMonth()+1).padStart(2,'0')+'-'+String(result.getUTCDate()).padStart(2,'0');
+  };
+  const dateFa = v => { try { return v ? new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'UTC'}).format(new Date(v+'T12:00:00Z')) : '—'; } catch (_) { return v || '—'; } };
+  const today = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+  function enhanceDateInputs(){ root.querySelectorAll('input[type="date"]').forEach(input=>{const iso=input.value;input.type='text';input.dataset.jalaliDate='1';input.inputMode='numeric';input.placeholder='۱۴۰۵/۰۸/۲۸';input.autocomplete='off';input.value=gregorianToJalali(iso);input.setAttribute('aria-label',(input.closest('.fw-field')?.querySelector('label')?.textContent||'تاریخ')+' به شمسی');}); }
   const idempotency = () => 'web-' + (crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(16).slice(2));
   const getStored = () => { try { return JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch (_) { return null; } };
   const saveSession = s => { state.session=s; if(s) sessionStorage.setItem(storageKey,JSON.stringify(s)); else sessionStorage.removeItem(storageKey); };
@@ -103,6 +119,7 @@
   function shell(content,title,subtitle='مدیریت یکپارچه کسب‌وکار شما'){
     const nav=[['dashboard','▦','داشبورد'],['invoices','▤','فاکتورها'],['contacts','♙','اشخاص'],['products','◇','کالاها'],['finance','ت','دریافت و پرداخت'],['expenses','٪','هزینه‌ها'],['creditors','♧','تأمین‌کنندگان'],['cheques','▣','چک‌ها'],['inventory','▧','انبار و موجودی'],['reports','▥','گزارش‌ها'],['settings','⚙','تنظیمات'],['legacy','⇄','همگام‌سازی و ورود داده']];
     root.innerHTML='<div class="fw-layout"><aside class="fw-sidebar"><div class="fw-brand"><div class="fw-brand-mark">ف</div><div><b>فاکتوری</b><small>حسابداری آنلاین</small></div></div><div class="fw-business"><small>کسب‌وکار فعال</small><select id="fw-business">'+state.businesses.map(b=>'<option value="'+esc(b.id)+'" '+(b.id===state.business?.id?'selected':'')+'>'+esc(b.name)+'</option>').join('')+'</select></div><nav class="fw-nav">'+nav.map(n=>'<button data-section="'+n[0]+'" class="'+(state.section===n[0]?'active':'')+'"><i>'+n[1]+'</i>'+n[2]+'</button>').join('')+'</nav><div class="fw-side-bottom">'+(cfg.purchaseUrl?'<a class="fw-purchase" href="'+esc(cfg.purchaseUrl)+'" target="_blank" rel="noopener">★ ارتقا به نسخه حرفه‌ای</a>':'')+'<div class="fw-user">'+esc(state.user?.email||'')+'</div><button class="fw-btn ghost fw-full" data-action="logout">خروج از حساب</button></div></aside><main class="fw-main"><div class="fw-content"><header class="fw-topbar"><div><h1>'+title+'</h1><p>'+subtitle+'</p></div><div class="fw-top-actions">'+(cfg.purchaseUrl?'<a class="fw-purchase" href="'+esc(cfg.purchaseUrl)+'" target="_blank" rel="noopener">★ نسخه حرفه‌ای</a>':'')+'<button class="fw-btn ghost" data-action="refresh">↻ بروزرسانی</button></div></header>'+content+'</div></main></div>';
+    enhanceDateInputs();
   }
   function table(rows,heads,empty){
     if(!rows.length)return '<div class="fw-empty">'+empty+'</div>';
@@ -297,7 +314,7 @@
   });
   root.addEventListener('submit',e=>{
     const form=e.target.closest('form[data-form]');if(!form)return;e.preventDefault();
-    const data=Object.fromEntries(new FormData(form).entries());const kind=form.dataset.form;
+    const data=Object.fromEntries(new FormData(form).entries());form.querySelectorAll('[data-jalali-date]').forEach(input=>{data[input.name]=jalaliToGregorian(input.value);});const kind=form.dataset.form;
     withBusy(async()=>{
       if(kind==='auth'){
         await auth(state.signup?'signup':'signin',data.email,data.password,data.name||'');
