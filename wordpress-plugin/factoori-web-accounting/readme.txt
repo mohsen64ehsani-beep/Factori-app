@@ -31,7 +31,7 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Shared financial transaction entry for customer receipts, supplier payments, expenses and other income.
 * Cheque register with normalized lifecycle transitions and accounting settlement.
 * Inventory balances from the complete movement history, FIFO stock transfers, opening stock and wastage posting.
-* Read-only legacy data preview and guarded import of supported customers, suppliers, products, services, warehouses, fiscal periods and invoice drafts.
+* Read-only legacy data preview and guarded import of supported customers, suppliers, products, services, warehouses, fiscal periods, invoice drafts, cash receipts, supplier payments, expenses and other income.
 * Web-origin financial and inventory operations mirrored to the Android sync collections.
 * Shared service catalog management and service-sale invoice drafts with Android `serviceInv` synchronization.
 * Web purchase invoice lines are mirrored to Android `purchases`; unit cost remains in the private sync payload partition.
@@ -42,4 +42,4 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 The plugin uses only the Supabase Publishable key in the browser. Never enter a service_role or secret key. Row Level Security and permission-checked database functions enforce business access. Invoice creation and posting are performed by database RPCs; the plugin does not write journal or stock records directly.
 
 == Notes ==
-This is the first web workspace release. Customer, supplier and product records are bridged bidirectionally between the normalized web tables and the Android sync stream. Goods-sale drafts created on the web are mirrored into Android; mobile-origin invoice records are listed on the web but must pass the owner-controlled normalized import/reconciliation workflow before web posting. Historical financial records are still shown as deferred legacy collections until their opening balances, account mappings and allocations can be reconciled safely; new web financial transactions, cheques and stock movements are mirrored to Android.
+This is the first web workspace release. Customer, supplier and product records are bridged bidirectionally between the normalized web tables and the Android sync stream. Goods-sale drafts created on the web are mirrored into Android; mobile-origin invoice records are listed on the web but must pass the owner-controlled normalized import/reconciliation workflow before web posting. Legacy cheques, account transfers, opening balances and invoice allocations remain visible as deferred legacy records until their mappings can be reconciled safely; new web financial transactions, cheques and stock movements are mirrored to Android.
