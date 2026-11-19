@@ -8,7 +8,7 @@
   const storageKey = 'factoori_web_session_v1';
   const state = {session:null,user:null,businesses:[],business:null,contacts:[],contactLedger:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],chequeEvents:[],dueDates:[],members:null,documentItems:[],salesReturns:[],purchaseReturns:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const currencyLabel = () => state.businessSettings?.currency_display_unit === 'toman' ? 'تومان' : ''+currencyLabel()+'';
+  const currencyLabel = () => state.businessSettings?.currency_display_unit === 'toman' ? 'تومان' : 'ریال';
   const money = v => new Intl.NumberFormat('fa-IR').format(Number(v || 0));
   const persianDateFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn',{year:'numeric',month:'numeric',day:'numeric',timeZone:'UTC'});
   const persianParts = date => { const p=persianDateFormatter.formatToParts(date); return {year:+p.find(x=>x.type==='year').value,month:+p.find(x=>x.type==='month').value,day:+p.find(x=>x.type==='day').value}; };
