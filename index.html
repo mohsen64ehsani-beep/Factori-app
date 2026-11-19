@@ -202,9 +202,12 @@ try{cloudActiveBusinessId=localStorage.getItem('factoori:active-business')||''}c
 let appTheme='light';try{appTheme=localStorage.getItem('factoori-theme')||'light'}catch(e){}if(!['light','dark'].includes(appTheme))appTheme='light';document.documentElement.setAttribute('data-theme',appTheme);
 function toggleAppTheme(){appTheme=appTheme==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',appTheme);try{localStorage.setItem('factoori-theme',appTheme)}catch(e){}render();}
 let db={cust:[],prod:[],inv:[],pay:[],debt:[],creditors:[],creditorPayments:[],expenses:[],services:[],serviceInv:[],categories:[],stockMoves:[],serviceSeq:2000,seq:1000,cu:'ریال',sn:'',sp:'',ad:''};
+// Capture a genuinely empty template BEFORE loading any legacy device data.
+// Never let one account's local records become the default database for another account.
+const EMPTY_BUSINESS_DB_JSON=JSON.stringify(db);
 try{Object.assign(db,JSON.parse(localStorage.getItem(K))||{})}catch(e){}
 db.debt=Array.isArray(db.debt)?db.debt:[];db.creditors=Array.isArray(db.creditors)?db.creditors:[];db.creditorPayments=Array.isArray(db.creditorPayments)?db.creditorPayments:[];db.expenses=Array.isArray(db.expenses)?db.expenses:[];db.services=Array.isArray(db.services)?db.services:[];db.serviceInv=Array.isArray(db.serviceInv)?db.serviceInv:[];db.categories=Array.isArray(db.categories)?db.categories:[];db.stockMoves=Array.isArray(db.stockMoves)?db.stockMoves:[];['suppliers','purchases','supplierPayments','returns','wastage','warehouses','transfers','accounts','moneytransfers','otherincome','opening','fiscal','duedates'].forEach(k=>{db[k]=Array.isArray(db[k])?db[k]:[]});db.advancedSettings=db.advancedSettings&&typeof db.advancedSettings==='object'?db.advancedSettings:{};db.warehouseStocks=Array.isArray(db.warehouseStocks)?db.warehouseStocks:[];db.smsHistory=Array.isArray(db.smsHistory)?db.smsHistory:[];db.bankAccounts=Array.isArray(db.bankAccounts)?db.bankAccounts:[];db.serviceSeq=Number(db.serviceSeq)||2000;
-const EMPTY_BUSINESS_DB_JSON=JSON.stringify(db);
+
 function activateBusinessLocalDatabase(nextId){
  if(!nextId||!cloudBusinesses.some(x=>x.id===nextId))throw new Error('کسب‌وکار انتخاب‌شده معتبر نیست');
  if(localDbBusinessId===nextId)return false;
