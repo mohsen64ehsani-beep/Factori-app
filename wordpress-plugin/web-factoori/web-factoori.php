@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Web Factoori
  * Description: Factoori unified account bridge and product introduction page. Uses Supabase Auth as the single credential authority for Android, web accounting and the WordPress profile.
- * Version: 1.0.4
+ * Version: 1.0.5
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: Factoori
@@ -10,7 +10,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
-define('FACTOORI_INTRO_VERSION', '1.0.4');
+define('FACTOORI_INTRO_VERSION', '1.0.5');
 define('FACTOORI_INTRO_SUPABASE_URL', 'https://rtlwztotaolbnjdtsjqy.supabase.co');
 define('FACTOORI_INTRO_PUBLISHABLE_KEY', 'sb_publishable_GhG0h_Mco3UomLqxnhynnw_blPQ3ii-');
 
@@ -200,7 +200,7 @@ function factoori_intro_confirmation_shortcode() {
           const response = await fetch(cfg.url + '/auth/v1/verify', {
             method: 'POST',
             headers: { apikey: cfg.key, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token_hash: tokenHash, type })
+            body: JSON.stringify({ token_hash: tokenHash, type: type === 'email' ? 'signup' : type })
           });
           const data = await response.json().catch(() => ({}));
           if (!response.ok) {
