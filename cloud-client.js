@@ -151,7 +151,7 @@ const api = {
     return unwrap(await client.auth.signInWithPassword({ email: String(email || '').trim(), password }));
   },
   async signUp(email, password, displayName) {
-    return unwrap(await client.auth.signUp({
+    const data = unwrap(await client.auth.signUp({
       email: String(email || '').trim(),
       password,
       options: {
@@ -159,6 +159,14 @@ const api = {
         emailRedirectTo: FACTOORI_AUTH_REDIRECT_URL
       }
     }));
+    // Supabase intentionally masks duplicate-email errors when email confirmations are enabled.
+    // Its documented anti-enumeration response is a user with an empty identities array.
+    if (Array.isArray(data?.user?.identities) && data.user.identities.length === 0) {
+      const error = new Error('این ایمیل قبلاً در فاکتوری ثبت‌نام شده است؛ از بخش ورود استفاده کنید.');
+      error.code = 'user_already_exists';
+      throw error;
+    }
+    return data;
   },
   async signOut() {
     return unwrap(await client.auth.signOut());
