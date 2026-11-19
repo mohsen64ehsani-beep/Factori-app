@@ -37,6 +37,14 @@ begin
   v_legacy_id:=v_row.legacy_id;v_payload:=private.merge_sensitive_json(v_row.payload_public,v_row.payload_private);
   if jsonb_typeof(v_payload)<>'object' or coalesce(v_payload->>'id','')<>v_legacy_id then v_invalid:=v_invalid+1;continue;end if;
   v_fingerprint:=encode(extensions.digest(convert_to(v_payload::text,'UTF8'),'sha256'),'hex');
+  select * into v_map from private.legacy_normalized_record_map m where m.business_id=p_business_id and m.legacy_collection='moneytransfers' and m.legacy_id=v_legacy_id for update;
+  if found then
+   if v_map.import_status<>'mapped' then v_conflicts:=v_conflicts+1;continue;end if;
+   if v_map.source_fingerprint<>v_fingerprint then update private.legacy_normalized_record_map set import_status='conflict',note_code='source_changed',last_seen_at=now() where business_id=p_business_id and id=v_map.id;v_conflicts:=v_conflicts+1;continue;end if;
+   if not exists(select 1 from public.account_transfers t where t.business_id=p_business_id and t.id=v_map.normalized_id) then update private.legacy_normalized_record_map set import_status='orphaned',note_code='missing_reference',last_seen_at=now() where business_id=p_business_id and id=v_map.id;v_orphaned:=v_orphaned+1;
+   else update private.legacy_normalized_record_map set last_seen_at=now() where business_id=p_business_id and id=v_map.id;v_unchanged:=v_unchanged+1;end if;
+   continue;
+  end if;
   begin
    v_transfer_id:=v_legacy_id::uuid;
   exception when invalid_text_representation then
@@ -46,14 +54,6 @@ begin
    insert into private.legacy_normalized_record_map(business_id,legacy_collection,legacy_id,target_table,normalized_id,source_fingerprint,import_status,import_generation,created_by)
    values(p_business_id,'moneytransfers',v_legacy_id,'account_transfers',v_transfer_id,v_fingerprint,'mapped',p_import_generation,v_user);
    v_unchanged:=v_unchanged+1;continue;
-  end if;
-  select * into v_map from private.legacy_normalized_record_map m where m.business_id=p_business_id and m.legacy_collection='moneytransfers' and m.legacy_id=v_legacy_id for update;
-  if found then
-   if v_map.import_status<>'mapped' then v_conflicts:=v_conflicts+1;continue;end if;
-   if v_map.source_fingerprint<>v_fingerprint then update private.legacy_normalized_record_map set import_status='conflict',note_code='source_changed',last_seen_at=now() where business_id=p_business_id and id=v_map.id;v_conflicts:=v_conflicts+1;continue;end if;
-   if not exists(select 1 from public.account_transfers t where t.business_id=p_business_id and t.id=v_map.normalized_id) then update private.legacy_normalized_record_map set import_status='orphaned',note_code='missing_reference',last_seen_at=now() where business_id=p_business_id and id=v_map.id;v_orphaned:=v_orphaned+1;
-   else update private.legacy_normalized_record_map set last_seen_at=now() where business_id=p_business_id and id=v_map.id;v_unchanged:=v_unchanged+1;end if;
-   continue;
   end if;
   v_from_account:=null;v_to_account:=null;v_amount:=null;v_date:=null;
   select id into v_from_account from public.financial_accounts where business_id=p_business_id and legacy_id=nullif(v_payload->>'fromAccount','') and is_active limit 1;
