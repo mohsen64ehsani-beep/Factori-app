@@ -12,6 +12,7 @@ on:
       - "index.html"
       - "supabase/migrations/**"
       - "wordpress-plugin/factoori-web-accounting/**"
+      - "wordpress-plugin/web-factoori/**"
       - ".github/workflows/factoori-validation.yml"
   workflow_dispatch:
 
@@ -40,20 +41,23 @@ jobs:
         run: node --experimental-default-type=module --test sync-engine.test.js
 
       - name: Validate PHP plugin syntax
-        run: php -l wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php
+        run: |
+          php -l wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php
           php -l wordpress-plugin/factoori-web-accounting/includes/landing.php
+          php -l wordpress-plugin/web-factoori/web-factoori.php
 
       - name: Build installable WordPress plugin ZIP
         run: |
+          mkdir -p dist
           cd wordpress-plugin
-          zip -r ../factoori-web-accounting-0.2.4.zip factoori-web-accounting
+          zip -r ../dist/factoori-web-accounting-0.2.6.zip factoori-web-accounting
           cd ..
-          unzip -t factoori-web-accounting-0.2.3.zip
+          unzip -t dist/factoori-web-accounting-0.2.6.zip
 
       - name: Upload plugin ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: factoori-web-accounting-0.2.4
-          path: factoori-web-accounting-0.2.3.zip
+          name: factoori-web-accounting-0.2.6-validation
+          path: dist/factoori-web-accounting-0.2.6.zip
           if-no-files-found: error
           retention-days: 14
