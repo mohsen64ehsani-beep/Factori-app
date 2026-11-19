@@ -4,7 +4,7 @@ Tags: accounting, invoice, supabase, factoori
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPLv2 or later
 
 A full-screen, responsive Factoori accounting workspace that uses the same Supabase Auth account and business data as the Factoori Android app.
@@ -22,9 +22,9 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 == Current web features ==
 * Shared email/password sign-in and sign-up.
 * Business creation and business switching.
-* Dashboard summary.
+* Management dashboard with sales, purchases, receipts, payments, pending cheque and low-stock indicators.
 * Contact/customer/supplier creation and list.
-* Product creation and list.
+* Product creation and list with unit cost, sale price, live gross-margin preview and product categories.
 * Sales and purchase invoice draft creation.
 * Bidirectional customer, supplier and product sync with the Android legacy sync stream.
 * Web-created goods-sale drafts are mirrored into the Android invoice stream; Android-origin invoice records are visible in the web invoice list.
@@ -36,7 +36,7 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Web-origin financial, account-transfer and inventory operations mirrored to the Android sync collections.
 * Shared service catalog management and service-sale invoice drafts with Android `serviceInv` synchronization.
 * Web purchase invoice lines are mirrored to Android `purchases`; unit cost remains in the private sync payload partition.
-* Responsive full-screen desktop and mobile interface.
+* Responsive full-screen desktop and mobile interface with refreshed dashboard, cards, tables and navigation.
 * Optional prominent professional-upgrade link.
 
 == Security ==
