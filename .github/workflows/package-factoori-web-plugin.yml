@@ -4,7 +4,7 @@ on:
     branches:
       - factoori-web-plugin-0.2.0
     paths:
-      - 'factoori-web-plugin-0.2.0/**'
+      - '**'
       - '.github/workflows/package-factoori-web-plugin.yml'
   workflow_dispatch:
 permissions:
@@ -18,10 +18,10 @@ jobs:
       - name: Build WordPress install ZIP
         run: |
           mkdir -p dist/factoori-web-accounting
-          cp factoori-web-plugin-0.2.0/factoori-web-accounting.php dist/factoori-web-accounting/
-          cp factoori-web-plugin-0.2.0/readme.txt dist/factoori-web-accounting/
-          cp -R factoori-web-plugin-0.2.0/assets dist/factoori-web-accounting/
-          cp -R factoori-web-plugin-0.2.0/templates dist/factoori-web-accounting/
+          cp factoori-web-accounting.php dist/factoori-web-accounting/
+          cp readme.txt dist/factoori-web-accounting/
+          cp -R assets dist/factoori-web-accounting/
+          cp -R templates dist/factoori-web-accounting/
           cd dist
           zip -r factoori-web-accounting-0.2.0.zip factoori-web-accounting
           unzip -t factoori-web-accounting-0.2.0.zip
