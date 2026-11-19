@@ -105,12 +105,18 @@ begin
   select c.id into v_target_id from public.contacts c
   where c.business_id=p_business_id and c.legacy_id=v_legacy_id;
   if v_target_id is not null then
-   insert into private.legacy_normalized_record_map(
-    business_id,legacy_collection,legacy_id,target_table,normalized_id,
-    source_fingerprint,import_status,import_generation,note_code,created_by
-   ) values(p_business_id,'suppliers',v_legacy_id,'contacts',v_target_id,
-    v_fingerprint,'conflict',p_import_generation,'target_conflict',v_user);
-   v_conflicts:=v_conflicts+1; continue;
+   if exists(select 1 from public.contacts c where c.business_id=p_business_id and c.id=v_target_id
+     and c.contact_type='supplier' and c.name=v_name and c.phone is not distinct from v_phone
+     and c.address is not distinct from v_address) then
+    insert into private.legacy_normalized_record_map(business_id,legacy_collection,legacy_id,target_table,normalized_id,source_fingerprint,import_status,import_generation,created_by)
+    values(p_business_id,'suppliers',v_legacy_id,'contacts',v_target_id,v_fingerprint,'mapped',p_import_generation,v_user);
+    v_imported:=v_imported+1;
+   else
+    insert into private.legacy_normalized_record_map(business_id,legacy_collection,legacy_id,target_table,normalized_id,source_fingerprint,import_status,import_generation,note_code,created_by)
+    values(p_business_id,'suppliers',v_legacy_id,'contacts',v_target_id,v_fingerprint,'conflict',p_import_generation,'target_conflict',v_user);
+    v_conflicts:=v_conflicts+1;
+   end if;
+   continue;
   end if;
 
   begin
