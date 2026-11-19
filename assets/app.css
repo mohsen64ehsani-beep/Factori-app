@@ -138,3 +138,11 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
  .fw-invoice-options{grid-template-columns:1fr}.fw-fin-chart{gap:4px}.fw-fin-bars{gap:2px}.fw-fin-bars i{width:7px}.fw-fin-month small{font-size:9px}
 }
 @media(max-width:390px){.fw-nav>button{font-size:8px}.fw-nav>button i{font-size:17px}.fw-fin-bars i{width:5px}}
+
+/* Mobile overflow-safe bottom navigation menu */
+@media(max-width:760px){
+ .fw-nav-extra{position:fixed!important;display:none;right:12px;left:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:1002;max-height:min(62vh,440px);overflow-y:auto;overscroll-behavior:contain;padding:12px;background:#102a35;border:1px solid #ffffff25;border-radius:18px;box-shadow:0 16px 42px #071c2c66;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .fw-mobile-menu-open .fw-nav-extra{display:grid!important}
+ .fw-nav-extra button{min-height:44px;display:flex!important;align-items:center;justify-content:flex-start;gap:9px;padding:10px 9px;font-size:11px;white-space:normal}
+ .fw-nav-more{position:relative;z-index:1003}
+}
