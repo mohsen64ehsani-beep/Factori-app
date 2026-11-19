@@ -196,8 +196,12 @@ function markAccountLicenseMode(){accountLicenseMode=true;try{localStorage.setIt
 let localDbBusinessId='',businessScopedMode=false;
 let syncTimer=null,syncRunning=false,syncPending=false,syncStatus='idle',syncError='',syncGeneration=0,dbRevision=0;
 window.addEventListener('factoori-sync-runtime-ready',()=>{if(syncPending)scheduleBusinessSync(80)});
-const BUSINESS_DB_PREFIX='db:v2:business:';
-const LEGACY_ADOPTION_MARKER='factoori:db-v2:legacy-adopted';
+const BUSINESS_DB_PREFIX='db:v3:user:';
+function businessDatabaseStorageKey(businessId){
+ const userId=cloudSession?.user?.id;
+ if(!userId||!businessId)throw new Error('برای دسترسی به اطلاعات کسب‌وکار باید وارد حساب شوید');
+ return BUSINESS_DB_PREFIX+encodeURIComponent(userId)+':'+encodeURIComponent(businessId);
+}
 try{cloudActiveBusinessId=localStorage.getItem('factoori:active-business')||''}catch(e){}
 let appTheme='light';try{appTheme=localStorage.getItem('factoori-theme')||'light'}catch(e){}if(!['light','dark'].includes(appTheme))appTheme='light';document.documentElement.setAttribute('data-theme',appTheme);
 function toggleAppTheme(){appTheme=appTheme==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',appTheme);try{localStorage.setItem('factoori-theme',appTheme)}catch(e){}render();}
@@ -211,23 +215,18 @@ db.debt=Array.isArray(db.debt)?db.debt:[];db.creditors=Array.isArray(db.creditor
 function activateBusinessLocalDatabase(nextId){
  if(!nextId||!cloudBusinesses.some(x=>x.id===nextId))throw new Error('کسب‌وکار انتخاب‌شده معتبر نیست');
  if(localDbBusinessId===nextId)return false;
- if(localDbBusinessId){try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار قبلی ناموفق بود')}}
- const targetKey=BUSINESS_DB_PREFIX+nextId;
+ if(localDbBusinessId){try{localStorage.setItem(businessDatabaseStorageKey(localDbBusinessId),JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار قبلی ناموفق بود')}}
+ const targetKey=businessDatabaseStorageKey(nextId);
  let next=null;
  try{const raw=localStorage.getItem(targetKey);if(raw)next=JSON.parse(raw)}catch(e){throw new Error('اطلاعات کسب‌وکار قابل خواندن نیست')}
- if(!next){
-  let legacy=null,marker=null;try{legacy=localStorage.getItem(K);marker=localStorage.getItem(LEGACY_ADOPTION_MARKER)}catch(e){}
-  if(legacy&&!marker&&confirm('اطلاعات قدیمی این برنامه پیدا شد. آیا می‌خواهید آن‌ها به کسب‌وکار انتخاب‌شده منتقل شوند؟ این انتقال فقط یک‌بار انجام می‌شود.')){
-   const claim={businessId:nextId,adoptedAt:new Date().toISOString(),source:K,state:'pending'};
-   try{localStorage.setItem(LEGACY_ADOPTION_MARKER,JSON.stringify(claim));localStorage.setItem(targetKey,legacy);localStorage.setItem(LEGACY_ADOPTION_MARKER,JSON.stringify({...claim,state:'committed'}));next=JSON.parse(legacy)}
-   catch(error){try{if(!localStorage.getItem(targetKey))localStorage.removeItem(LEGACY_ADOPTION_MARKER)}catch(_){}throw new Error('انتقال اطلاعات قدیمی ناموفق بود؛ نسخه اصلی اطلاعات حفظ شده است')}
-  }
- }
+ // Legacy db:v2 data has no authenticated-owner metadata. Never attach it to a
+ // cloud business: it may belong to a different account. Keep the original key
+ // untouched for recovery, and let this business start empty / sync its own data.
  if(!next){next=JSON.parse(EMPTY_BUSINESS_DB_JSON);try{localStorage.setItem(targetKey,JSON.stringify(next))}catch(e){throw new Error('ساخت فضای اطلاعات کسب‌وکار ناموفق بود')}}
  cancelBusinessSync();db=next;normalizeDemoCollections();localDbBusinessId=nextId;businessScopedMode=true;realDb=db;syncGeneration++;dbRevision++;return true;
 }
 function clearLocalBusinessSelection(){
- if(localDbBusinessId){try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار ناموفق بود')}}
+ if(localDbBusinessId){try{localStorage.setItem(businessDatabaseStorageKey(localDbBusinessId),JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار ناموفق بود')}}
  cancelBusinessSync();localDbBusinessId='';businessScopedMode=true;db=JSON.parse(EMPTY_BUSINESS_DB_JSON);normalizeDemoCollections();realDb=db;syncGeneration++;dbRevision++;
 }
 function resetCloudBusinessContext(){
@@ -242,7 +241,7 @@ function resetCloudBusinessContext(){
 }
 function isolateLocalDataForCloudSession(){
  if(localDbBusinessId){
-  try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}
+  try{localStorage.setItem(businessDatabaseStorageKey(localDbBusinessId),JSON.stringify(db))}
   catch(e){console.warn('[Factoori business save before account switch]',e);throw new Error('ذخیره اطلاعات کسب‌وکار قبلی ناموفق بود؛ تغییر حساب تا ذخیره امن اطلاعات متوقف شد.')}
   localDbBusinessId='';
  }
@@ -255,7 +254,7 @@ const invoiceIssuedDay=i=>String(i.createdAt||i.dt||'').slice(0,10);
 const invoicesIssuedToday=()=>[...db.inv,...db.serviceInv].filter(i=>invoiceIssuedDay(i)===today()).length;
 const canCreateInvoice=()=>{if(licenseActive)return true;const left=FREE_DAILY_INVOICE_LIMIT-invoicesIssuedToday();if(left<=0){toast('سهمیه رایگان امروز تکمیل شده است؛ روزانه فقط ۳ فاکتور می‌توانید صادر کنید.');return false}return true};
 const freeInvoiceUsage=()=>Math.min(FREE_DAILY_INVOICE_LIMIT,invoicesIssuedToday());
-const save=()=>{if(demoMode)return;if(businessScopedMode&&!localDbBusinessId)return;try{localStorage.setItem(localDbBusinessId?BUSINESS_DB_PREFIX+localDbBusinessId:K,JSON.stringify(db));dbRevision++;scheduleBusinessSync()}catch(e){toast('حافظه پر است')}},
+const save=()=>{if(demoMode)return;if(businessScopedMode&&!localDbBusinessId)return;try{localStorage.setItem(localDbBusinessId?businessDatabaseStorageKey(localDbBusinessId):K,JSON.stringify(db));dbRevision++;scheduleBusinessSync()}catch(e){toast('حافظه پر است')}},
 uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6),
 money=n=>fa(n)+' '+db.cu,
 dstr=d=>d?new Date(d).toLocaleDateString('fa-IR-u-ca-persian',{year:'numeric',month:'long',day:'numeric',timeZone:'UTC'}):'',
@@ -404,7 +403,7 @@ async function runScheduledBusinessSync(){
   if(localDbBusinessId===businessId&&syncGeneration===generation&&dbRevision===revision){
    db=result.database;realDb=db;dbRevision++;
    try{
-    localStorage.setItem(BUSINESS_DB_PREFIX+businessId,JSON.stringify(db));
+    localStorage.setItem(businessDatabaseStorageKey(businessId),JSON.stringify(db));
    }catch(e){syncStatus='error';syncError='ذخیره نسخه همگام‌شده در حافظه دستگاه ناموفق بود'}
    if(syncStatus!=='error'){
     try{
@@ -473,7 +472,7 @@ async function loadCloudBusinesses(){
 }
 function restoreLocalDataAfterCloudSession(saveCurrentBusiness=true){
  if(saveCurrentBusiness&&localDbBusinessId){
-  try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}
+  try{localStorage.setItem(businessDatabaseStorageKey(localDbBusinessId),JSON.stringify(db))}
   catch(e){console.warn('[Factoori business checkpoint before logout]',e);cloudSession=null;cloudSchemaReady=false;return false}
  }
  cancelBusinessSync();localDbBusinessId='';businessScopedMode=false;cloudSession=null;cloudBusinesses=[];cloudActiveBusinessId='';cloudSchemaReady=false;syncGeneration++;dbRevision++;
@@ -758,7 +757,7 @@ cloudSyncNow:()=>{if(!cloudSchemaReady||!localDbBusinessId)return toast('ابت�
 cloudLogin:async()=>{const api=window.FactooriCloud,email=$('cloudEmail')?.value||'',password=$('cloudPassword')?.value||'';if(!email.trim()||!password)return toast('ایمیل و رمز عبور را وارد کنید');try{cloudLoading=true;await api.signIn(email,password);try{sessionStorage.removeItem('factoori:signup-pending-email');localStorage.removeItem('factoori:signup-pending-email')}catch(_){}const signedInSession=await api.getSession();if(signedInSession&&cloudSession?.user?.id!==signedInSession.user?.id){isolateLocalDataForCloudSession();cloudSession=signedInSession}cloudSchemaReady=!!cloudSession&&await api.getClientHealth();await loadCloudBusinesses();$('ov').className='';if(lock&&lk==='auth'){lock=false;lk='in';go('home')}else render();toast('ورود به حساب مشترک موفق بود')}catch(e){if(e?.code==='email_not_confirmed')toast('ابتدا ایمیل خود را از طریق لینک تأیید فعال کنید.');else toast('ورود ناموفق: '+(e.message||'خطای ارتباط'))}finally{cloudLoading=false}},
 cloudRegister:async()=>{if(cloudLoading||cloudSignupInFlight)return;const api=window.FactooriCloud;if(cloudSession?.user?.id){toast('برای ساخت حساب جدید، ابتدا از حساب فعلی خارج شوید');return}const email=$('cloudEmail')?.value||'',password=$('cloudPassword')?.value||'',name=$('cloudDisplayName')?.value||'',signupEmail=email.trim().toLowerCase();if(!name.trim()||!email.trim()||password.length<8)return toast('نام، ایمیل و رمز حداقل ۸ کاراکتری را وارد کنید');try{if(localStorage.getItem('factoori:signup-pending-email')===signupEmail||sessionStorage.getItem('factoori:signup-pending-email')===signupEmail)return toast('برای این ایمیل درخواست ثبت‌نام ارسال شده است؛ صندوق ورودی و هرزنامه را بررسی کنید. پس از تأیید، از بخش ورود استفاده کنید.')}catch(_){}try{cloudSignupInFlight=true;cloudLoading=true;const signupButton=document.querySelector('[data-a="cloudRegister"]');if(signupButton){signupButton.disabled=true;signupButton.textContent='در حال ارسال ایمیل تأیید…'}try{localStorage.setItem('factoori:signup-pending-email',signupEmail);sessionStorage.setItem('factoori:signup-pending-email',signupEmail)}catch(_){}const result=await api.signUp(email,password,name);const registeredSession=result.session||await api.getSession();if(registeredSession&&cloudSession?.user?.id!==registeredSession.user?.id){isolateLocalDataForCloudSession();cloudSession=registeredSession}if(registeredSession){try{localStorage.removeItem('factoori:signup-pending-email');sessionStorage.removeItem('factoori:signup-pending-email')}catch(_){}cloudSchemaReady=await api.getClientHealth();await loadCloudBusinesses();$('ov').className='';if(lock&&lk==='auth'){lock=false;lk='in';go('home')}else render();toast('حساب ساخته شد؛ اکنون می‌توانید کسب‌وکار خود را ایجاد کنید')}else{try{localStorage.setItem('factoori:signup-pending-email',signupEmail);sessionStorage.setItem('factoori:signup-pending-email',signupEmail)}catch(_){}$('ov').innerHTML=`<div class="picker-shell"><div class="picker-top"><div class="r"><b style="flex:1">ثبت‌نام با موفقیت انجام شد</b><button class="b s" data-a="cloudClose">بستن</button></div></div><div class="c" style="text-align:center;padding:24px 18px"><div style="font-size:42px;margin-bottom:10px">📩</div><h2 style="margin:0 0 12px">فقط یک مرحله تا فعال‌سازی حساب باقی مانده!</h2><p style="line-height:2">لینک تأیید حساب به این آدرس ارسال شد:</p><b dir="ltr" style="display:block;overflow-wrap:anywhere;margin:8px 0 18px">${esc(email.trim())}</b><div class="page-note" style="text-align:right;line-height:2">۱. صندوق ورودی ایمیل خود را باز کنید.<br>۲. ایمیل «تأیید ثبت‌نام در فاکتوری» را پیدا کنید و روی لینک تأیید بزنید.<br>۳. با زدن لینک تأیید، برنامه فاکتوری باز می‌شود و حساب شما فعال خواهد شد.</div><p style="color:var(--danger,#b45309);font-weight:700;line-height:1.9;margin:16px 0 20px">تا زمانی که ایمیل را تأیید نکرده‌اید، دوباره ثبت‌نام نکنید. حساب شما ساخته شده و نیازی به ساخت حساب دیگری نیست.</p><button class="b w100" data-a="cloudAuthMode" data-id="login">متوجه شدم؛ بازگشت به ورود</button></div></div>`;$('ov').className='on';$('ov').scrollTop=0}}catch(e){const timedOut=e?.status===504||e?.code==='request_timeout'||/context deadline exceeded|timeout|504/i.test(e?.message||'');if(timedOut){try{localStorage.setItem('factoori:signup-pending-email',signupEmail);sessionStorage.setItem('factoori:signup-pending-email',signupEmail)}catch(_){}$('ov').innerHTML=`<div class="picker-shell"><div class="picker-top"><div class="r"><b style="flex:1">درخواست ثبت‌نام دریافت شد</b><button class="b s" data-a="cloudClose">بستن</button></div></div><div class="c" style="text-align:center;padding:24px 18px"><div style="font-size:42px;margin-bottom:10px">📩</div><h2>پاسخ سرویس ایمیل با تأخیر مواجه شد</h2><p style="line-height:2">ممکن است ایمیل تأیید ارسال شده باشد. صندوق ورودی و پوشه هرزنامه را بررسی کنید.</p><b dir="ltr" style="display:block;overflow-wrap:anywhere;margin:8px 0 18px">${esc(email.trim())}</b><p style="color:var(--danger,#b45309);font-weight:700;line-height:1.9">لطفاً فعلاً ثبت‌نام را تکرار نکنید؛ ممکن است چند حساب و چند ایمیل تأیید ساخته شود. پس از دریافت ایمیل، لینک را باز کنید تا برنامه فاکتوری حساب شما را فعال کند.</p><button class="b w100" data-a="cloudAuthMode" data-id="login">بازگشت به ورود</button></div></div>`;$('ov').className='on';$('ov').scrollTop=0}else{const canRetrySignup=['weak_password','email_address_invalid','validation_failed','signup_disabled','captcha_failed'].includes(e?.code);if(canRetrySignup){try{localStorage.removeItem('factoori:signup-pending-email');sessionStorage.removeItem('factoori:signup-pending-email')}catch(_){}toast('ثبت‌نام ناموفق: '+(e.message||'اطلاعات ثبت‌نام را بررسی کنید'))}else{try{localStorage.setItem('factoori:signup-pending-email',signupEmail);sessionStorage.setItem('factoori:signup-pending-email',signupEmail)}catch(_){}if(e?.code==='user_already_exists'||e?.code==='email_exists'||/already registered|already exists|user_already_exists|email_exists/i.test(String(e?.message||''))){try{localStorage.removeItem('factoori:signup-pending-email');sessionStorage.removeItem('factoori:signup-pending-email')}catch(_){}toast('این ایمیل قبلاً در فاکتوری ثبت‌نام شده است؛ از بخش ورود استفاده کنید.')}else if(e?.code==='over_email_send_rate_limit')toast('ارسال ایمیل موقتاً محدود شده است؛ درخواست قبلی را تکرار نکنید و صندوق ورودی را بررسی کنید.');else toast('وضعیت درخواست ثبت‌نام مشخص نیست؛ ممکن است ایمیل ارسال شده باشد. برای جلوگیری از ارسال تکراری، دوباره ثبت‌نام نکنید و صندوق ورودی را بررسی کنید.')}}}finally{cloudLoading=false;cloudSignupInFlight=false;const signupButton=document.querySelector('[data-a="cloudRegister"]');if(signupButton){signupButton.disabled=false;signupButton.textContent='ساخت حساب'}}},
 cloudContinue:async()=>{if(!cloudSession)return toast('ابتدا وارد حساب شوید');if(lock&&lk==='auth'){lock=false;lk='in';go('home');toast('ورود به فاکتوری موفق بود')}},
-cloudLogout:async()=>{if(!confirm('از حساب مشترک خارج شوید؟'))return;try{if(localDbBusinessId){try{localStorage.setItem(BUSINESS_DB_PREFIX+localDbBusinessId,JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار ناموفق بود')}}await window.FactooriCloud.signOut();restoreLocalDataAfterCloudSession(false);lock=true;lk='auth';cloudAuthMode='login';render();toast('از حساب خارج شدید')}catch(e){toast('خروج ناموفق: '+(e.message||''))}},
+cloudLogout:async()=>{if(!confirm('از حساب مشترک خارج شوید؟'))return;try{if(localDbBusinessId){try{localStorage.setItem(businessDatabaseStorageKey(localDbBusinessId),JSON.stringify(db))}catch(e){throw new Error('ذخیره اطلاعات کسب‌وکار ناموفق بود')}}await window.FactooriCloud.signOut();restoreLocalDataAfterCloudSession(false);lock=true;lk='auth';cloudAuthMode='login';render();toast('از حساب خارج شدید')}catch(e){toast('خروج ناموفق: '+(e.message||''))}},
 cloudRefresh:async()=>{try{cloudSession=await window.FactooriCloud.getSession();cloudSchemaReady=!!cloudSession&&await window.FactooriCloud.getClientHealth();await loadCloudBusinesses();render();toast(cloudSchemaReady?'فهرست کسب‌وکارها به‌روز شد':'ساختار دیتابیس مشترک هنوز فعال نشده است')}catch(e){toast('به‌روزرسانی ناموفق: '+(e.message||''))}},
 cloudCreateBusiness:async()=>{if(!cloudSchemaReady)return toast('دیتابیس مشترک هنوز فعال نشده است');const name=$('cloudBusinessName')?.value||'';if(!name.trim())return toast('نام کسب‌وکار را وارد کنید');try{const id=await window.FactooriCloud.createBusiness(name);await loadCloudBusinesses();if(typeof id==='string'&&cloudBusinesses.some(x=>x.id===id)){activateBusinessLocalDatabase(id);licenseActive=false;cloudActiveBusinessId=id;try{localStorage.setItem('factoori:active-business',id)}catch(e){}await refreshLicenseStatus(false);scheduleBusinessSync(300)}else{cloudActiveBusinessId='';try{localStorage.removeItem('factoori:active-business')}catch(e){}}render();toast('کسب‌وکار مشترک ساخته شد')}catch(e){toast('ساخت کسب‌وکار ناموفق: '+(e.message||''))}},
 cloudSelectBusiness:async id=>{if(!cloudSchemaReady)return;if(id&&!cloudBusinesses.some(x=>x.id===id))return toast('این کسب‌وکار در فهرست عضویت‌های شما نیست');try{if(id)activateBusinessLocalDatabase(id);else clearLocalBusinessSelection();licenseActive=false;cloudActiveBusinessId=id||'';try{if(cloudActiveBusinessId)localStorage.setItem('factoori:active-business',cloudActiveBusinessId);else localStorage.removeItem('factoori:active-business')}catch(e){}await refreshLicenseStatus(false);render();if(id)scheduleBusinessSync(300)}catch(e){toast(e.message||'تغییر کسب‌وکار ناموفق بود')}},
