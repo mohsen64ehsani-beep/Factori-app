@@ -46,7 +46,7 @@ jobs:
       - name: Upload WordPress-installable plugin folder
         uses: actions/upload-artifact@v4
         with:
-          name: factoori-web-accounting-0.1.2
+          name: factoori-web-accounting-0.1.3
           path: dist/factoori-web-accounting/
           if-no-files-found: error
           retention-days: 30
