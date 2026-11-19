@@ -292,6 +292,7 @@
   });
   root.addEventListener('change',e=>{
     if(e.target.id==='fw-business')withBusy(async()=>{state.business=state.businesses.find(b=>b.id===e.target.value)||null;await loadData();state.section='dashboard';render();});
+    if(e.target.name==='document_type'){const form=e.target.closest('form[data-form="invoice"]');form?.querySelectorAll('[data-invoice-row]').forEach(row=>{const opt=row.querySelector('[name="product_id"]')?.selectedOptions[0];const price=row.querySelector('[name="unit_price"]');const suggested=e.target.value==='purchase'?opt?.dataset.cost:opt?.dataset.price;if(price&&suggested)price.value=suggested;});}
     if(e.target.name==='product_id'||e.target.name==='service_id'){const opt=e.target.selectedOptions[0];const row=e.target.closest('[data-invoice-row]');const form=e.target.closest('form[data-form="invoice"]');const price=row?.querySelector('[name="unit_price"]');const docType=form?.querySelector('[name="document_type"]')?.value;const suggested=e.target.name==='service_id'?opt?.dataset.price:(docType==='purchase'?opt?.dataset.cost:opt?.dataset.price);if(price&&suggested)price.value=suggested;}
   });
   root.addEventListener('submit',e=>{
