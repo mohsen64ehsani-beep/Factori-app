@@ -80,7 +80,7 @@
       rest('contact_ledger_entries','select=id,contact_id,entry_date,entry_type,debit,credit,document_id,transaction_id,description&'+f+'&order=entry_date.desc&limit=1000'),
       rpc('web_list_products',{p_business_id:b}),
       rest('product_categories','select=id,name,parent_id&'+f+'&order=name.asc&limit=200'),
-      rest('documents','select=id,document_type,document_number,document_date,due_date,subtotal,discount_amount,taxable_amount,tax_amount,total_amount,notes,status,contact_id,warehouse_id,created_at&'+f+'&order=created_at.desc&limit=50'),
+      rest('documents','select=id,document_type,document_number,document_date,due_date,subtotal,discount_amount,taxable_amount,tax_amount,total_amount,notes,status,contact_id,warehouse_id,fiscal_period_id,created_at&'+f+'&order=created_at.desc&limit=50'),
       rest('warehouses','select=id,name,is_default,is_active&'+f+'&is_active=eq.true&order=is_default.desc,name.asc'),
       rest('financial_accounts','select=id,name,account_type,opening_balance,is_default,is_active&'+f+'&is_active=eq.true&order=is_default.desc,name.asc'),
       rpc('web_list_legacy_invoices',{p_business_id:b})
@@ -92,7 +92,7 @@
       rest('financial_transactions','select=id,transaction_type,direction,amount,transaction_date,reference_number,description,status,account_id,contact_id,financial_accounts(name),contacts(name)&'+f+'&order=transaction_date.desc&limit=100'),
       rest('cheques','select=id,cheque_direction,cheque_number,sayad_id,bank_name,amount,issue_date,due_date,status,contact_id,contacts(name),note&'+f+'&order=due_date.asc&limit=100'),
       rest('cheque_events','select=id,cheque_id,event_type,event_date,from_status,to_status,amount,note&'+f+'&order=event_date.desc&limit=200'),
-      rest('document_items','select=id,document_id,item_type,product_id,description_snapshot,quantity,unit_name_snapshot,unit_price,discount_amount,tax_rate_snapshot,tax_amount,line_total&'+f+'&order=sort_order.asc&limit=1000'),
+      rest('document_items','select=id,document_id,item_type,product_id,service_id,description_snapshot,quantity,unit_name_snapshot,unit_price,discount_amount,tax_rate_snapshot,tax_amount,line_total&'+f+'&order=sort_order.asc&limit=1000'),
       rest('sales_return_documents','select=id,original_document_id,return_date,total_amount,status,reason&'+f+'&order=return_date.desc&limit=100'),
       rest('purchase_return_documents','select=id,original_document_id,return_date,total_amount,status,reason&'+f+'&order=return_date.desc&limit=100'),
       rest('stock_movements','select=id,product_id,warehouse_id,movement_type,quantity_delta,movement_date,note,products(name),warehouses(name)&'+f+'&order=movement_date.desc&limit=150'),
@@ -253,7 +253,8 @@
     const d=state.documents.find(x=>x.id===state.selectedDocumentId);
     if(!d||d.status!=='draft'){state.section='invoices';invoices();return;}
     const isService=['service_sale','service_purchase'].includes(d.document_type);
-    const contactOptions=state.contacts.filter(c=>isService?['customer','both','supplier'].includes(c.contact_type):['customer','both','supplier'].includes(c.contact_type)).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===d.contact_id?'selected':'')+'>'+esc(c.name)+'</option>').join('');
+    const isSale=['goods_sale','service_sale'].includes(d.document_type);
+    const contactOptions=state.contacts.filter(c=>isSale?['customer','both'].includes(c.contact_type):['supplier','both'].includes(c.contact_type)).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===d.contact_id?'selected':'')+'>'+esc(c.name)+'</option>').join('');
     const warehouseOptions='<option value="">بدون انبار</option>'+state.warehouses.map(w=>'<option value="'+esc(w.id)+'" '+(w.id===d.warehouse_id?'selected':'')+'>'+esc(w.name)+'</option>').join('');
     const catalog=isService?state.services:state.products;
     const itemRows=state.documentItems.filter(x=>x.document_id===d.id);
