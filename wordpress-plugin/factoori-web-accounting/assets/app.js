@@ -6,7 +6,7 @@
   const base = String(cfg.supabaseUrl || '').replace(/\/$/, '');
   const key = String(cfg.publishableKey || '');
   const storageKey = 'factoori_web_session_v1';
-  const state = {session:null,user:null,businesses:[],business:null,contacts:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],cheques:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',signup:false,busy:false};
+  const state = {session:null,user:null,businesses:[],business:null,contacts:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],cheques:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => new Intl.NumberFormat('fa-IR').format(Number(v || 0));
   const dateFa = v => { try { return new Intl.DateTimeFormat('fa-IR').format(new Date(v+'T12:00:00')); } catch (_) { return v || '—'; } };
@@ -143,8 +143,20 @@
     'گزارش‌های مالی','خلاصه فروش، خرید و جریان نقدی بر اساس اسناد ثبت‌شده');
   }
   function contacts(){
-    const rows=state.contacts.map(c=>'<tr><td>'+esc(c.name)+'</td><td>'+({customer:'مشتری',supplier:'تأمین‌کننده',both:'مشتری و تأمین‌کننده'}[c.contact_type]||'—')+'</td><td>'+esc(c.phone||'—')+'</td><td>'+esc(c.code||'—')+'</td></tr>');
+    const rows=state.contacts.map(c=>'<tr><td><button class="fw-link" data-action="contact-detail" data-id="'+esc(c.id)+'">'+esc(c.name)+'</button></td><td>'+({customer:'مشتری',supplier:'تأمین‌کننده',both:'مشتری و تأمین‌کننده'}[c.contact_type]||'—')+'</td><td>'+esc(c.phone||'—')+'</td><td>'+esc(c.code||'—')+'</td></tr>');
     shell('<div class="fw-two"><section class="fw-card"><div class="fw-section-head"><div><h2>افزودن شخص جدید</h2><p>ثبت مشتری یا تأمین‌کننده</p></div></div><form data-form="contact"><div class="fw-field"><label>نام شخص / شرکت</label><input name="name" required maxlength="160"></div><div class="fw-field"><label>نوع شخص</label><select name="contact_type"><option value="customer">مشتری</option><option value="supplier">تأمین‌کننده</option><option value="both">هر دو</option></select></div><div class="fw-field"><label>شماره تماس</label><input name="phone" inputmode="tel"></div><div class="fw-field"><label>کد / شناسه</label><input name="code"></div><div class="fw-field"><label>نشانی</label><input name="address"></div><button class="fw-btn fw-full" type="submit">ذخیره شخص</button></form></section><section class="fw-card"><div class="fw-section-head"><div><h2>دفتر اشخاص</h2><p>'+money(state.contacts.length)+' شخص فعال</p></div></div>'+table(rows,['نام','نوع','تلفن','کد'],'هنوز شخصی ثبت نشده است.')+'</section></div>','دفتر اشخاص','مشتریان و تأمین‌کنندگان مشترک میان اپلیکیشن و وب'); 
+  }
+  function contactDetail(){
+    const c=state.contacts.find(x=>x.id===state.selectedContactId);if(!c){state.section='contacts';contacts();return;}
+    const docs=state.documents.filter(d=>d.contact_id===c.id&&d.status==='posted');
+    const tx=state.transactions.filter(t=>t.contact_id===c.id&&t.status==='posted');
+    const sales=docs.filter(d=>['goods_sale','service_sale'].includes(d.document_type)).reduce((n,d)=>n+Number(d.total_amount||0),0);
+    const purchases=docs.filter(d=>['purchase','service_purchase'].includes(d.document_type)).reduce((n,d)=>n+Number(d.total_amount||0),0);
+    const received=tx.filter(t=>t.transaction_type==='customer_receipt').reduce((n,t)=>n+Number(t.amount||0),0);
+    const paid=tx.filter(t=>['supplier_payment','creditor_payment'].includes(t.transaction_type)).reduce((n,t)=>n+Number(t.amount||0),0);
+    const history=[...docs.map(d=>({date:d.document_date,title:'سند '+d.document_number,amount:d.total_amount,kind:d.document_type})),...tx.map(t=>({date:t.transaction_date,title:({customer_receipt:'دریافت از شخص',supplier_payment:'پرداخت به تأمین‌کننده',expense_payment:'هزینه',other_income:'درآمد'}[t.transaction_type]||t.transaction_type),amount:t.amount,kind:'تراکنش مالی'}))].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,40).map(x=>'<tr><td>'+dateFa(x.date)+'</td><td>'+esc(x.title)+'</td><td>'+esc(x.kind)+'</td><td>'+money(x.amount)+'</td></tr>');
+    shell('<button class="fw-btn secondary" data-action="contacts-back">← بازگشت به دفتر اشخاص</button><section class="fw-hero" style="margin-top:14px"><div><span>پرونده شخص</span><h2>'+esc(c.name)+'</h2><p>'+esc(c.phone||'بدون شماره تماس')+' · '+esc(c.contact_type)+'</p></div><div class="fw-hero-mark">♙</div></section><div class="fw-grid"><section class="fw-card fw-stat"><div><small>فروش ثبت‌شده</small><strong>'+money(sales)+'</strong><em>ریال</em></div></section><section class="fw-card fw-stat"><div><small>خرید ثبت‌شده</small><strong>'+money(purchases)+'</strong><em>ریال</em></div></section><section class="fw-card fw-stat"><div><small>دریافت از شخص</small><strong>'+money(received)+'</strong><em>ریال</em></div></section><section class="fw-card fw-stat"><div><small>پرداخت به شخص</small><strong>'+money(paid)+'</strong><em>ریال</em></div></section></div><section class="fw-card"><div class="fw-section-head"><div><h2>گردش و سوابق شخص</h2><p>آخرین اسناد و تراکنش‌های موجود در نسخه وب</p></div></div>'+table(history,['تاریخ','شرح','نوع','مبلغ (ریال)'],'گردشی برای این شخص ثبت نشده است.')+'</section>',
+    'پرونده '+c.name,'سوابق مالی و اسناد مرتبط با مشتری یا تأمین‌کننده');
   }
   function products(){
     const rows=state.products.map(p=>{const cat=state.categories.find(c=>c.id===p.category_id);const margin=Number(p.sale_price||0)-Number(p.cost_price||0);return '<tr><td>'+esc(p.name)+'</td><td>'+esc(cat?.name||'بدون دسته')+'</td><td>'+esc(p.sku||'—')+'</td><td>'+(p.cost_price===null?'—':money(p.cost_price))+'</td><td>'+money(p.sale_price)+'</td><td class="'+(p.cost_price===null?'':(margin>=0?'fw-profit':'fw-loss'))+'">'+(p.cost_price===null?'—':money(margin))+'</td><td>'+(p.track_inventory?money(state.inventoryBalances.filter(x=>x.product_id===p.id).reduce((n,x)=>n+Number(x.quantity||0),0)):'—')+'</td></tr>';});
@@ -214,7 +226,7 @@
   function render(){
     if(!state.user){authView();return;}
     if(!state.business){root.innerHTML='<div class="fw-auth-wrap"><section class="fw-auth-card"><div class="fw-brand"><div class="fw-brand-mark">ف</div><div><b>فاکتوری</b><small>حسابداری آنلاین</small></div></div><h1>ساخت کسب‌وکار</h1><p class="fw-sub">برای شروع، نام کسب‌وکار خود را وارد کنید.</p><form data-form="business"><div class="fw-field"><label>نام کسب‌وکار</label><input name="name" required minlength="2" maxlength="160"></div><button class="fw-btn fw-full" type="submit">ایجاد فضای حسابداری</button></form><button class="fw-link" data-action="logout" style="margin-top:16px">خروج از حساب</button></section></div>';return;}
-    ({dashboard,invoices,contacts,products,finance,cheques,inventory,reports,legacy}[state.section]||dashboard)();
+    ({dashboard,invoices,contacts,contactDetail,products,finance,cheques,inventory,reports,legacy}[state.section]||dashboard)();
   }
   async function withBusy(fn){
     if(state.busy)return;state.busy=true;root.classList.add('fw-busy');
@@ -226,6 +238,8 @@
     if(section){state.section=section.dataset.section;render();return;}
     const btn=e.target.closest('[data-action]');if(!btn)return;
     const action=btn.dataset.action;
+    if(action==='contact-detail'){state.selectedContactId=btn.dataset.id;state.section='contactDetail';render();return;}
+    if(action==='contacts-back'){state.section='contacts';render();return;}
     if(action==='toggle-auth'){state.signup=!state.signup;render();}
     if(action==='logout')withBusy(async()=>{try{await request('/auth/v1/logout',{method:'POST'});}catch(_){}saveSession(null);state.user=null;state.business=null;state.businesses=[];clearData();render();});
     if(action==='refresh')withBusy(async()=>{await loadBusinesses();render();toast('اطلاعات بروزرسانی شد.');});
