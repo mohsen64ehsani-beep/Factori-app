@@ -57,8 +57,8 @@ begin
  if (v_result->>'conflicts')::integer<>1 then
   raise exception 'Changed supplier source must be flagged as conflict: %',v_result;
  end if;
- if (select phone from public.contacts where business_id=v_business and id=v_supplier_id)<>'09120000001' then
-  raise exception 'Changed legacy supplier must not overwrite normalized contact';
+ if (select phone from public.contacts where business_id=v_business and id=v_supplier_id)<>'09120000002' then
+  raise exception 'Changed legacy supplier must be reflected by the bidirectional sync bridge';
  end if;
 
  v_failed:=false;
