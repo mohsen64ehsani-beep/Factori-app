@@ -1067,3 +1067,45 @@ test('client and server keep financial and stock mutations out of generic sync',
     assert.match(permissions, new RegExp("when '" + collection + "' then '"));
   }
 });
+
+
+test('first sync pulls the selected business before any unverified local cache can be uploaded', async () => {
+  const { runBusinessSync } = await import('./sync-runtime.js');
+  let pushes = 0;
+  const saved = [];
+  const result = await runBusinessSync({
+    businessId: 'new-business',
+    database: {
+      cust: [{ id: 'stale-customer', n: 'From another business' }],
+      prod: [{ id: 'stale-product', n: 'From another business' }],
+      inv: [{ id: 'stale-invoice', no: 1002 }],
+      advancedSettings: { currency: 'ریال' }
+    },
+    api: {
+      async ensureSyncDevice() { return { device_id: 'device-1', verified: true }; },
+      getSyncDeviceId() { return 'device-1'; },
+      async syncPull({ sinceRevision }) {
+        assert.equal(sinceRevision, 0);
+        return {
+          records: [
+            { collection: 'prod', legacy_id: 'remote-product', version: 1, revision: 1, payload: { id: 'remote-product', n: 'Correct remote product' } }
+          ],
+          next_cursor: 1,
+          has_more: false,
+          reset_required: false
+        };
+      },
+      async syncPushBatches() { pushes++; return []; }
+    },
+    createOperationId: ids,
+    persistCheckpoint: async args => { saved.push(args); }
+  });
+  assert.equal(pushes, 0, 'first sync must not push any unverified local rows');
+  assert.deepEqual(result.database.prod, [{ id: 'remote-product', n: 'Correct remote product' }]);
+  assert.deepEqual(result.database.cust, []);
+  assert.deepEqual(result.database.inv, []);
+  assert.equal(result.syncState.initialLocalRecovery.prod[0].id, 'stale-product');
+  assert.equal(result.syncState.initialLocalRecovery.cust[0].id, 'stale-customer');
+  assert.equal(result.database.advancedSettings.currency, 'ریال');
+  assert.ok(saved.length >= 1);
+});
