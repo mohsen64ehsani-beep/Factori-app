@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - work/factoori-shared-db-integration
+      - work/factoori-web-fixes-0.2.3
     paths:
       - "sync-engine.js"
       - "sync-engine.test.js"
