@@ -1073,6 +1073,30 @@ test('first sync pulls the selected business before any unverified local cache c
   const { runBusinessSync } = await import('./sync-runtime.js');
   let pushes = 0;
   const saved = [];
+  const indexedDBImpl = {
+    open() {
+      const request = { result: null, error: null, onsuccess: null, onerror: null, onupgradeneeded: null, onblocked: null };
+      const db = {
+        objectStoreNames: { contains: () => true },
+        close() {},
+        transaction() {
+          const tx = { error: null, oncomplete: null, onabort: null, onerror: null,
+            objectStore() {
+              return { get() {
+                const getRequest = { result: null, error: null, onsuccess: null, onerror: null };
+                setTimeout(() => { getRequest.onsuccess?.(); tx.oncomplete?.(); }, 0);
+                return getRequest;
+              } };
+            }
+          };
+          return tx;
+        }
+      };
+      request.result = db;
+      setTimeout(() => request.onsuccess?.(), 0);
+      return request;
+    }
+  };
   const result = await runBusinessSync({
     businessId: 'new-business',
     database: {
@@ -1098,6 +1122,7 @@ test('first sync pulls the selected business before any unverified local cache c
       async syncPushBatches() { pushes++; return []; }
     },
     createOperationId: ids,
+    indexedDBImpl,
     persistCheckpoint: async args => { saved.push(args); }
   });
   assert.equal(pushes, 0, 'first sync must not push any unverified local rows');
