@@ -4,7 +4,7 @@ Tags: accounting, invoice, supabase, factoori
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.2.3
+Stable tag: 0.2.4
 License: GPLv2 or later
 
 A full-screen, responsive Factoori accounting workspace that uses the same Supabase Auth account and business data as the Factoori Android app.
@@ -12,9 +12,14 @@ A full-screen, responsive Factoori accounting workspace that uses the same Supab
 == Installation ==
 1. Upload and activate the plugin ZIP in WordPress.
 2. Open Settings > Factoori Web and verify the Supabase URL and Publishable key.
-3. The plugin automatically creates a dedicated «حسابداری آنلاین فاکتوری» page at `/factoori-accounting` when activated.
+3. The plugin automatically creates a product introduction page at `/web-factoori` and a dedicated accounting page at `/factoori-accounting`.
 4. Open Settings > Factoori Web and use the direct link to the automatically created accounting page.
 5. Set the professional-version purchase URL in Settings > Factoori Web if needed.
+
+== Product introduction page ==
+The `/web-factoori` page explains Factoori, compares free and premium access, describes registration and license activation, and links to the web accounting workspace. The page is created automatically when the updated plugin runs.
+
+The Android dashboard includes a direct link to the introduction page. The web accounting page remains a separate full-screen workspace.
 
 == Shared account ==
 Users sign in or register with Supabase Auth. They must use the same email and password as the Android application. Business membership and business records are read from the shared Factoori database.
