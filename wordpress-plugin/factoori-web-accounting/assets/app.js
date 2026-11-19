@@ -6,7 +6,7 @@
   const base = String(cfg.supabaseUrl || '').replace(/\/$/, '');
   const key = String(cfg.publishableKey || '');
   const storageKey = 'factoori_web_session_v1';
-  const state = {session:null,user:null,businesses:[],business:null,contacts:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],chequeEvents:[],documentItems:[],salesReturns:[],purchaseReturns:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
+  const state = {session:null,user:null,businesses:[],business:null,contacts:[],contactLedger:[],categories:[],products:[],services:[],documents:[],legacyDocuments:[],warehouses:[],accounts:[],transactions:[],accountTransfers:[],businessSettings:null,fiscalPeriods:[],cheques:[],chequeEvents:[],documentItems:[],salesReturns:[],purchaseReturns:[],stockMovements:[],inventoryBalances:[],legacyCollections:{},legacyPreview:null,legacyReconciliation:null,legacyImportResult:null,section:'dashboard',selectedContactId:null,signup:false,busy:false};
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => new Intl.NumberFormat('fa-IR').format(Number(v || 0));
   const persianDateFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn',{year:'numeric',month:'numeric',day:'numeric',timeZone:'UTC'});
@@ -70,20 +70,21 @@
     state.business=selected;
     if(selected) await loadData(); else clearData();
   }
-  function clearData(){state.contacts=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.chequeEvents=[];state.documentItems=[];state.salesReturns=[];state.purchaseReturns=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
+  function clearData(){state.contacts=[];state.contactLedger=[];state.categories=[];state.products=[];state.services=[];state.documents=[];state.legacyDocuments=[];state.warehouses=[];state.accounts=[];state.transactions=[];state.accountTransfers=[];state.businessSettings=null;state.fiscalPeriods=[];state.cheques=[];state.chequeEvents=[];state.documentItems=[];state.salesReturns=[];state.purchaseReturns=[];state.stockMovements=[];state.inventoryBalances=[];state.legacyCollections={};state.legacyPreview=null;state.legacyReconciliation=null;state.legacyImportResult=null;}
   async function loadData(){
     const b=state.business?.id;if(!b){clearData();return;}
     const f='business_id=eq.'+encodeURIComponent(b);
     const results=await Promise.all([
       rest('contacts','select=id,name,contact_type,phone,code,is_active&'+f+'&is_active=eq.true&order=name.asc&limit=200'),
+      rest('contact_ledger_entries','select=id,contact_id,entry_date,entry_type,debit,credit,document_id,transaction_id,description&'+f+'&order=entry_date.desc&limit=1000'),
       rpc('web_list_products',{p_business_id:b}),
       rest('product_categories','select=id,name,parent_id&'+f+'&order=name.asc&limit=200'),
-      rest('documents','select=id,document_type,document_number,document_date,total_amount,status,contact_id,warehouse_id,created_at&'+f+'&order=created_at.desc&limit=50'),
+      rest('documents','select=id,document_type,document_number,document_date,due_date,total_amount,status,contact_id,warehouse_id,created_at&'+f+'&order=created_at.desc&limit=50'),
       rest('warehouses','select=id,name,is_default,is_active&'+f+'&is_active=eq.true&order=is_default.desc,name.asc'),
       rest('financial_accounts','select=id,name,account_type,opening_balance,is_default,is_active&'+f+'&is_active=eq.true&order=is_default.desc,name.asc'),
       rpc('web_list_legacy_invoices',{p_business_id:b})
     ]);
-    [state.contacts,state.products,state.categories,state.documents,state.warehouses,state.accounts]=results.slice(0,6).map(x=>x||[]);
+    state.contacts=results[0]||[];state.contactLedger=results[1]||[];[state.products,state.categories,state.documents,state.warehouses,state.accounts]=results.slice(2,7).map(x=>x||[]);
     const normalizedIds=new Set(state.documents.map(d=>d.id));
     state.legacyDocuments=(results[6]||[]).map(row=>{const p=row.payload||{};const items=Array.isArray(p.items)?p.items:[];const subtotal=items.reduce((sum,x)=>sum+Number(x.q||0)*Number(x.p||0),0);const discount=Number(p.ds||0);const tax=(subtotal-discount)*Number(p.tx||0)/100;return {id:row.legacy_id,document_type:'goods_sale',document_number:p.no,document_date:p.dt,total_amount:Math.max(0,subtotal-discount+tax),status:p.status||'legacy',legacy_source:true,created_at:row.updated_at};}).filter(d=>!normalizedIds.has(d.id));
     const optional=await Promise.allSettled([
@@ -125,7 +126,7 @@
     root.innerHTML='<div class="fw-auth-wrap"><section class="fw-auth-card"><div class="fw-brand"><div class="fw-brand-mark">ف</div><div><b>فاکتوری</b><small>سیستم یکپارچه حسابداری</small></div></div><h1>'+(state.signup?'ساخت حساب کاربری':'خوش آمدید')+'</h1><p class="fw-sub">با همان حساب اپلیکیشن اندروید وارد شوید؛ اطلاعات در هر دو نسخه مشترک است.</p><form data-form="auth">'+(state.signup?'<div class="fw-field"><label>نام و نام خانوادگی</label><input name="name" autocomplete="name" required placeholder="نام شما"></div>':'')+'<div class="fw-field"><label>ایمیل</label><input name="email" type="email" autocomplete="email" required placeholder="name@example.com" dir="ltr"></div><div class="fw-field"><label>رمز عبور</label><input name="password" type="password" autocomplete="'+(state.signup?'new-password':'current-password')+'" minlength="8" required placeholder="حداقل ۸ کاراکتر" dir="ltr"></div><button class="fw-btn fw-full" type="submit">'+(state.signup?'ایجاد حساب':'ورود به حساب')+'</button></form><div class="fw-auth-toggle">'+(state.signup?'قبلاً حساب دارید؟':'حساب ندارید؟')+' <button class="fw-link" data-action="toggle-auth">'+(state.signup?'ورود':'ثبت‌نام')+'</button></div><div class="fw-auth-toggle">اطلاعات ورود اپلیکیشن و نسخه وب یکسان است.</div></section></div>';
   }
   function shell(content,title,subtitle='مدیریت یکپارچه کسب‌وکار شما'){
-    const nav=[['dashboard','▦','داشبورد'],['invoices','▤','فاکتورها'],['contacts','♙','اشخاص'],['products','◇','کالاها'],['finance','ت','دریافت و پرداخت'],['expenses','٪','هزینه‌ها'],['creditors','♧','تأمین‌کنندگان'],['cheques','▣','چک‌ها'],['inventory','▧','انبار و موجودی'],['reports','▥','گزارش‌ها'],['settings','⚙','تنظیمات'],['legacy','⇄','همگام‌سازی و ورود داده']];
+    const nav=[['dashboard','▦','داشبورد'],['invoices','▤','فاکتورها'],['contacts','♙','اشخاص'],['receivables','◉','دفتر بدهکاران'],['products','◇','کالاها'],['finance','ت','دریافت و پرداخت'],['expenses','٪','هزینه‌ها'],['creditors','♧','تأمین‌کنندگان'],['cheques','▣','چک‌ها'],['inventory','▧','انبار و موجودی'],['reports','▥','گزارش‌ها'],['settings','⚙','تنظیمات'],['legacy','⇄','همگام‌سازی و ورود داده']];
     root.innerHTML='<div class="fw-layout"><aside class="fw-sidebar"><div class="fw-brand"><div class="fw-brand-mark">ف</div><div><b>فاکتوری</b><small>حسابداری آنلاین</small></div></div><div class="fw-business"><small>کسب‌وکار فعال</small><select id="fw-business">'+state.businesses.map(b=>'<option value="'+esc(b.id)+'" '+(b.id===state.business?.id?'selected':'')+'>'+esc(b.name)+'</option>').join('')+'</select></div><nav class="fw-nav">'+nav.map(n=>'<button data-section="'+n[0]+'" class="'+(state.section===n[0]?'active':'')+'"><i>'+n[1]+'</i>'+n[2]+'</button>').join('')+'</nav><div class="fw-side-bottom">'+(cfg.purchaseUrl?'<a class="fw-purchase" href="'+esc(cfg.purchaseUrl)+'" target="_blank" rel="noopener">★ ارتقا به نسخه حرفه‌ای</a>':'')+'<div class="fw-user">'+esc(state.user?.email||'')+'</div><button class="fw-btn ghost fw-full" data-action="logout">خروج از حساب</button></div></aside><main class="fw-main"><div class="fw-content"><header class="fw-topbar"><div><h1>'+title+'</h1><p>'+subtitle+'</p></div><div class="fw-top-actions">'+(cfg.purchaseUrl?'<a class="fw-purchase" href="'+esc(cfg.purchaseUrl)+'" target="_blank" rel="noopener">★ نسخه حرفه‌ای</a>':'')+'<button class="fw-btn ghost" data-action="refresh">↻ بروزرسانی</button></div></header>'+content+'</div></main></div>';
     enhanceDateInputs();
   }
@@ -175,6 +176,21 @@
   function contacts(){
     const rows=state.contacts.map(c=>'<tr><td><button class="fw-link" data-action="contact-detail" data-id="'+esc(c.id)+'">'+esc(c.name)+'</button></td><td>'+({customer:'مشتری',supplier:'تأمین‌کننده',both:'مشتری و تأمین‌کننده'}[c.contact_type]||'—')+'</td><td>'+esc(c.phone||'—')+'</td><td>'+esc(c.code||'—')+'</td></tr>');
     shell('<div class="fw-two"><section class="fw-card"><div class="fw-section-head"><div><h2>افزودن شخص جدید</h2><p>ثبت مشتری یا تأمین‌کننده</p></div></div><form data-form="contact"><div class="fw-field"><label>نام شخص / شرکت</label><input name="name" required maxlength="160"></div><div class="fw-field"><label>نوع شخص</label><select name="contact_type"><option value="customer">مشتری</option><option value="supplier">تأمین‌کننده</option><option value="both">هر دو</option></select></div><div class="fw-field"><label>شماره تماس</label><input name="phone" inputmode="tel"></div><div class="fw-field"><label>کد / شناسه</label><input name="code"></div><div class="fw-field"><label>نشانی</label><input name="address"></div><button class="fw-btn fw-full" type="submit">ذخیره شخص</button></form></section><section class="fw-card"><div class="fw-section-head"><div><h2>دفتر اشخاص</h2><p>'+money(state.contacts.length)+' شخص فعال</p></div></div>'+table(rows,['نام','نوع','تلفن','کد'],'هنوز شخصی ثبت نشده است.')+'</section></div>','دفتر اشخاص','مشتریان و تأمین‌کنندگان مشترک میان اپلیکیشن و وب'); 
+  }
+  function receivables(){
+    const customers=state.contacts.filter(c=>['customer','both'].includes(c.contact_type));
+    const suppliers=state.contacts.filter(c=>['supplier','both'].includes(c.contact_type));
+    const balanceFor=id=>state.contactLedger.filter(x=>x.contact_id===id).reduce((n,x)=>n+Number(x.debit||0)-Number(x.credit||0),0);
+    const customerRows=customers.map(c=>{const balance=balanceFor(c.id);return '<tr><td><button class="fw-link" data-action="contact-detail" data-id="'+esc(c.id)+'">'+esc(c.name)+'</button></td><td>'+esc(c.phone||'—')+'</td><td>'+money(Math.max(0,balance))+'</td><td>'+money(Math.max(0,-balance))+'</td></tr>';});
+    const supplierRows=suppliers.map(c=>{const balance=balanceFor(c.id);return '<tr><td><button class="fw-link" data-action="contact-detail" data-id="'+esc(c.id)+'">'+esc(c.name)+'</button></td><td>'+esc(c.phone||'—')+'</td><td>'+money(Math.max(0,-balance))+'</td><td>'+money(Math.max(0,balance))+'</td></tr>';});
+    const overdue=state.documents.filter(d=>d.status==='posted'&&d.due_date&&d.due_date<today()&&['goods_sale','service_sale'].includes(d.document_type)).map(d=>'<tr><td>'+esc(d.document_number||'—')+'</td><td>'+esc(state.contacts.find(c=>c.id===d.contact_id)?.name||'—')+'</td><td>'+dateFa(d.due_date)+'</td><td>'+money(d.total_amount)+'</td></tr>');
+    const totalReceivable=customers.reduce((n,c)=>n+Math.max(0,balanceFor(c.id)),0);
+    const totalPayable=suppliers.reduce((n,c)=>n+Math.max(0,-balanceFor(c.id)),0);
+    shell('<div class="fw-grid"><section class="fw-card fw-stat"><div><small>مطالبات از مشتریان</small><strong>'+money(totalReceivable)+'</strong><em>مانده بدهکار دفتر اشخاص</em></div></section><section class="fw-card fw-stat"><div><small>بدهی به تأمین‌کنندگان</small><strong>'+money(totalPayable)+'</strong><em>مانده بستانکار دفتر اشخاص</em></div></section><section class="fw-card fw-stat"><div><small>مشتریان</small><strong>'+money(customers.length)+'</strong><em>مشتری و مشترک</em></div></section><section class="fw-card fw-stat"><div><small>تأمین‌کنندگان</small><strong>'+money(suppliers.length)+'</strong><em>تأمین‌کننده و مشترک</em></div></section></div>'+
+    '<section class="fw-card"><div class="fw-section-head"><div><h2>دفتر بدهکاران مشتری</h2><p>مانده از گردش ثبت‌شده در دفتر حساب اشخاص؛ مبالغ بر اساس بدهکار منهای بستانکار</p></div><button class="fw-btn secondary" data-section="finance">ثبت دریافت</button></div>'+table(customerRows,['مشتری','تلفن','بدهکار (ریال)','بستانکار (ریال)'],'مشتری‌ای ثبت نشده است.')+'</section>'+
+    '<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>دفتر بستانکاران تأمین‌کننده</h2><p>مانده بدهی به تأمین‌کنندگان</p></div><button class="fw-btn secondary" data-section="creditors">دفتر تأمین‌کنندگان</button></div>'+table(supplierRows,['تأمین‌کننده','تلفن','بدهی ما (ریال)','طلب ما (ریال)'],'تأمین‌کننده‌ای ثبت نشده است.')+'</section>'+
+    '<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>فاکتورهای فروش سررسیدگذشته</h2><p>بر اساس تاریخ سررسید ثبت‌شده در اسناد</p></div></div>'+table(overdue,['شماره فاکتور','مشتری','سررسید','مبلغ (ریال)'],'فاکتور فروش سررسیدگذشته‌ای وجود ندارد.')+'</section>',
+    'دفتر بدهکاران و بستانکاران','مانده حساب اشخاص و پیگیری مطالبات');
   }
   function contactDetail(){
     const c=state.contacts.find(x=>x.id===state.selectedContactId);if(!c){state.section='contacts';contacts();return;}
@@ -285,7 +301,7 @@
   function render(){
     if(!state.user){authView();return;}
     if(!state.business){root.innerHTML='<div class="fw-auth-wrap"><section class="fw-auth-card"><div class="fw-brand"><div class="fw-brand-mark">ف</div><div><b>فاکتوری</b><small>حسابداری آنلاین</small></div></div><h1>ساخت کسب‌وکار</h1><p class="fw-sub">برای شروع، نام کسب‌وکار خود را وارد کنید.</p><form data-form="business"><div class="fw-field"><label>نام کسب‌وکار</label><input name="name" required minlength="2" maxlength="160"></div><button class="fw-btn fw-full" type="submit">ایجاد فضای حسابداری</button></form><button class="fw-link" data-action="logout" style="margin-top:16px">خروج از حساب</button></section></div>';return;}
-    ({dashboard,invoices,contacts,contactDetail,products,finance,expenses,creditors,cheques,inventory,reports,settings,legacy}[state.section]||dashboard)();
+    ({dashboard,invoices,contacts,receivables,contactDetail,products,finance,expenses,creditors,cheques,inventory,reports,settings,legacy}[state.section]||dashboard)();
   }
   async function withBusy(fn){
     if(state.busy)return;state.busy=true;root.classList.add('fw-busy');
