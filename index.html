@@ -172,6 +172,9 @@ nav{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);background:col
 @media(max-width:390px){.welcome-columns{grid-template-columns:1fr}}
 
 .au.auth-gate{background:radial-gradient(circle at 12% 8%,#14b8a6 0,transparent 38%),radial-gradient(circle at 92% 92%,#6366f1 0,transparent 42%),linear-gradient(155deg,#064e3b,#0f172a);padding:24px 18px;justify-content:center;overflow:auto}.au.auth-gate>*{max-width:440px}.auth-card{width:100%;padding:22px;border:1px solid #ffffff30;border-radius:24px;background:#ffffff12;backdrop-filter:blur(16px);box-shadow:0 24px 70px #0005;text-align:right}.auth-card .logo{width:82px;height:82px;margin:0 auto 8px}.auth-card h1{display:block;text-align:center;font-size:25px;margin:6px 0 8px}.auth-card h1:before{display:none}.auth-card>p{text-align:center;color:#e2e8f0;font-size:12px;margin:0 0 16px}.auth-card label{color:#e2e8f0;text-align:right}.auth-card input{background:#ffffff18;color:#fff;border-color:#ffffff45;margin:5px 0 12px;text-align:left;direction:ltr}.auth-card input::placeholder{color:#ffffff9c}.auth-card .b{margin-top:8px}.auth-card .b.s{color:#fff;border:1px solid #ffffff70;background:transparent;box-shadow:none}.auth-account{padding:12px;border-radius:14px;background:#ffffff18;text-align:center;margin:12px 0}.auth-account small{display:block;color:#d1fae5;font-size:11px}.auth-card .v{display:block;color:#d1fae5;font-size:11px;text-align:center;margin-top:14px}
+
+/* Factoori settings dashboard v1.2.52 */
+.settings-dashboard{margin:0 0 14px}.settings-dashboard-intro{display:flex;align-items:center;gap:13px;padding:17px;margin:0 0 13px;border-radius:19px;background:var(--gr);color:#fff;box-shadow:0 9px 25px rgba(67,56,202,.2)}.settings-dashboard-mark{width:48px;height:48px;display:grid;place-items:center;border-radius:15px;background:#ffffff25;font-size:25px;flex:none}.settings-dashboard-intro b{display:block;font-size:15px}.settings-dashboard-intro small{display:block;margin-top:4px;color:#e5eaff;font-size:11px}.settings-dashboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.settings-dashboard-tile{min-width:0;min-height:112px;display:flex;align-items:center;gap:10px;padding:13px 11px;border:1px solid var(--bd);border-radius:17px;background:var(--card);color:var(--tx);box-shadow:var(--sh);text-align:right;font:inherit;cursor:pointer}.settings-dashboard-icon{width:40px;height:40px;display:grid;place-items:center;flex:none;border-radius:13px;background:color-mix(in srgb,var(--pr) 12%,var(--card));font-size:21px}.settings-dashboard-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}.settings-dashboard-copy b{font-size:12px;line-height:1.6}.settings-dashboard-copy small{font-size:10px;line-height:1.65;color:var(--mu)}.settings-dashboard-arrow{font-size:23px;color:var(--pr);flex:none}.settings-dashboard-detail{margin:0 0 14px}.settings-dashboard-back{width:100%;margin:0 0 12px;padding:12px 14px;border:1px solid var(--bd);border-radius:13px;background:var(--card);color:var(--pr);font:inherit;font-size:13px;font-weight:700;text-align:right}.settings-dashboard-detail>.settings-dashboard-original{margin-bottom:12px}.settings-dashboard-detail>.settings-dashboard-original[hidden]{display:none!important}@media(max-width:360px){.settings-dashboard-grid{gap:8px}.settings-dashboard-tile{padding:11px 9px;gap:8px;min-height:105px}.settings-dashboard-icon{width:35px;height:35px}}
 </style>
 </head>
 <body>
@@ -649,38 +652,55 @@ function render(){const a=$('app');if(lock){a.innerHTML=lockV2();return}
  a.innerHTML=`<main>${demoMode?'<div class="demo-notice">نسخه آزمایشی — ثبت و تغییر اطلاعات و خروجی PDF/تصویر غیرفعال است</div>':''}${VIEWS[v.t]()}${demoMode?'<button class="b s w100" data-a="exitdemo">خروج از نسخه آزمایشی</button>':''}</main><nav>${TABS.map(([k,i,l])=>`<button data-a="tab" data-id="${k}" class="${(v.tab||v.t)==k?'on':''}"><span>${i}</span>${l}</button>`).join('')}</nav>${showWelcome&&!demoMode?`<div class="first-welcome" id="firstWelcome"><div class="first-welcome-card"><div class="first-welcome-head"><div class="first-welcome-logo">${LG}</div><div><h2>به فاکتوری خوش آمدی</h2><p>مدیریت فروش، مشتریان، دریافت‌ها و حسابداری کسب‌وکارت در یک برنامه.</p></div></div><div class="welcome-columns"><section><b>امکانات رایگان</b><ul><li>روزانه ۳ فاکتور</li><li>حداکثر ۵ مشتری و ۵ کالا</li><li>حداکثر ۲ ردیف در هر فاکتور</li><li>پیامک و گزارش مالی غیرفعال</li><li>۲ قالب و ۲ رنگ فاکتور</li><li>ارسال فقط PDF</li></ul></section><section><b>امکانات حرفه‌ای</b><ul><li>صدور فاکتور بدون محدودیت روزانه</li><li>ثبت نامحدود مشتری و کالا و ردیف فاکتور</li><li>تمام قالب‌ها و رنگ‌های فاکتور</li><li>ارسال پیامک و امکانات حرفه‌ای</li><li>گزارش مالی و روند فروش ۷ روزه</li></ul></section></div><div class="r"><button class="b s" data-a="dismisswelcome">شروع استفاده رایگان</button><button class="b" data-a="buyoptions">خرید نسخه کامل</button></div></div></div>`:''}`;
  if(v.t==='set')collapseSettingsMenus();if(v.t=='invf')upd()}
 function collapseSettingsMenus(){
- const main=$('app').querySelector('main');if(!main)return;
+ const main=$('app').querySelector('main');if(!main||main.dataset.settingsDashboard==='1')return;
  const descriptors={
-  'مشخصات فروشنده':['🏪','نام، اطلاعات تماس، واحد پول، لوگو و امضای فاکتور'],
+  'مشخصات فروشنده':['🏪','اطلاعات فروشگاه، تماس، واحد پول و نشان تجاری'],
   'حساب ابری':['☁️','حساب کاربری، کسب‌وکار و همگام‌سازی اطلاعات'],
-  'حساب‌های بانکی فاکتور':['🏦','مدیریت حساب‌هایی که روی فاکتورها نمایش داده می‌شوند'],
+  'حساب‌های بانکی فاکتور':['🏦','مدیریت حساب‌های بانکی قابل درج در فاکتورها'],
   'تنظیمات حرفه‌ای':['⚙️','ابزارهای تکمیلی حسابداری و مدیریت کسب‌وکار'],
-  'اتصال پیامک فراز اس‌ام‌اس':['✉️','تنظیمات اتصال و ارسال پیامک'],
-  'ارسال پیامک':['✉️','وضعیت دسترسی پیامک در پلن فعلی'],
+  'اتصال پیامک فراز اس‌ام‌اس':['✉️','تنظیم اتصال و ارسال پیامک'],
+  'ارسال پیامک':['💬','وضعیت دسترسی پیامک در پلن فعلی'],
   'نسخه و ارتقا':['🔑','وضعیت مجوز و فعال‌سازی لایسنس حرفه‌ای'],
   'ارتقا به نسخه کامل':['⭐','مشاهده روش‌های تهیه نسخه حرفه‌ای'],
-  'سبک فاکتور':['🎨','انتخاب قالب و رنگ فاکتورهای صادرشده'],
-  'امنیت':['🔒','روش ورود، اثر انگشت و تغییر رمز'],
-  'پشتیبان‌گیری':['🗂️','ذخیره و بازیابی نسخه پشتیبان اطلاعات'],
-  'درباره فاکتوری':['ℹ️','اطلاعات برنامه و راه‌های ارتباط با پشتیبانی']
+  'سبک فاکتور':['🎨','قالب‌ها و رنگ‌بندی فاکتورهای صادرشده'],
+  'امنیت':['🔒','رمز ورود و تنظیمات اثر انگشت'],
+  'پشتیبان‌گیری':['🗂️','ذخیره و بازیابی اطلاعات برنامه'],
+  'درباره فاکتوری':['ℹ️','اطلاعات برنامه و راه‌های پشتیبانی']
  };
- Array.from(main.children).filter(el=>el.classList&&el.classList.contains('c')&&el.querySelector(':scope > h2')).forEach(card=>{
-  if(card.matches('details.settings-menu'))return;
-  const heading=card.querySelector(':scope > h2');const title=heading.textContent.trim();
-  const meta=descriptors[title]||['⚙️','مشاهده و مدیریت گزینه‌های این بخش'];
-  const body=document.createElement('div');body.className='settings-menu-body';
-  Array.from(card.children).forEach(child=>{if(child!==heading)body.appendChild(child)});
-  const summary=document.createElement('summary');summary.className='settings-menu-head';
-  summary.innerHTML='<span class="settings-menu-icon" aria-hidden="true">'+meta[0]+'</span><span class="settings-menu-title"><b>'+esc(title)+'</b><small>'+esc(meta[1])+'</small></span><span class="settings-menu-arrow" aria-hidden="true">⌄</span>';
-  const menu=document.createElement('details');menu.className=card.className+' settings-menu';menu.open=false;
-  menu.append(summary,body);card.replaceWith(menu);
- });
+ const icons=['🏪','☁️','🏦','⚙️','✉️','💬','🔑','⭐','🎨','🔒','🗂️','ℹ️'];
+ const cards=Array.from(main.children).filter(el=>el.classList&&el.classList.contains('c')&&el.querySelector(':scope > h2'));
+ if(!cards.length)return;
  const heading=main.querySelector(':scope > h1');
- if(heading&&!main.querySelector('.settings-hero')){
-  const hero=document.createElement('section');hero.className='settings-hero';
-  hero.innerHTML='<span class="settings-hero-icon" aria-hidden="true">⚙️</span><div><b>مرکز تنظیمات فاکتوری</b><p>همه تنظیمات و امکانات قبلی در دسته‌بندی‌های مرتب و بازشونده؛ بدون حذف یا تغییر عملکرد.</p></div>';
-  heading.insertAdjacentElement('afterend',hero);
+ const dashboard=document.createElement('section');dashboard.className='settings-dashboard';
+ dashboard.innerHTML='<div class="settings-dashboard-intro"><div class="settings-dashboard-mark">⚙️</div><div><b>مرکز مدیریت فاکتوری</b><small>تنظیمات برنامه را از دسته‌بندی‌های زیر مدیریت کن</small></div></div><div class="settings-dashboard-grid"></div>';
+ const grid=dashboard.querySelector('.settings-dashboard-grid');
+ const detail=document.createElement('section');detail.className='settings-dashboard-detail';detail.hidden=true;
+ const back=document.createElement('button');back.type='button';back.className='settings-dashboard-back';back.textContent='→ بازگشت به داشبورد تنظیمات';
+ detail.appendChild(back);
+ cards.forEach((card,index)=>{
+  const h=card.querySelector(':scope > h2'),title=h.textContent.trim(),meta=descriptors[title]||[icons[index%icons.length],'مشاهده و مدیریت گزینه‌های این بخش'];
+  const tile=document.createElement('button');tile.type='button';tile.className='settings-dashboard-tile';tile.dataset.settingsOpen=String(index);
+  tile.innerHTML='<span class="settings-dashboard-icon">'+meta[0]+'</span><span class="settings-dashboard-copy"><b>'+esc(title)+'</b><small>'+esc(meta[1])+'</small></span><span class="settings-dashboard-arrow">‹</span>';
+  grid.appendChild(tile);
+  card.classList.add('settings-dashboard-original');card.hidden=true;detail.appendChild(card);
+ });
+ if(heading)heading.insertAdjacentElement('afterend',dashboard);else main.insertBefore(dashboard,main.firstChild);
+ dashboard.insertAdjacentElement('afterend',detail);
+ if(!main.dataset.settingsDashboardBound){
+  main.dataset.settingsDashboardBound='1';
+  main.addEventListener('click',e=>{
+   const tile=e.target.closest('[data-settings-open]');
+   if(tile&&dashboard.contains(tile)){
+    const index=Number(tile.dataset.settingsOpen);
+    detail.querySelectorAll('.settings-dashboard-original').forEach((card,i)=>card.hidden=i!==index);
+    dashboard.hidden=true;detail.hidden=false;detail.scrollIntoView({behavior:'smooth',block:'start'});return;
+   }
+   if(e.target.closest('.settings-dashboard-back')){
+    detail.hidden=true;dashboard.hidden=false;main.scrollIntoView({behavior:'smooth',block:'start'});
+   }
+  });
  }
+ main.dataset.settingsDashboard='1';
 }
 function upd(){const t=$('tt');if(t)t.innerHTML=`<div><span>جمع</span><span>${money(subt(D))}</span></div><div><span>تخفیف</span><span>${money(disc(D))}</span></div><div><span>مالیات</span><span>${money(taxv(D))}</span></div><div class="gt"><span>قابل پرداخت</span><span>${money(tot(D))}</span></div>`}
 
