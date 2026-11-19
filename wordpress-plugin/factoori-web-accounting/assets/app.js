@@ -60,7 +60,7 @@
     const f='business_id=eq.'+encodeURIComponent(b);
     const results=await Promise.all([
       rest('contacts','select=id,name,contact_type,phone,code,is_active&'+f+'&is_active=eq.true&order=name.asc&limit=200'),
-      rest('products','select=id,name,sku,unit_name,sale_price,cost_price,category_id,track_inventory,is_active&'+f+'&is_active=eq.true&order=name.asc&limit=200'),
+      rpc('web_list_products',{p_business_id:b}),
       rest('product_categories','select=id,name,parent_id&'+f+'&order=name.asc&limit=200'),
       rest('documents','select=id,document_type,document_number,document_date,total_amount,status,contact_id,created_at&'+f+'&order=created_at.desc&limit=50'),
       rest('warehouses','select=id,name,is_default,is_active&'+f+'&is_active=eq.true&order=is_default.desc,name.asc'),
