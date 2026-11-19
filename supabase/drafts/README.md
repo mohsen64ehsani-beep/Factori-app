@@ -1,6 +1,6 @@
 # Shared database migration source and deployment status
 
-The SQL source files remain under `supabase/drafts/` as the tested development sequence. On 2026-11-18, all current database changes through migration 057 (including 004a and the later web/mobile bridge migrations) were applied successfully to the live Factoori Supabase project. Matching, timestamped copies are recorded under `supabase/migrations/` so the GitHub branch tracks the production migration history. The two earlier license migrations remain the pre-existing production baseline.
+The SQL source files remain under `supabase/drafts/` as the tested development sequence. On 2026-11-18, all current database changes through migration 058 (including 004a and the later web/mobile bridge migrations) were applied successfully to the live Factoori Supabase project. Matching, timestamped copies are recorded under `supabase/migrations/` so the GitHub branch tracks the production migration history. The two earlier license migrations remain the pre-existing production baseline.
 
 ## Draft order
 
@@ -343,3 +343,8 @@ Documents imported from Android are marked by their legacy idempotency namespace
 ## Adoption of web-created catalog records (057)
 
 The catalog importer now adopts services and categories already present in normalized tables when their legacy value and normalized name match, recording the source mapping instead of reporting a false target conflict.
+
+
+## Pending cheque import (058)
+
+Pending received and issued cheques with matched customer/supplier references and valid due dates can be imported into the normalized cheque register. Already cleared, returned or cancelled legacy cheques remain deferred for audited event-date and settlement-account reconciliation; imported pending cheques are not echoed back as new legacy rows.
