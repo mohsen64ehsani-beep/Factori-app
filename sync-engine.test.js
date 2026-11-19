@@ -12,7 +12,7 @@ test('only explicitly write-enabled collections produce operations', () => {
     cust: [{ id: 1, n: 'A' }], pay: [{ id: 2, amount: 10 }],
     purchases: [{ id: 3, amount: 20 }], accounts: [{ id: 4, name: 'Cash' }]
   }, createSyncState(), ids);
-  assert.deepEqual(operations.map(op => op.collection), ['cust', 'pay']);
+  assert.deepEqual(operations.map(op => op.collection), ['cust']);
 });
 
 test('financial records are staged as upserts and cannot use generic deletes', async () => {
