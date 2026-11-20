@@ -1,9 +1,9 @@
 name: Build Android APK
-# Factori 1.2.43: Capacitor 8 migration, Node 22 / Java 21, Android API 24+
+# Factori 1.2.54: Capacitor 8 migration, Node 22 / Java 21, Android API 24+
 
 on:
   push:
-    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings, feature/factori-v1.2.15-sms-guide-customers-advanced-dialogs, fix/factori-1.2.16-advanced-settings-selectors, feature/factori-v1.2.17-home-promo-copy, release/myket-first-release, work/factoori-redesign-myket-iap]
+    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings, feature/factori-v1.2.15-sms-guide-customers-advanced-dialogs, fix/factori-1.2.16-advanced-settings-selectors, feature/factori-v1.2.17-home-promo-copy, release/myket-first-release, work/factoori-redesign-myket-iap, fix/settings-dashboard-1.2.54]
   workflow_dispatch:
 
 jobs:
@@ -50,13 +50,13 @@ jobs:
       - name: Set visible app version
         run: |
           set -euo pipefail
-          sed -i 's/__FACTOORI_VERSION__/1.2.43/g' www/index.html
+          sed -i 's/__FACTOORI_VERSION__/1.2.54/g' www/index.html
           if grep -Fq '__FACTOORI_VERSION__' www/index.html; then
             echo "::error::Visible app version placeholder was not replaced."
             exit 1
           fi
-          grep -Fq 'نسخه 1.2.43' www/index.html
-          echo "Splash version label verified: 1.2.43"
+          grep -Fq 'نسخه 1.2.54' www/index.html
+          echo "Splash version label verified: 1.2.54"
 
       - name: Verify requested homepage promo is in the active app entry
         run: |
@@ -109,12 +109,12 @@ jobs:
 
       - name: Set Android update version
         run: |
-          sed -i -E 's/versionCode [0-9]+/versionCode 45/' android/app/build.gradle
-          sed -i -E 's/versionName "[^"]+"/versionName "1.2.43"/' android/app/build.gradle
+          sed -i -E 's/versionCode [0-9]+/versionCode 56/' android/app/build.gradle
+          sed -i -E 's/versionName "[^"]+"/versionName "1.2.54"/' android/app/build.gradle
           grep -n -E 'versionCode|versionName' android/app/build.gradle
-          grep -q 'versionCode 45' android/app/build.gradle
-          grep -q 'versionName "1.2.43"' android/app/build.gradle
-          echo "Android update version verified: 1.2.43 (45)"
+          grep -q 'versionCode 56' android/app/build.gradle
+          grep -q 'versionName "1.2.54"' android/app/build.gradle
+          echo "Android update version verified: 1.2.54 (45)"
 
       - name: Allow fingerprint permission only
         run: |
@@ -224,25 +224,25 @@ jobs:
           MIN_SDK=$("$AAPT" dump badging "$APK" | sed -n "s/^sdkVersion:'\\([0-9]*\\)'.*/\\1/p" | head -n1)
           echo "APK minimum Android SDK: $MIN_SDK"
           test "$MIN_SDK" = "24" || { echo "::error::APK minimum SDK is not Android 7 (API 24)."; exit 1; }
-          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.43-release.apk"
-          sha256sum "app/build/outputs/apk/release/Factori-v1.2.43-release.apk"
+          cp "$APK" "app/build/outputs/apk/release/Factori-v1.2.54-release.apk"
+          sha256sum "app/build/outputs/apk/release/Factori-v1.2.54-release.apk"
           echo "Official release APK signature and Android 7 minimum verified."
 
       - name: Package exact source snapshot
         run: |
           set -euo pipefail
-          git archive --format=zip --output="$RUNNER_TEMP/factoori-v1.2.43-source.zip" HEAD
-          test -s "$RUNNER_TEMP/factoori-v1.2.43-source.zip"
-          sha256sum "$RUNNER_TEMP/factoori-v1.2.43-source.zip"
+          git archive --format=zip --output="$RUNNER_TEMP/factoori-v1.2.54-source.zip" HEAD
+          test -s "$RUNNER_TEMP/factoori-v1.2.54-source.zip"
+          sha256sum "$RUNNER_TEMP/factoori-v1.2.54-source.zip"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factoori-source-v1.2.43
-          path: ${{ runner.temp }}/factoori-v1.2.43-source.zip
+          name: factoori-source-v1.2.54
+          path: ${{ runner.temp }}/factoori-v1.2.54-source.zip
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factori-android-v1.2.43-release
-          path: android/app/build/outputs/apk/release/Factori-v1.2.43-release.apk
+          name: factori-android-v1.2.54-release
+          path: android/app/build/outputs/apk/release/Factori-v1.2.54-release.apk
           if-no-files-found: error
