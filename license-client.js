@@ -86,14 +86,41 @@ async function native(progress = () => {}) {
   progress('افزونه اندروید شناسایی شد');
 }
 
+async function checkRemoteStatus(activationId, thumbprint) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/activate-license', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      },
+      body: JSON.stringify({
+        action: 'check_status',
+        activation_id: activationId,
+        device_thumbprint: thumbprint
+      })
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data?.ok !== true) return null;
+    return data.active === true;
+  } catch {
+    // Keep offline accounting available; a confirmed server revocation is still enforced.
+    return null;
+  }
+}
+
 async function isLicensed() {
   try {
     await native();
     const device = await LicenseManager.getPublicKey();
     const stored = await LicenseManager.getToken();
+    if (!stored.token || !await verifyToken(stored.token, device.thumbprint)) return false;
 
-    return !!stored.token &&
-      await verifyToken(stored.token, device.thumbprint);
+    const claims = JSON.parse(new TextDecoder().decode(b64u(stored.token.split('.')[1])));
+    const remoteStatus = await checkRemoteStatus(claims.sub, device.thumbprint);
+    return remoteStatus === null ? true : remoteStatus;
   } catch {
     return false;
   }
