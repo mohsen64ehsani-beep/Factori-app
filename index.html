@@ -175,6 +175,27 @@ nav{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);background:col
 
 /* Factoori settings dashboard v1.2.53 */
 .settings-dashboard{margin:0 0 14px}.settings-dashboard-intro{display:flex;align-items:center;gap:13px;padding:17px;margin:0 0 13px;border-radius:19px;background:var(--gr);color:#fff;box-shadow:0 9px 25px rgba(67,56,202,.2)}.settings-dashboard-mark{width:48px;height:48px;display:grid;place-items:center;border-radius:15px;background:#ffffff25;font-size:25px;flex:none}.settings-dashboard-intro b{display:block;font-size:15px}.settings-dashboard-intro small{display:block;margin-top:4px;color:#e5eaff;font-size:11px}.settings-dashboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.settings-dashboard-tile{min-width:0;min-height:112px;display:flex;align-items:center;gap:10px;padding:13px 11px;border:1px solid var(--bd);border-radius:17px;background:var(--card);color:var(--tx);box-shadow:var(--sh);text-align:right;font:inherit;cursor:pointer}.settings-dashboard-icon{width:40px;height:40px;display:grid;place-items:center;flex:none;border-radius:13px;background:color-mix(in srgb,var(--pr) 12%,var(--card));font-size:21px}.settings-dashboard-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}.settings-dashboard-copy b{font-size:12px;line-height:1.6}.settings-dashboard-copy small{font-size:10px;line-height:1.65;color:var(--mu)}.settings-dashboard-arrow{font-size:23px;color:var(--pr);flex:none}.settings-dashboard-detail{margin:0 0 14px}.settings-dashboard-back{width:100%;margin:0 0 12px;padding:12px 14px;border:1px solid var(--bd);border-radius:13px;background:var(--card);color:var(--pr);font:inherit;font-size:13px;font-weight:700;text-align:right}.settings-dashboard-detail>.settings-dashboard-original{margin-bottom:12px}.settings-dashboard-detail>.settings-dashboard-original[hidden]{display:none!important}@media(max-width:360px){.settings-dashboard-grid{gap:8px}.settings-dashboard-tile{padding:11px 9px;gap:8px;min-height:105px}.settings-dashboard-icon{width:35px;height:35px}}
+
+/* Factoori settings dashboard refresh */
+.settings-dashboard-intro{min-height:150px;padding:24px 20px;border-radius:24px;position:relative;overflow:hidden;background:radial-gradient(circle at 12% 10%,#ffffff35 0 3%,transparent 25%),linear-gradient(125deg,#0f766e 0%,#2563eb 55%,#4338ca 100%);box-shadow:0 14px 32px #1d4ed833}
+.settings-dashboard-intro b{font-size:20px;letter-spacing:-.3px}.settings-dashboard-intro small{font-size:12px;line-height:1.9;max-width:230px}
+.settings-dashboard-mark{width:58px;height:58px;border-radius:19px;background:#ffffff24;border:1px solid #ffffff38;font-size:30px;box-shadow:0 8px 20px #071a3340}
+.settings-dashboard-hero-art{position:absolute;left:20px;bottom:-30px;font-size:120px;line-height:1;color:#ffffff15;transform:rotate(-15deg);pointer-events:none}
+.settings-dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.settings-dashboard-tile{min-width:0;min-height:142px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:9px;padding:15px;border:1px solid color-mix(in srgb,var(--pr) 12%,var(--bd));border-radius:20px;box-shadow:0 6px 20px #0f172a0d;transition:transform .18s,box-shadow .18s}
+.settings-dashboard-tile:active{transform:scale(.975);box-shadow:0 2px 8px #0f172a12}
+.settings-dashboard-icon{width:48px;height:48px;border-radius:16px;font-size:26px;background:linear-gradient(145deg,color-mix(in srgb,var(--pr) 17%,var(--card)),color-mix(in srgb,#6366f1 12%,var(--card)));border:1px solid color-mix(in srgb,var(--pr) 15%,var(--bd))}
+.settings-dashboard-copy{width:100%;gap:3px}.settings-dashboard-copy b{font-size:13px}.settings-dashboard-copy small{font-size:10px}
+.settings-dashboard-arrow{align-self:flex-end;width:25px;height:25px;display:grid;place-items:center;border-radius:9px;background:color-mix(in srgb,var(--pr) 10%,var(--card));font-size:20px}
+.settings-dashboard-detail{position:fixed;inset:0;z-index:24;overflow:auto;overscroll-behavior:contain;background:var(--bg);padding:calc(12px + env(safe-area-inset-top,0px)) 14px calc(105px + env(safe-area-inset-bottom,0px));max-width:720px;margin:0 auto}
+.settings-dashboard-detail-head{display:flex;align-items:center;gap:12px;padding:12px 2px 16px;margin-bottom:10px;border-bottom:1px solid var(--bd)}
+.settings-dashboard-detail-head>div{display:grid;gap:2px}.settings-dashboard-detail-head b{font-size:17px}.settings-dashboard-detail-head small{font-size:11px;color:var(--mu)}
+.settings-dashboard-back{width:44px;height:44px;flex:none;margin:0;padding:0;display:grid;place-items:center;border:1px solid var(--bd);border-radius:14px;background:var(--card);font-size:28px;box-shadow:var(--sh)}
+.settings-dashboard-detail>.settings-dashboard-original{margin:0 0 14px;box-shadow:var(--sh);border-radius:20px}
+.settings-dashboard-detail>.settings-dashboard-original[hidden]{display:none!important}
+@media(min-width:560px){.settings-dashboard-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.settings-dashboard-tile{min-height:150px}}
+@media(max-width:360px){.settings-dashboard-grid{gap:8px}.settings-dashboard-tile{min-height:132px;padding:12px}.settings-dashboard-copy b{font-size:12px}}
+
 </style>
 </head>
 <body>
@@ -302,7 +323,7 @@ const makeDemoDb=()=>({
  seq:1003,cu:'تومان',sn:'فروشگاه نمونه',sp:'09120000000',ad:'تهران، خیابان نمونه'
 });
 const denyDemo=()=>{if(!demoMode)return false;toast('این امکان در نسخه آزمایشی غیرفعال است؛ برای فعال‌سازی لایسنس اقدام کنید');return true};
-const buyHtml=()=>'';
+const buyHtml=()=>'<div class="r" style="display:grid;gap:9px;margin-top:14px"><button class="b w100" data-a="openweb">🌐 ورود به نسخه وب</button><button class="b s w100" data-a="buysite">🔑 خرید لایسنس از سایت</button></div>';
 function licenseUi(){ $('ov').innerHTML=`<div class="bar"><button class="b s" data-a="cls">بستن</button></div><div class="c" style="max-width:520px;margin:18px auto"><h2>فعال‌سازی لایسنس فاکتوری</h2><p class="page-note">اگر لایسنس را از وب‌سایت فاکتوری تهیه کرده‌اید، کد دریافتی را در این قسمت وارد کنید.</p><label for="licenseCode">کد لایسنس</label><input id="licenseCode" dir="ltr" autocomplete="off" placeholder="کد لایسنس را وارد کن"><button id="licenseCheckBtn" class="b w100" data-a="licensecheck">بررسی و فعال‌سازی</button><p id="licenseStatus" role="status" aria-live="polite" style="font-size:13px;margin-top:12px;padding:10px;border-radius:10px;background:var(--bg);color:var(--mu)">فعال‌سازی کد خریداری‌شده از وب‌سایت؛ خرید از طریق واتساپ در برنامه ارائه نمی‌شود.</p></div>`;$('ov').className='on'}
 function normalizeDemoCollections(){['cust','prod','inv','pay','debt','creditors','creditorPayments','expenses','services','serviceInv','categories','stockMoves','suppliers','purchases','supplierPayments','returns','wastage','warehouses','transfers','accounts','moneytransfers','otherincome','opening','fiscal','duedates'].forEach(k=>{if(!Array.isArray(db[k]))db[k]=[]});db.advancedSettings=db.advancedSettings&&typeof db.advancedSettings==='object'?db.advancedSettings:{};db.warehouseStocks=Array.isArray(db.warehouseStocks)?db.warehouseStocks:[];db.smsHistory=Array.isArray(db.smsHistory)?db.smsHistory:[];db.serviceSeq=Number(db.serviceSeq)||2000;db.seq=Number(db.seq)||1000;}
 function enterDemo(){try{cancelBusinessSync();syncGeneration++;dbRevision++;demoMode=true;db=makeDemoDb();normalizeDemoCollections();D={};IV=null;lock=false;go('home')}catch(error){console.error('[Factori demo entry]',error);demoMode=false;db=realDb;D={};IV=null;lock=true;toast('ورود آزمایشی ناموفق بود: '+(error?.message||error));render()}}
@@ -649,10 +670,11 @@ const ft=(i,a,b)=>`<div class="ft"><i>${i}</i><div><b>${a}</b><small>${b}</small
  return `<div class="au"><div class="logo">${LG}</div><h1>خوش آمدی</h1><p>${esc(db.sn||'برای ادامه رمز را وارد کن')}</p><input id="p1" type="password" placeholder="رمز"><button class="b" data-a="login">ورود</button>${db.bio?'<button class="b s" data-a="biolog">ورود با اثر انگشت</button>':''}</div>`}
 function render(){const a=$('app');if(lock){a.innerHTML=lockV2();return}
  const showWelcome=(()=>{try{return !localStorage.getItem(welcomeDismissalKey())}catch(e){return false}})();
- a.innerHTML=`<main>${demoMode?'<div class="demo-notice">نسخه آزمایشی — ثبت و تغییر اطلاعات و خروجی PDF/تصویر غیرفعال است</div>':''}${VIEWS[v.t]()}${demoMode?'<button class="b s w100" data-a="exitdemo">خروج از نسخه آزمایشی</button>':''}</main><nav>${TABS.map(([k,i,l])=>`<button data-a="tab" data-id="${k}" class="${(v.tab||v.t)==k?'on':''}"><span>${i}</span>${l}</button>`).join('')}</nav>${showWelcome&&!demoMode?`<div class="first-welcome" id="firstWelcome"><div class="first-welcome-card"><div class="first-welcome-head"><div class="first-welcome-logo">${LG}</div><div><h2>به فاکتوری خوش آمدی</h2><p>مدیریت فروش، مشتریان، دریافت‌ها و حسابداری کسب‌وکارت در یک برنامه.</p></div></div><div class="welcome-columns"><section><b>امکانات رایگان</b><ul><li>روزانه ۳ فاکتور</li><li>حداکثر ۵ مشتری و ۵ کالا</li><li>حداکثر ۲ ردیف در هر فاکتور</li><li>پیامک و گزارش مالی غیرفعال</li><li>۲ قالب و ۲ رنگ فاکتور</li><li>ارسال فقط PDF</li></ul></section><section><b>امکانات حرفه‌ای</b><ul><li>صدور فاکتور بدون محدودیت روزانه</li><li>ثبت نامحدود مشتری و کالا و ردیف فاکتور</li><li>تمام قالب‌ها و رنگ‌های فاکتور</li><li>ارسال پیامک و امکانات حرفه‌ای</li><li>گزارش مالی و روند فروش ۷ روزه</li></ul></section></div><div class="r"><button class="b s" data-a="dismisswelcome">شروع استفاده رایگان</button><button class="b" data-a="buyoptions">خرید نسخه کامل</button></div></div></div>`:''}`;
+ a.innerHTML=`<main>${demoMode?'<div class="demo-notice">نسخه آزمایشی — ثبت و تغییر اطلاعات و خروجی PDF/تصویر غیرفعال است</div>':''}${VIEWS[v.t]()}${demoMode?'<button class="b s w100" data-a="exitdemo">خروج از نسخه آزمایشی</button>':''}</main><nav>${TABS.map(([k,i,l])=>`<button data-a="${k==='set'?'openSettings':'tab'}" data-id="${k}" class="${(v.tab||v.t)==k?'on':''}"><span>${i}</span>${l}</button>`).join('')}</nav>${showWelcome&&!demoMode?`<div class="first-welcome" id="firstWelcome"><div class="first-welcome-card"><div class="first-welcome-head"><div class="first-welcome-logo">${LG}</div><div><h2>به فاکتوری خوش آمدی</h2><p>مدیریت فروش، مشتریان، دریافت‌ها و حسابداری کسب‌وکارت در یک برنامه.</p></div></div><div class="welcome-columns"><section><b>امکانات رایگان</b><ul><li>روزانه ۳ فاکتور</li><li>حداکثر ۵ مشتری و ۵ کالا</li><li>حداکثر ۲ ردیف در هر فاکتور</li><li>پیامک و گزارش مالی غیرفعال</li><li>۲ قالب و ۲ رنگ فاکتور</li><li>ارسال فقط PDF</li></ul></section><section><b>امکانات حرفه‌ای</b><ul><li>صدور فاکتور بدون محدودیت روزانه</li><li>ثبت نامحدود مشتری و کالا و ردیف فاکتور</li><li>تمام قالب‌ها و رنگ‌های فاکتور</li><li>ارسال پیامک و امکانات حرفه‌ای</li><li>گزارش مالی و روند فروش ۷ روزه</li></ul></section></div><div class="r"><button class="b s" data-a="dismisswelcome">شروع استفاده رایگان</button><button class="b" data-a="buyoptions">خرید نسخه کامل</button></div></div></div>`:''}`;
  if(v.t==='set')collapseSettingsMenus();if(v.t=='invf')upd()}
+let settingsActiveIndex=null;
 function collapseSettingsMenus(){
- const main=$('app').querySelector('main');if(!main||main.dataset.settingsDashboard==='1')return;
+ const main=$('app').querySelector('main');if(!main)return;
  const descriptors={
   'مشخصات فروشنده':['🏪','اطلاعات فروشگاه، تماس، واحد پول و نشان تجاری'],
   'حساب ابری':['☁️','حساب کاربری، کسب‌وکار و همگام‌سازی اطلاعات'],
@@ -670,19 +692,27 @@ function collapseSettingsMenus(){
  const icons=['🏪','☁️','🏦','⚙️','✉️','💬','🔑','⭐','🎨','🔒','🗂️','ℹ️'];
  const cards=Array.from(main.children).filter(el=>el.classList&&el.classList.contains('c')&&el.querySelector(':scope > h2'));
  if(!cards.length)return;
+ if(main.dataset.settingsDashboard==='1'){
+  const detail=main.querySelector('.settings-dashboard-detail'),dashboard=main.querySelector('.settings-dashboard');
+  if(detail&&dashboard){
+   if(settingsActiveIndex!==null&&cards[settingsActiveIndex]){cards.forEach((card,i)=>card.hidden=i!==settingsActiveIndex);dashboard.hidden=true;detail.hidden=false}
+   else{detail.hidden=true;dashboard.hidden=false;cards.forEach(card=>card.hidden=true)}
+   return;
+  }
+ }
  const heading=main.querySelector(':scope > h1');
  const dashboard=document.createElement('section');dashboard.className='settings-dashboard';
- dashboard.innerHTML='<div class="settings-dashboard-intro"><div class="settings-dashboard-mark">⚙️</div><div><b>مرکز مدیریت فاکتوری</b><small>تنظیمات برنامه را از دسته‌بندی‌های زیر مدیریت کن</small></div></div><div class="settings-dashboard-grid"></div>';
+ dashboard.innerHTML='<div class="settings-dashboard-intro"><div class="settings-dashboard-mark">⚙️</div><div><b>پنل تنظیمات فاکتوری</b><small>تمام تنظیمات برنامه را از این بخش مدیریت کن</small></div><span class="settings-dashboard-hero-art">✦</span></div><div class="settings-dashboard-grid"></div>';
  const grid=dashboard.querySelector('.settings-dashboard-grid');
  const detail=document.createElement('section');detail.className='settings-dashboard-detail';detail.hidden=true;
- const back=document.createElement('button');back.type='button';back.className='settings-dashboard-back';back.textContent='→ بازگشت به داشبورد تنظیمات';
- detail.appendChild(back);
+ const detailHead=document.createElement('div');detailHead.className='settings-dashboard-detail-head';
+ detailHead.innerHTML='<button type="button" class="settings-dashboard-back">‹</button><div><b>تنظیمات بخش</b><small>تغییرات را انجام بده و ذخیره کن</small></div>';
+ detail.appendChild(detailHead);
  cards.forEach((card,index)=>{
   const h=card.querySelector(':scope > h2'),title=h.textContent.trim(),meta=descriptors[title]||[icons[index%icons.length],'مشاهده و مدیریت گزینه‌های این بخش'];
   const tile=document.createElement('button');tile.type='button';tile.className='settings-dashboard-tile';tile.dataset.settingsOpen=String(index);
   tile.innerHTML='<span class="settings-dashboard-icon">'+meta[0]+'</span><span class="settings-dashboard-copy"><b>'+esc(title)+'</b><small>'+esc(meta[1])+'</small></span><span class="settings-dashboard-arrow">‹</span>';
-  grid.appendChild(tile);
-  card.classList.add('settings-dashboard-original');card.hidden=true;detail.appendChild(card);
+  grid.appendChild(tile);card.classList.add('settings-dashboard-original');card.hidden=true;detail.appendChild(card);
  });
  if(heading)heading.insertAdjacentElement('afterend',dashboard);else main.insertBefore(dashboard,main.firstChild);
  dashboard.insertAdjacentElement('afterend',detail);
@@ -691,16 +721,18 @@ function collapseSettingsMenus(){
   main.addEventListener('click',e=>{
    const tile=e.target.closest('[data-settings-open]');
    if(tile&&dashboard.contains(tile)){
-    const index=Number(tile.dataset.settingsOpen);
-    detail.querySelectorAll('.settings-dashboard-original').forEach((card,i)=>card.hidden=i!==index);
-    dashboard.hidden=true;detail.hidden=false;detail.scrollIntoView({behavior:'smooth',block:'start'});return;
+    settingsActiveIndex=Number(tile.dataset.settingsOpen);
+    detail.querySelectorAll('.settings-dashboard-original').forEach((card,i)=>card.hidden=i!==settingsActiveIndex);
+    const title=cards[settingsActiveIndex]?.querySelector(':scope > h2')?.textContent?.trim()||'تنظیمات';
+    detailHead.querySelector('b').textContent=title;dashboard.hidden=true;detail.hidden=false;detail.scrollTop=0;detail.scrollIntoView({behavior:'auto',block:'start'});return;
    }
    if(e.target.closest('.settings-dashboard-back')){
-    detail.hidden=true;dashboard.hidden=false;main.scrollIntoView({behavior:'smooth',block:'start'});
+    settingsActiveIndex=null;detail.hidden=true;dashboard.hidden=false;cards.forEach(card=>card.hidden=true);main.scrollIntoView({behavior:'smooth',block:'start'});
    }
   });
  }
  main.dataset.settingsDashboard='1';
+ if(settingsActiveIndex!==null&&cards[settingsActiveIndex]){cards.forEach((card,i)=>card.hidden=i!==settingsActiveIndex);dashboard.hidden=true;detail.hidden=false}
 }
 function upd(){const t=$('tt');if(t)t.innerHTML=`<div><span>جمع</span><span>${money(subt(D))}</span></div><div><span>تخفیف</span><span>${money(disc(D))}</span></div><div><span>مالیات</span><span>${money(taxv(D))}</span></div><div class="gt"><span>قابل پرداخت</span><span>${money(tot(D))}</span></div>`}
 
@@ -821,7 +853,7 @@ smshelp:()=>{$('ov').innerHTML=`<div class="picker-shell"><div class="picker-top
 savesms:async()=>{try{await readSmsForm();toast('تنظیمات پیامک با رمزنگاری Android Keystore ذخیره شد');render()}catch(e){toast(e.message||'ذخیره ناموفق بود')}},
 clearsms:async()=>{if(!confirm('اطلاعات اتصال پیامک پاک شود؟'))return;try{await window.FactoriLicenseApi.clearSmsSettings();smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:'',brandName:'',autoInvoice:false,autoPayment:false};render();toast('اطلاعات پیامک پاک شد')}catch(e){toast('پاک‌کردن اطلاعات ناموفق بود')}},
 checkpatterns:async()=>{try{const cfg=await readSmsForm();toast('در حال بررسی پترن صدور فاکتور…');const a=await window.FactoriLicenseApi.getFarazPatternDetails({settings:cfg,patternCode:cfg.invoicePattern});const aNames=(a.attributes||[]).map(x=>x.name);const b=await window.FactoriLicenseApi.getFarazPatternDetails({settings:cfg,patternCode:cfg.paymentPattern});const bNames=(b.attributes||[]).map(x=>x.name);const issues=[];if(cfg.brandName&&!aNames.includes('brand'))issues.push('پترن فاکتور متغیر brand ندارد');if(cfg.brandName&&!bNames.includes('brand'))issues.push('پترن دریافت وجه متغیر brand ندارد');toast(issues.length?issues.join('؛ '):'پترن‌ها بررسی شدند. متغیرهای فاکتور: '+aNames.join('، ')+' | دریافت وجه: '+bNames.join('، '))}catch(e){toast('بررسی پترن ناموفق: '+(e.message||e))}},sendtest:async()=>{try{const cfg=await readSmsForm();if(!/^(09\d{9}|\+989\d{9})$/.test(cfg.testPhone))throw new Error('شماره موبایل آزمایشی را با 09 وارد کن');await sendCustomerPattern('invoice',{n:'آزمایش فاکتوری',ph:cfg.testPhone},{no:'1000',total:1000,paid:500,remain:500});toast('پیامک آزمایشی به فراز ارسال شد')}catch(e){toast('آزمایش ناموفق: '+(e.message||e))}},
-demo:()=>enterDemo(),exitdemo:()=>exitDemo(),licenseui:()=>licenseUi(),
+openSettings:()=>{settingsActiveIndex=null;go('set',{tab:'set'})},openweb:()=>{window.open('https://factoori.ir/web-factoori/','_blank','noopener')},demo:()=>enterDemo(),exitdemo:()=>exitDemo(),licenseui:()=>licenseUi(),
 licensecheck:async()=>{
  const code=$('licenseCode')?.value?.trim();
  const status=$('licenseStatus'),button=$('licenseCheckBtn');
@@ -967,6 +999,7 @@ document.addEventListener('click',e=>{
 },true);
 window.addEventListener('popstate',()=>{backStep();try{history.pushState({factori:true},'','#'+(v?.t||'home'))}catch(e){}});
 try{history.replaceState({factori:true},'','#home');history.pushState({factori:true},'','#home')}catch(e){}
+document.addEventListener('click',e=>{const b=e.target?.closest?.('#app nav [data-id="set"]');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation?.();try{A.openSettings()}catch(error){console.error('[Factoori settings navigation]',error);toast('باز کردن تنظیمات ناموفق بود')}},true);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
  if(a==='demo')return;
  if(demoMode&&DEMO_BLOCKED.has(a)){denyDemo();return}
