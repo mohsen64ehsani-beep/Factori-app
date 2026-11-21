@@ -105,7 +105,7 @@
     state.legacyDocuments=(results[7]||[]).map(row=>{const p=row.payload||{};const items=Array.isArray(p.items)?p.items:[];const subtotal=items.reduce((sum,x)=>sum+Number(x.q||0)*Number(x.p||0),0);const discount=Number(p.ds||0);const tax=(subtotal-discount)*Number(p.tx||0)/100;return {id:row.legacy_id,document_type:'goods_sale',document_number:p.no,document_date:p.dt,total_amount:Math.max(0,subtotal-discount+tax),items,status:p.status||'legacy',legacy_source:true,created_at:row.updated_at};}).filter(d=>!normalizedIds.has(d.id));
     const optional=await Promise.allSettled([
       rest('financial_transactions','select=id,transaction_type,direction,amount,transaction_date,reference_number,description,status,account_id,contact_id,financial_accounts(name),contacts(name)&'+f+'&order=transaction_date.desc&limit=100'),
-      rest('cheques','select=id,cheque_direction,cheque_number,sayad_id,bank_name,amount,issue_date,due_date,status,contact_id,contacts(name),note&'+f+'&order=due_date.asc&limit=100'),
+      rest('cheques','select=id,cheque_direction,cheque_number,sayad_id,bank_name,amount,issue_date,due_date,status,contact_id,related_document_id,contacts(name),note&'+f+'&order=due_date.asc&limit=100'),
       rest('cheque_events','select=id,cheque_id,event_type,event_date,from_status,to_status,amount,note&'+f+'&order=event_date.desc&limit=200'),
       rest('document_items','select=id,document_id,item_type,product_id,description_snapshot,quantity,unit_name_snapshot,unit_price,discount_amount,tax_rate_snapshot,tax_amount,line_total&'+f+'&order=sort_order.asc&limit=1000'),
       rest('sales_return_documents','select=id,original_document_id,return_date,total_amount,status,reason&'+f+'&order=return_date.desc&limit=100'),
