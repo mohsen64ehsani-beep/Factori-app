@@ -146,3 +146,42 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
  .fw-nav-extra button{min-height:44px;display:flex!important;align-items:center;justify-content:flex-start;gap:9px;padding:10px 9px;font-size:11px;white-space:normal}
  .fw-nav-more{position:relative;z-index:1003}
 }
+
+
+/* Factoori premium workspace refresh — isolated visual layer */
+#factoori-web-root{--fw-ink:#172b3a;--fw-muted:#718096;--fw-line:#e7edf2;--fw-brand:#087f78;--fw-surface:#fff;color:var(--fw-ink)}
+#factoori-web-root .fw-layout{background:#f3f6f9}
+#factoori-web-root .fw-main{padding:28px clamp(16px,3vw,38px)}
+#factoori-web-root .fw-topbar{padding:15px 18px;background:rgba(255,255,255,.88);border:1px solid #e8eef2;border-radius:20px;box-shadow:0 8px 26px rgba(20,48,65,.045);backdrop-filter:blur(12px)}
+#factoori-web-root .fw-card{background:#fff;border:1px solid #e8edf2;border-radius:20px;padding:21px;box-shadow:0 8px 26px rgba(20,48,65,.045);transition:box-shadow .18s ease,border-color .18s ease}
+#factoori-web-root .fw-card:hover{border-color:#dce8e8;box-shadow:0 12px 30px rgba(20,48,65,.07)}
+#factoori-web-root .fw-hero{border-radius:22px;box-shadow:0 14px 32px rgba(8,127,120,.13)}
+#factoori-web-root .fw-section-head{margin-bottom:17px;gap:14px}
+#factoori-web-root .fw-section-head h2{font-size:16px;font-weight:850;letter-spacing:-.2px}
+#factoori-web-root .fw-section-head p,.fw-sub{line-height:1.9}
+#factoori-web-root .fw-field{gap:8px}
+#factoori-web-root .fw-field label{font-weight:750;color:#465a68}
+#factoori-web-root .fw-field input:not([type=checkbox]),#factoori-web-root .fw-field select,#factoori-web-root .fw-field textarea{border:1px solid #dfe7ed;border-radius:13px;background:#fbfcfd;padding:11px 13px;min-height:47px;transition:border-color .15s,box-shadow .15s,background .15s}
+#factoori-web-root .fw-field textarea{min-height:88px;resize:vertical}
+#factoori-web-root .fw-field input:focus,#factoori-web-root .fw-field select:focus,#factoori-web-root .fw-field textarea:focus{outline:0;border-color:#0d9a8e;background:#fff;box-shadow:0 0 0 4px rgba(13,154,142,.10)}
+#factoori-web-root .fw-btn{border-radius:13px;min-height:44px;padding:10px 17px;font-weight:800;box-shadow:0 5px 13px rgba(8,127,120,.12)}
+#factoori-web-root .fw-btn.secondary{background:#f3f7f8;border:1px solid #e4ebef;color:#38515d;box-shadow:none}
+#factoori-web-root .fw-table-wrap{border:1px solid #e9eef2;border-radius:15px;overflow:auto}
+#factoori-web-root .fw-table{border-collapse:separate;border-spacing:0;min-width:560px}
+#factoori-web-root .fw-table th{background:#f5f8fa;color:#637684;font-weight:800;border-bottom:1px solid #e6edf1}
+#factoori-web-root .fw-table td{border-bottom:1px solid #eff3f5}
+#factoori-web-root .fw-table tbody tr:last-child td{border-bottom:0}
+#factoori-web-root .fw-table tbody tr:hover{background:#f7fbfa}
+#factoori-web-root .fw-stat{border-radius:18px}
+#factoori-web-root .fw-sidebar{box-shadow:8px 0 28px rgba(14,39,51,.08)}
+#factoori-web-root .fw-nav button{transition:background .16s,color .16s,transform .16s}
+#factoori-web-root .fw-nav button:hover{transform:translateX(-2px)}
+#factoori-web-root .fw-invoice-row{border-color:#e1e9ed;background:#f8fafb;border-radius:14px}
+#factoori-web-root .fw-small{min-height:34px;padding:6px 11px;font-size:11px;box-shadow:none}
+#factoori-web-root .fw-loss{color:#d14343!important;font-weight:850}
+@media(max-width:760px){
+ #factoori-web-root .fw-main{padding:12px 10px calc(96px + env(safe-area-inset-bottom))}
+ #factoori-web-root .fw-card{padding:14px;border-radius:16px}
+ #factoori-web-root .fw-topbar{border-radius:15px;padding:12px}
+ #factoori-web-root .fw-table{min-width:540px}
+}
