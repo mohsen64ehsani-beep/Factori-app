@@ -96,7 +96,8 @@ begin
  end if;
  if p_business_id is null
    or not private.has_business_permission(p_business_id,'sales.create')
-   or not private.has_business_permission(p_business_id,'sales.post') then
+   or not private.has_business_permission(p_business_id,'sales.post')
+   or not private.has_business_permission(p_business_id,'sales.read') then
   raise exception using errcode='42501',message='Sales document creation or posting is not permitted';
  end if;
  if p_document_type not in ('goods_sale','service_sale') then
@@ -115,8 +116,11 @@ begin
   raise exception using errcode='42501',message='Customer payment creation is not permitted';
  end if;
  if v_mode in ('cheque','mixed')
-   and not private.has_business_permission(p_business_id,'cheques.update_status') then
-  raise exception using errcode='42501',message='Cheque creation is not permitted';
+   and (
+    not private.has_business_permission(p_business_id,'cheques.update_status')
+    or not private.has_business_permission(p_business_id,'cheques.read')
+   ) then
+  raise exception using errcode='42501',message='Cheque creation or reading is not permitted';
  end if;
  v_cash:=coalesce(nullif(p_payment->>'cash_amount','')::numeric,0);
  v_cheque:=coalesce(nullif(p_payment->>'cheque_amount','')::numeric,0);
@@ -146,8 +150,7 @@ begin
 
  select d.total_amount into v_total
  from public.documents d
- where d.business_id=p_business_id and d.id=v_document_id and d.status='posted'
- for update;
+ where d.business_id=p_business_id and d.id=v_document_id and d.status='posted';
  if not found then
   raise exception using errcode='55000',message='Posted sales document was not found';
  end if;
