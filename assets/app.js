@@ -438,7 +438,7 @@
   });
   root.addEventListener('submit',e=>{
     const form=e.target.closest('form[data-form]');if(!form)return;e.preventDefault();
-    const data=Object.fromEntries(new FormData(form).entries());form.querySelectorAll('[data-jalali-date]').forEach(input=>{data[input.name]=input.value.trim()?jalaliToGregorian(input.value):'';});const kind=form.dataset.form;
+    const data=Object.fromEntries(new FormData(form).entries());let dateError='';form.querySelectorAll('[data-jalali-date]').forEach(input=>{const value=input.value.trim();if(input.required&&!value){dateError='لطفاً تاریخ «'+(input.closest('.fw-field')?.querySelector('label')?.textContent||'')+'» را انتخاب کنید.';return;}try{data[input.name]=value?jalaliToGregorian(value):'';}catch(error){dateError=error.message||'تاریخ انتخاب‌شده معتبر نیست.';}});if(dateError){toast(dateError);return;}const kind=form.dataset.form;
     withBusy(async()=>{
       if(kind==='auth'){
         await auth(state.signup?'signup':'signin',data.email,data.password,data.name||'');
