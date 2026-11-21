@@ -487,6 +487,10 @@ declare
  v_existing_fingerprint text;
  v_fingerprint text;
  v_transaction_id uuid;
+ v_doc_total numeric;
+ v_doc_outstanding numeric;
+ v_allocated_amount numeric;
+ v_receipt_document_id uuid;
  v_allowed boolean:=false;
  v_event_type text;
 begin
@@ -544,10 +548,35 @@ begin
    raise exception using errcode='42501',message='Cheque settlement is not permitted';
   end if;
   if v_cheque.cheque_direction='received' then
+   v_receipt_document_id:=null;
+   v_allocated_amount:=0;
+   if v_cheque.related_document_id is not null then
+    -- Lock the invoice before calculating its live outstanding balance.
+    -- This serializes cheque clearance with any concurrent customer receipt.
+    select d.total_amount into v_doc_total
+    from public.documents d
+    where d.business_id=p_business_id and d.id=v_cheque.related_document_id
+      and d.contact_id=v_cheque.contact_id
+      and d.status='posted'
+      and d.document_type in ('goods_sale','service_sale')
+    for update;
+    if not found then
+     raise exception using errcode='55000',message='Linked sales invoice is no longer available for cheque settlement';
+    end if;
+    select greatest(v_doc_total-coalesce(sum(ta.amount),0),0)
+      into v_doc_outstanding
+    from public.transaction_allocations ta
+    where ta.business_id=p_business_id
+      and ta.document_id=v_cheque.related_document_id
+      and ta.reversed_by_transaction_id is null;
+    v_allocated_amount:=least(v_cheque.amount,v_doc_outstanding);
+    if v_allocated_amount>0 then
+     v_receipt_document_id:=v_cheque.related_document_id;
+    end if;
+   end if;
    v_transaction_id:=public.post_customer_receipt(
     p_business_id,v_cheque.contact_id,p_financial_account_id,v_cheque.amount,
-    p_event_date,v_cheque.related_document_id,
-    case when v_cheque.related_document_id is null then 0 else v_cheque.amount end,
+    p_event_date,v_receipt_document_id,v_allocated_amount,
     v_cheque.cheque_number,
     coalesce(nullif(btrim(coalesce(p_note,'')),''),'وصول چک دریافتی'),
     'cheque-received-clear:'||p_cheque_id::text
