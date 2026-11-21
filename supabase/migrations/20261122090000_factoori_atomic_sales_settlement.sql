@@ -22,6 +22,41 @@ create index if not exists cheques_business_related_document_idx
   on public.cheques(business_id, related_document_id)
   where related_document_id is not null;
 
+-- Permit only a one-time invoice link from an unlinked, pending received cheque.
+revoke update on table public.cheques from authenticated;
+grant update (related_document_id) on table public.cheques to authenticated;
+
+do $migration$
+begin
+ if not exists (
+  select 1 from pg_policies
+  where schemaname='public' and tablename='cheques'
+    and policyname='cheques_link_pending_received_invoice'
+ ) then
+  create policy cheques_link_pending_received_invoice
+   on public.cheques for update to authenticated
+   using (
+    private.has_business_permission(business_id,'cheques.update_status')
+    and cheque_direction='received' and status='pending'
+    and related_document_id is null
+   )
+   with check (
+    private.has_business_permission(business_id,'cheques.update_status')
+    and cheque_direction='received' and status='pending'
+    and related_document_id is not null
+    and exists (
+     select 1 from public.documents d
+     where d.business_id=cheques.business_id
+       and d.id=cheques.related_document_id
+       and d.status='posted'
+       and d.document_type in ('goods_sale','service_sale')
+       and d.contact_id=cheques.contact_id
+    )
+   );
+ end if;
+end;
+$migration$;
+
 create or replace function public.create_and_settle_sales_document(
  p_business_id uuid,
  p_document_type text,
@@ -39,7 +74,7 @@ create or replace function public.create_and_settle_sales_document(
 )
 returns uuid
 language plpgsql
-security definer
+security invoker
 set search_path=''
 as $function$
 declare
@@ -54,6 +89,7 @@ declare
  v_cheque_due_date date;
  v_cheque_issue_date date;
  v_cheque_number text;
+ v_existing_document_id uuid;
 begin
  if auth.uid() is null then
   raise exception using errcode='28000',message='Authentication required';
@@ -149,11 +185,16 @@ begin
   );
 
   update public.cheques
-  set related_document_id=v_document_id,updated_at=now(),version=version+1
+  set related_document_id=v_document_id
   where business_id=p_business_id and id=v_cheque_id
-    and (related_document_id is null or related_document_id=v_document_id);
+    and related_document_id is null;
   if not found then
-   raise exception using errcode='23514',message='Cheque is already linked to another document';
+   select related_document_id into v_existing_document_id
+   from public.cheques
+   where business_id=p_business_id and id=v_cheque_id;
+   if not found or v_existing_document_id is distinct from v_document_id then
+    raise exception using errcode='23514',message='Cheque is already linked to another document';
+   end if;
   end if;
  end if;
 
