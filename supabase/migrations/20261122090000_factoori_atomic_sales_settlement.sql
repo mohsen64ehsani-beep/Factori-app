@@ -32,8 +32,8 @@ declare
  v_document_id uuid;
  v_total numeric(20,0);
  v_mode text;
- v_cash numeric(20,0);
- v_cheque numeric(20,0);
+ v_cash numeric;
+ v_cheque numeric;
  v_cash_account_id uuid;
  v_cheque_id uuid;
  v_payment_date date;
@@ -115,7 +115,7 @@ begin
    nullif(p_payment->>'payee_name',''),v_cheque,v_cheque_issue_date,
    v_cheque_due_date,
    coalesce(nullif(p_payment->>'cheque_note',''),'چک بابت فاکتور فروش'),
-   left(p_idempotency_key,130)||':cheque'
+   left(p_idempotency_key,110)||':cheque'
   );
 
   update public.cheques
