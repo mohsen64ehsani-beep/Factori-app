@@ -26,7 +26,23 @@
   };
   const dateFa = v => { try { return v ? new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'UTC'}).format(new Date(v+'T12:00:00Z')) : '—'; } catch (_) { return v || '—'; } };
   const today = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-  function enhanceDateInputs(){ root.querySelectorAll('input[type="date"]').forEach(input=>{const iso=input.value;input.type='text';input.dataset.jalaliDate='1';input.inputMode='numeric';input.placeholder='۱۴۰۵۰۸۲۸';input.autocomplete='off';input.value=gregorianToJalali(iso);input.setAttribute('aria-label',(input.closest('.fw-field')?.querySelector('label')?.textContent||'تاریخ')+' به شمسی');}); }
+  let activeCalendar=null;
+  const jalaliMonthNames=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+  const faNum=n=>new Intl.NumberFormat('fa-IR').format(n);
+  function jalaliParts(value){const m=String(value||'').match(/^(\\d{4})[\\/.-](\\d{1,2})[\\/.-](\\d{1,2})$/);if(!m)return null;return {year:+m[1],month:+m[2],day:+m[3]};}
+  function monthLength(year,month){if(month<=6)return 31;if(month<=11)return 30;try{jalaliToGregorian(year+'/12/30');return 30;}catch(_){return 29;}}
+  function closeCalendar(){root.querySelectorAll('.fw-jalali-calendar').forEach(x=>x.remove());activeCalendar=null;}
+  function drawCalendar(input,year,month){
+    closeCalendar();const host=input.closest('.fw-field')||input.parentElement;const popup=document.createElement('div');popup.className='fw-jalali-calendar';popup.setAttribute('role','dialog');popup.setAttribute('aria-label','انتخاب تاریخ شمسی');
+    const first=jalaliToGregorian(year+'/'+String(month).padStart(2,'0')+'/01');const weekday=(new Date(first+'T12:00:00Z').getUTCDay()+1)%7;const count=monthLength(year,month);
+    const current=jalaliParts(input.value);const todayParts=jalaliParts(gregorianToJalali(today()));
+    let days='';for(let i=0;i<weekday;i++)days+='<span class="fw-cal-empty"></span>';
+    for(let day=1;day<=count;day++){const value=year+'/'+String(month).padStart(2,'0')+'/'+String(day).padStart(2,'0');const selected=current&&current.year===year&&current.month===month&&current.day===day;const isToday=todayParts&&todayParts.year===year&&todayParts.month===month&&todayParts.day===day;days+='<button type="button" class="fw-cal-day '+(selected?'is-selected ':'')+(isToday?'is-today':'')+'" data-cal-day="'+day+'" aria-pressed="'+(selected?'true':'false')+'">'+faNum(day)+'</button>';}
+    popup.innerHTML='<div class="fw-cal-head"><button type="button" data-cal-nav="-1" aria-label="ماه قبل">‹</button><strong>'+jalaliMonthNames[month-1]+' '+faNum(year)+'</strong><button type="button" data-cal-nav="1" aria-label="ماه بعد">›</button></div><div class="fw-cal-week">'+['ش','ی','د','س','چ','پ','ج'].map(x=>'<span>'+x+'</span>').join('')+'</div><div class="fw-cal-grid">'+days+'</div><div class="fw-cal-foot"><button type="button" data-cal-today>امروز</button><button type="button" data-cal-clear>پاک کردن</button></div>';
+    host.appendChild(popup);activeCalendar={input,year,month,popup};popup.querySelector('[data-cal-nav="-1"]').dataset.year=year;popup.querySelector('[data-cal-nav="-1"]').dataset.month=month;
+  }
+  function openCalendar(input){if(!input?.dataset.jalaliDate)return;let p=jalaliParts(input.value);if(!p)p=jalaliParts(gregorianToJalali(today()));drawCalendar(input,p.year,p.month);}
+  function enhanceDateInputs(){root.querySelectorAll('input[type="date"]').forEach(input=>{const iso=input.value;input.type='text';input.dataset.jalaliDate='1';input.inputMode='none';input.readOnly=true;input.placeholder='انتخاب تاریخ شمسی';input.autocomplete='off';input.value=gregorianToJalali(iso);input.setAttribute('aria-haspopup','dialog');input.setAttribute('aria-label',(input.closest('.fw-field')?.querySelector('label')?.textContent||'تاریخ')+'؛ انتخاب از تقویم شمسی');input.classList.add('fw-date-trigger');});}
   const idempotency = () => 'web-' + (crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(16).slice(2));
   const getStored = () => { try { return JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch (_) { return null; } };
   const saveSession = s => { state.session=s; if(s) sessionStorage.setItem(storageKey,JSON.stringify(s)); else sessionStorage.removeItem(storageKey); };
@@ -350,6 +366,13 @@
     finally{state.busy=false;root.classList.remove('fw-busy');}
   }
   root.addEventListener('click',e=>{
+    const dateInput=e.target.closest('input[data-jalali-date]');if(dateInput){openCalendar(dateInput);return;}
+    if(activeCalendar&&e.target.closest('.fw-jalali-calendar')){
+      const nav=e.target.closest('[data-cal-nav]');if(nav){let y=activeCalendar.year,m=activeCalendar.month+Number(nav.dataset.calNav);if(m<1){m=12;y--;}if(m>12){m=1;y++;}drawCalendar(activeCalendar.input,y,m);return;}
+      const day=e.target.closest('[data-cal-day]');if(day){activeCalendar.input.value=activeCalendar.year+'/'+String(activeCalendar.month).padStart(2,'0')+'/'+String(Number(day.dataset.calDay)).padStart(2,'0');activeCalendar.input.dispatchEvent(new Event('change',{bubbles:true}));closeCalendar();return;}
+      if(e.target.closest('[data-cal-today]')){activeCalendar.input.value=gregorianToJalali(today());activeCalendar.input.dispatchEvent(new Event('change',{bubbles:true}));closeCalendar();return;}
+      if(e.target.closest('[data-cal-clear]')){activeCalendar.input.value='';activeCalendar.input.dispatchEvent(new Event('change',{bubbles:true}));closeCalendar();return;}
+    }else if(activeCalendar){closeCalendar();}
     const section=e.target.closest('[data-section]');
     if(section){state.section=section.dataset.section;root.classList.remove('fw-mobile-menu-open');render();return;}
     const btn=e.target.closest('[data-action]');if(!btn)return;
@@ -495,3 +518,5 @@
   restore();
 })();
 /* Build 0.2.1: atomic invoice posting, mobile menu and team provisioning. */
+
+/* Persian date picker interactions */
