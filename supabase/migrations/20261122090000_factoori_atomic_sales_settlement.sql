@@ -25,7 +25,7 @@ create or replace function public.create_and_settle_sales_document(
 )
 returns uuid
 language plpgsql
-security invoker
+security definer
 set search_path=''
 as $function$
 declare
@@ -41,6 +41,14 @@ declare
  v_cheque_issue_date date;
  v_cheque_number text;
 begin
+ if auth.uid() is null then
+  raise exception using errcode='28000',message='Authentication required';
+ end if;
+ if p_business_id is null
+   or not private.has_business_permission(p_business_id,'sales.create')
+   or not private.has_business_permission(p_business_id,'sales.post') then
+  raise exception using errcode='42501',message='Sales document creation or posting is not permitted';
+ end if;
  if p_document_type not in ('goods_sale','service_sale') then
   raise exception using errcode='22023',message='Settlement is supported only for sales documents';
  end if;
@@ -51,6 +59,14 @@ begin
  v_mode:=coalesce(p_payment->>'mode','credit');
  if v_mode not in ('credit','cash','cheque','mixed') then
   raise exception using errcode='22023',message='Unsupported payment mode';
+ end if;
+ if v_mode in ('cash','cheque','mixed')
+   and not private.has_business_permission(p_business_id,'payments.create') then
+  raise exception using errcode='42501',message='Customer payment creation is not permitted';
+ end if;
+ if v_mode in ('cheque','mixed')
+   and not private.has_business_permission(p_business_id,'cheques.update_status') then
+  raise exception using errcode='42501',message='Cheque creation is not permitted';
  end if;
  v_cash:=coalesce(nullif(p_payment->>'cash_amount','')::numeric,0);
  v_cheque:=coalesce(nullif(p_payment->>'cheque_amount','')::numeric,0);
