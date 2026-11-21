@@ -238,7 +238,24 @@ language plpgsql
 security invoker
 set search_path=''
 as $function$
+declare
+ v_document_id uuid;
 begin
+ -- Serialize allocation reversal with receipts by locking each affected invoice first.
+ for v_document_id in
+  select distinct ta.document_id
+  from public.transaction_allocations ta
+  where ta.business_id=new.business_id
+    and ta.transaction_id=new.original_transaction_id
+    and ta.reversed_by_transaction_id is null
+    and ta.document_id is not null
+  order by ta.document_id
+ loop
+  perform 1 from public.documents d
+  where d.business_id=new.business_id and d.id=v_document_id
+  for update;
+ end loop;
+
  update public.transaction_allocations
  set reversed_by_transaction_id=new.reversal_transaction_id
  where business_id=new.business_id
