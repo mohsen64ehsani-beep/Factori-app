@@ -185,3 +185,23 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
  #factoori-web-root .fw-topbar{border-radius:15px;padding:12px}
  #factoori-web-root .fw-table{min-width:540px}
 }
+
+
+/* Jalali date picker */
+#factoori-web-root .fw-field{position:relative}
+#factoori-web-root .fw-date-trigger{cursor:pointer;padding-left:42px!important;background-color:#fbfcfd!important}
+#factoori-web-root .fw-date-trigger:after{content:'▦'}
+#factoori-web-root .fw-jalali-calendar{position:absolute;z-index:80;top:calc(100% + 7px);right:0;width:min(300px,calc(100vw - 36px));padding:13px;background:#fff;border:1px solid #e2eaf0;border-radius:17px;box-shadow:0 18px 48px rgba(19,42,57,.18);direction:rtl;color:#243746}
+#factoori-web-root .fw-cal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+#factoori-web-root .fw-cal-head strong{font-size:13px;font-weight:850}
+#factoori-web-root .fw-cal-head button,#factoori-web-root .fw-cal-foot button{border:0;background:#f2f7f7;color:#087f78;border-radius:9px;min-width:32px;height:32px;font-weight:800;cursor:pointer}
+#factoori-web-root .fw-cal-week,#factoori-web-root .fw-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+#factoori-web-root .fw-cal-week{margin-bottom:6px;color:#82919c;font-size:11px;font-weight:800}
+#factoori-web-root .fw-cal-week span{padding:5px 0}
+#factoori-web-root .fw-cal-day{height:33px;border:1px solid transparent;border-radius:9px;background:transparent;color:#304653;font-size:12px;cursor:pointer}
+#factoori-web-root .fw-cal-day:hover{background:#eaf6f4;color:#087f78}
+#factoori-web-root .fw-cal-day.is-today{border-color:#0b9589;color:#087f78;font-weight:900}
+#factoori-web-root .fw-cal-day.is-selected{background:#087f78;color:#fff;border-color:#087f78;font-weight:900}
+#factoori-web-root .fw-cal-empty{height:33px}
+#factoori-web-root .fw-cal-foot{display:flex;justify-content:space-between;border-top:1px solid #edf1f3;margin-top:10px;padding-top:9px}
+#factoori-web-root .fw-cal-foot button{padding:0 12px;width:auto}
