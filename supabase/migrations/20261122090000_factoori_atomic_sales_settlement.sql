@@ -204,6 +204,8 @@ begin
 end;
 $function$;
 
+revoke all on function private.mark_cheque_allocations_reversed() from public,anon,authenticated;
+
 drop trigger if exists mark_cheque_allocations_reversed
  on private.financial_transaction_reversals;
 create trigger mark_cheque_allocations_reversed
