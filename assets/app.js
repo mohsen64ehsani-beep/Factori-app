@@ -29,7 +29,7 @@
   let activeCalendar=null;
   const jalaliMonthNames=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
   const faNum=n=>new Intl.NumberFormat('fa-IR').format(n);
-  function jalaliParts(value){const m=String(value||'').match(/^(\\d{4})[\\/.-](\\d{1,2})[\\/.-](\\d{1,2})$/);if(!m)return null;return {year:+m[1],month:+m[2],day:+m[3]};}
+  function jalaliParts(value){const m=String(value||'').replace(/[۰-۹]/g,ch=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(ch)).replace(/[٠-٩]/g,ch=>'٠١٢٣٤٥٦٧٨٩'.indexOf(ch)).match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/);if(!m)return null;return {year:+m[1],month:+m[2],day:+m[3]};}
   function monthLength(year,month){if(month<=6)return 31;if(month<=11)return 30;try{jalaliToGregorian(year+'/12/30');return 30;}catch(_){return 29;}}
   function closeCalendar(){root.querySelectorAll('.fw-jalali-calendar').forEach(x=>x.remove());activeCalendar=null;}
   function drawCalendar(input,year,month){
