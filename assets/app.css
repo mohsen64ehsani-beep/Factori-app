@@ -393,3 +393,7 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
  #factoori-web-root .fw-returns-grid{grid-template-columns:1fr}
  #factoori-web-root .fw-invoice-items-head{align-items:flex-start}
 }
+
+#factoori-web-root .fw-cheque-inline-title{grid-column:1/-1;padding:12px 14px;border:1px solid #e7e5ff;border-radius:12px;background:#f8f7ff;color:var(--fw-primary);font-weight:800}
+#factoori-web-root .fw-cheque-edit{margin-bottom:16px;border:1px solid #dcd8ff}
+#factoori-web-root .fw-link.danger{color:#c04455}
