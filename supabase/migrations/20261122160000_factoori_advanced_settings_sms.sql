@@ -134,7 +134,7 @@ begin
      or pg_column_size(p_templates)>10000 then
     raise exception using errcode='22023', message='Invalid SMS settings';
   end if;
-  insert into private.business_sms_settings(
+  insert into private.business_sms_settings as current_sms(
     business_id,provider,username,sender_number,api_key,enabled,templates,updated_by,updated_at
   ) values (
     p_business_id,p_provider,nullif(btrim(p_username),''),nullif(btrim(p_sender_number),''),
@@ -148,7 +148,7 @@ begin
     api_key=case
       when coalesce(p_clear_api_key,false) then null
       when coalesce(p_api_key,'')<>'' then p_api_key
-      else private.business_sms_settings.api_key
+      else current_sms.api_key
     end,
     enabled=excluded.enabled,
     templates=excluded.templates,
