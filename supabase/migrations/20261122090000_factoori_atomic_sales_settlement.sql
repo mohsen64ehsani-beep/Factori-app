@@ -90,6 +90,9 @@ declare
  v_cheque_issue_date date;
  v_cheque_number text;
  v_existing_document_id uuid;
+ v_timezone text;
+ v_local_date date;
+ v_quota_operation_id uuid;
 begin
  if auth.uid() is null then
   raise exception using errcode='28000',message='Authentication required';
@@ -141,6 +144,26 @@ begin
  end if;
  if v_mode='mixed' and (v_cash<=0 or v_cheque<=0 or v_cash_account_id is null) then
   raise exception using errcode='22023',message='Mixed payment requires positive cash and cheque amounts';
+ end if;
+
+ if not private.business_has_premium_entitlement(p_business_id) then
+  if p_items is null or jsonb_typeof(p_items)<>'array' then
+   raise exception using errcode='22023',message='Invoice items are required';
+  end if;
+  perform private.assert_feature_limit(
+   p_business_id,'invoice.items.limit',jsonb_array_length(p_items)
+  );
+  select coalesce(bs.timezone,'Asia/Tehran') into v_timezone
+  from public.business_settings bs where bs.business_id=p_business_id;
+  v_local_date:=(now() at time zone coalesce(v_timezone,'Asia/Tehran'))::date;
+  v_quota_operation_id:=case
+   when nullif(btrim(coalesce(p_idempotency_key,'')),'') is not null
+    then md5(p_business_id::text||':'||p_idempotency_key)::uuid
+   else gen_random_uuid()
+  end;
+  perform private.consume_feature_quota(
+   p_business_id,'invoices.daily_limit',v_local_date,v_quota_operation_id
+  );
  end if;
 
  v_document_id:=public.create_and_post_document(
