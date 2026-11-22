@@ -25,10 +25,10 @@ jobs:
           mkdir -p dist/factoori-web-accounting/supabase/migrations
           cp supabase/migrations/*.sql dist/factoori-web-accounting/supabase/migrations/
           cd dist
-          zip -r factoori-web-accounting-0.3.3.zip factoori-web-accounting
-          unzip -t factoori-web-accounting-0.3.3.zip
+          zip -r factoori-web-accounting-0.3.4.zip factoori-web-accounting
+          unzip -t factoori-web-accounting-0.3.4.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: factoori-web-accounting-0.3.3-install
-          path: dist/factoori-web-accounting-0.3.3.zip
+          name: factoori-web-accounting-0.3.4-install
+          path: dist/factoori-web-accounting-0.3.4.zip
           if-no-files-found: error
