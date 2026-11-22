@@ -445,3 +445,8 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
  #factoori-web-root .fw-settings-group{padding:12px 0}
  #factoori-web-root .fw-settings-actions .fw-btn,#factoori-web-root .fw-sms-settings form>.fw-btn{width:100%}
 }
+
+#factoori-web-root.fw-compact .fw-card{padding:14px}
+#factoori-web-root.fw-compact .fw-grid,#factoori-web-root.fw-compact .fw-two{gap:10px}
+#factoori-web-root.fw-compact .fw-table th,#factoori-web-root.fw-compact .fw-table td{padding:8px 9px}
+#factoori-web-root.fw-compact .fw-section-head{margin-bottom:10px}
