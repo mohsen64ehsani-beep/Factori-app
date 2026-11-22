@@ -4,7 +4,7 @@ Tags: accounting, invoice, supabase, factoori
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPLv2 or later
 
 A full-screen, responsive Factoori accounting workspace that uses the same Supabase Auth account and business data as the Factoori Android app.
@@ -50,6 +50,10 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Invoice composer includes selectable visual styles and accent colors for print/PDF. The selected print appearance is saved locally in the browser.
 * Optional mobile-app download link configured in Settings > Factoori Web and displayed in the workspace navigation.
 * Optional prominent professional-upgrade link.
+
+== 0.3.1 ==
+* Fixed credit invoice registration to use the existing create_and_post_document RPC when the settlement wrapper migration is not yet installed.
+* Added a clear error for cash/cheque invoice settlement when the database settlement migration is missing, instead of a generic missing-RPC failure.
 
 == 0.3.0 ==
 * Fixed the invoice creation screen JavaScript error that prevented the invoice section from opening.
