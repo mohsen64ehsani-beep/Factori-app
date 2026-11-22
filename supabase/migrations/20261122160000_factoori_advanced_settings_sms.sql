@@ -61,10 +61,10 @@ begin
      or pg_column_size(p_settings)>20000 then
     raise exception using errcode='22023', message='Invalid advanced settings payload';
   end if;
-  insert into public.business_settings(business_id,settings_json,updated_at)
+  insert into public.business_settings as current_settings(business_id,settings_json,updated_at)
   values(p_business_id,jsonb_build_object('web_advanced',p_settings),now())
   on conflict(business_id) do update
-    set settings_json=coalesce(public.business_settings.settings_json,'{}'::jsonb)
+    set settings_json=coalesce(current_settings.settings_json,'{}'::jsonb)
                        || jsonb_build_object('web_advanced',p_settings),
         updated_at=now();
   return true;
