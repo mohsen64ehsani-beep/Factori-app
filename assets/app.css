@@ -415,3 +415,18 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
 .fw-table th,.fw-table td{font-size:13px;line-height:1.7;vertical-align:middle}
 .fw-table td{overflow-wrap:anywhere}
 @media(max-width:680px){.fw-cheque-details{grid-template-columns:1fr}.fw-modal{padding:15px}.fw-cheque-toolbar input{max-width:none;width:100%}.fw-table th,.fw-table td{font-size:12px;padding:8px 6px}}
+
+/* Compact desktop navigation with more readable workspace text */
+@media(min-width:761px){
+ #factoori-web-root .fw-layout{grid-template-columns:210px minmax(0,1fr)}
+ #factoori-web-root .fw-sidebar{padding-inline:12px}
+ #factoori-web-root .fw-nav button{padding:10px 9px;font-size:13px}
+ #factoori-web-root .fw-main{min-width:0}
+}
+#factoori-web-root .fw-table th{font-size:12px}
+#factoori-web-root .fw-table td{font-size:13px}
+#factoori-web-root .fw-section-head p{font-size:12px}
+@media(max-width:760px){
+ #factoori-web-root .fw-table th,#factoori-web-root .fw-table td{font-size:12px}
+ #factoori-web-root .fw-table th{white-space:normal}
+}
