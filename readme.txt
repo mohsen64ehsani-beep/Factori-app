@@ -55,7 +55,7 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Added a dedicated professional settings area for invoice behavior, inventory alerts, financial defaults, notifications and web workspace preferences. The section remains visible to free users with a clear premium lock; saving is enforced server-side by the license entitlement.
 * Added a dedicated SMS settings panel for Faraz SMS with sender line, API key storage in a private schema, message-pattern codes and legacy Android SMS history display. API credentials are never returned to the browser after saving.
 * Added the database migration under supabase/migrations. Apply it once in Supabase SQL Editor before saving professional or SMS settings; WordPress does not apply database migrations automatically.
-* The SMS settings and history screen is present, but live SMS sending / delivery-status polling is intentionally not enabled in this release because Faraz SMS announced retirement of its older web-service APIs and the current replacement API contract has not yet been verified. Do not use the old HTTP API endpoints.
+* The SMS settings and history screen is present. Live sending / delivery-status polling is intentionally not enabled until the replacement Faraz API contract is verified; the provider announced retirement of its older web-service APIs. Do not use the old HTTP API endpoints. Current setup supports storing provider details, sender line, API key securely, and pattern codes.
 
 == 0.3.2 ==
 * Unified normalized and legacy cheque records into one searchable, paginated register with at least 10 records per page, deduplication, readable contact names, and per-cheque detail/history modal.
