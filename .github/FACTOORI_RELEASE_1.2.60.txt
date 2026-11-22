@@ -1,0 +1,3 @@
+Factoori Android release 1.2.60
+Dashboard daily receipts include all payments recorded today.
+Uncollected cheques are shown separately and excluded from collected receipts.
