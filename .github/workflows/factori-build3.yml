@@ -48,18 +48,31 @@ jobs:
       - name: Sync web files
         run: npx cap sync android
 
-      - name: Use fixed signing key (so updates install over old versions)
+      - name: Use fixed signing key (same key for install-over-update)
         run: |
           mkdir -p ~/.android
           cp debug.keystore ~/.android/debug.keystore
 
-      - name: Build debug APK
+      - name: Set app version 59 and release signing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle')
+          s = p.read_text()
+          s = s.replace('versionCode 1', 'versionCode 59')
+          s = s.replace('versionName "1.0"', 'versionName "1.2.59"')
+          s = s.replace('release {', 'release {\n            signingConfig signingConfigs.debug')
+          p.write_text(s)
+          print('\n'.join(x for x in s.splitlines() if 'versionCode' in x or 'versionName' in x or 'signingConfig' in x))
+          PY
+
+      - name: Build signed release APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
 
       - uses: actions/upload-artifact@v4
         with:
-          name: factori-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: factoori-v59-release
+          path: android/app/build/outputs/apk/release/app-release.apk
