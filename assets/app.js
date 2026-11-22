@@ -501,6 +501,7 @@
     });
   });
   root.addEventListener('input',e=>{
+    if(e.target.matches('[data-cheque-search]')){state.chequeSearch=e.target.value;state.chequePage=1;const pos=e.target.selectionStart;cheques();const next=root.querySelector('[data-cheque-search]');if(next){next.focus();next.setSelectionRange(pos,pos);}return;}
     if(e.target.name==='cost_price'||e.target.name==='sale_price'){
       const form=e.target.closest('form[data-form="product"]');if(!form)return;
       const cost=Number(form.querySelector('[name="cost_price"]')?.value||0),sale=Number(form.querySelector('[name="sale_price"]')?.value||0);
