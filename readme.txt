@@ -4,7 +4,7 @@ Tags: accounting, invoice, supabase, factoori
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.3.1
+Stable tag: 0.3.2
 License: GPLv2 or later
 
 A full-screen, responsive Factoori accounting workspace that uses the same Supabase Auth account and business data as the Factoori Android app.
@@ -50,6 +50,14 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Invoice composer includes selectable visual styles and accent colors for print/PDF. The selected print appearance is saved locally in the browser.
 * Optional mobile-app download link configured in Settings > Factoori Web and displayed in the workspace navigation.
 * Optional prominent professional-upgrade link.
+
+== 0.3.2 ==
+* Unified normalized and legacy cheque records into one searchable, paginated register with at least 10 records per page, deduplication, readable contact names, and per-cheque detail/history modal.
+* Added Persian labels for cheque creation and status events; safe edit/delete is enabled only for pending cheques with no financial link and no event beyond initial creation.
+* Improved cheque register typography, responsive layout and desktop navigation width.
+* Updated dashboard totals and six-month cash-flow chart to use normalized posted transaction directions consistently; today's receipts/payments are shown on the metric cards and recent activity now includes receipts and payments.
+* Refresh shared business data when returning to the dashboard and load a larger recent transaction/cheque history.
+* Included the required atomic cash/cheque invoice settlement migration in the package under supabase/migrations. Apply this SQL once in Supabase SQL Editor before using cash/cheque invoice settlement; it is not auto-applied by WordPress.
 
 == 0.3.1 ==
 * Fixed credit invoice registration to use the existing create_and_post_document RPC when the settlement wrapper migration is not yet installed.
