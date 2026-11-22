@@ -4,7 +4,7 @@ Tags: accounting, invoice, supabase, factoori
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.2.9
+Stable tag: 0.3.0
 License: GPLv2 or later
 
 A full-screen, responsive Factoori accounting workspace that uses the same Supabase Auth account and business data as the Factoori Android app.
@@ -50,6 +50,12 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Invoice composer includes selectable visual styles and accent colors for print/PDF. The selected print appearance is saved locally in the browser.
 * Optional mobile-app download link configured in Settings > Factoori Web and displayed in the workspace navigation.
 * Optional prominent professional-upgrade link.
+
+== 0.3.0 ==
+* Fixed the invoice creation screen JavaScript error that prevented the invoice section from opening.
+* Added customer cheque receipt entry directly to the Receipts & Payments form, with an inline cheque-details panel and pending-cheque handling.
+* Made the Cheques section a management register with safe edit/delete controls for pending cheques that have no financial events or linked documents.
+* Kept cheque status transitions and the event audit history; legacy cheque records remain read-only.
 
 == 0.2.8 ==
 * Rebuilt the dashboard around the approved executive sample: purple and teal palette, metric cards, financial trend chart, shortcuts and recent activity.
