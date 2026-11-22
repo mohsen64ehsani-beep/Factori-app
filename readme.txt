@@ -4,7 +4,7 @@ Tags: accounting, invoice, supabase, factoori
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.2.8
+Stable tag: 0.2.9
 License: GPLv2 or later
 
 A full-screen, responsive Factoori accounting workspace that uses the same Supabase Auth account and business data as the Factoori Android app.
@@ -56,6 +56,12 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Rebuilt invoice creation as a hybrid three-pane workspace with product rows and a live totals summary.
 * Removed raw JSON/HTML payload dumps from legacy sync, finance and inventory details; only readable field summaries are displayed.
 * Updated the shared interface palette to purple #6258e8 and teal #18b89a, including navigation, controls, cards and date picker.
+
+== 0.2.9 ==
+* Simplified invoice entry to one focused sales-invoice form with customer, date, item, quantity, unit price, totals and payment fields.
+* Moved invoice history and sales/purchase returns into their own navigation sections.
+* Added business entitlement lookup and app-matched free-tier caps: 3 invoices/day, 2 lines/invoice, 5 customers, 5 products, 50 services and 1 warehouse.
+* Added server-side daily invoice quota and per-invoice line enforcement to the pending database migration; service and warehouse insert caps are also guarded there.
 
 == Security ==
 The plugin uses only the Supabase Publishable key in the browser. Never enter a service_role or secret key. Row Level Security and permission-checked database functions enforce business access. Invoice creation and posting are performed by database RPCs; the plugin does not write journal or stock records directly.
