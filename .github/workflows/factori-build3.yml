@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, factoori-currency-unit-settings]
   workflow_dispatch:
 
 jobs:
