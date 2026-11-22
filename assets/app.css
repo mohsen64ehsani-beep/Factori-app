@@ -430,3 +430,18 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
  #factoori-web-root .fw-table th,#factoori-web-root .fw-table td{font-size:12px}
  #factoori-web-root .fw-table th{white-space:normal}
 }
+
+/* Professional settings and SMS management */
+#factoori-web-root .fw-locked-note{padding:12px 14px;border:1px dashed #d7c8f5;background:#f7f3ff;color:#66519a;border-radius:12px;font-size:13px;line-height:1.9}
+#factoori-web-root .fw-advanced-settings fieldset,#factoori-web-root .fw-sms-settings fieldset{border:0;padding:0;margin:0;min-width:0}
+#factoori-web-root .fw-advanced-settings fieldset:disabled{opacity:.62}
+#factoori-web-root .fw-settings-group{padding:16px 0;border-top:1px solid var(--fw-border,#e9eaf0);margin-top:12px}
+#factoori-web-root .fw-settings-group h3{font-size:14px;font-weight:800;margin:0 0 12px;color:var(--fw-text,#242536)}
+#factoori-web-root .fw-settings-actions{display:flex;justify-content:flex-start;margin-top:14px}
+#factoori-web-root .fw-sms-settings .fw-sub{line-height:1.9}
+#factoori-web-root .fw-sms-settings input[type=password]{direction:ltr;text-align:left}
+#factoori-web-root .fw-advanced-settings .fw-section-head,#factoori-web-root .fw-sms-settings .fw-section-head{align-items:center}
+@media(max-width:760px){
+ #factoori-web-root .fw-settings-group{padding:12px 0}
+ #factoori-web-root .fw-settings-actions .fw-btn,#factoori-web-root .fw-sms-settings form>.fw-btn{width:100%}
+}
