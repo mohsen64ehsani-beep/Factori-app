@@ -441,7 +441,7 @@
       if(e.target.closest('[data-cal-clear]')){activeCalendar.input.value='';activeCalendar.input.dispatchEvent(new Event('change',{bubbles:true}));closeCalendar();return;}
     }else if(activeCalendar){closeCalendar();}
     const section=e.target.closest('[data-section]');
-    if(section){state.section=section.dataset.section;root.classList.remove('fw-mobile-menu-open');render();return;}
+    if(section){state.section=section.dataset.section;root.classList.remove('fw-mobile-menu-open');if(state.section==='dashboard')withBusy(async()=>{await loadData();render();});else render();return;}
     const btn=e.target.closest('[data-action]');if(!btn)return;
     const action=btn.dataset.action;
     if(action==='mobile-download-missing'){toast('لینک دانلود اپ هنوز در تنظیمات وردپرس ثبت نشده است.');return;}
