@@ -397,3 +397,21 @@ body.factoori-web-fullscreen .factoori-web-frame{min-height:100vh}
 #factoori-web-root .fw-cheque-inline-title{grid-column:1/-1;padding:12px 14px;border:1px solid #e7e5ff;border-radius:12px;background:#f8f7ff;color:var(--fw-primary);font-weight:800}
 #factoori-web-root .fw-cheque-edit{margin-bottom:16px;border:1px solid #dcd8ff}
 #factoori-web-root .fw-link.danger{color:#c04455}
+
+/* Unified cheque register */
+.fw-cheque-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;flex-wrap:wrap}
+.fw-cheque-toolbar input{flex:1;min-width:220px;max-width:440px;padding:11px 13px;border:1px solid var(--fw-border,#dce3e8);border-radius:10px;font:inherit}
+.fw-pagination{display:flex;align-items:center;justify-content:center;gap:14px;padding:16px 4px;color:var(--fw-muted,#64748b);font-size:13px}
+.fw-cheque-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}
+.fw-cheque-details>div{min-width:0;padding:11px 13px;border:1px solid var(--fw-border,#e2e8f0);border-radius:10px;background:var(--fw-card,#fff)}
+.fw-cheque-details small,.fw-cheque-details b{display:block;overflow-wrap:anywhere}
+.fw-cheque-details small{color:var(--fw-muted,#64748b);margin-bottom:5px}
+.fw-cheque-event{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--fw-border,#e2e8f0)}
+.fw-cheque-event span{color:var(--fw-muted,#64748b);font-size:12px}
+.fw-cheque-event small{flex-basis:100%;color:var(--fw-muted,#64748b)}
+.fw-modal-backdrop{position:fixed;inset:0;z-index:99999;background:#0f172a99;display:flex;align-items:center;justify-content:center;padding:18px}
+.fw-modal{width:min(720px,100%);max-height:88vh;overflow:auto;background:var(--fw-card,#fff);color:var(--fw-text,#172b3a);border-radius:16px;padding:22px;box-shadow:0 20px 60px #0003}
+.fw-modal h3{margin:18px 0 8px}
+.fw-table th,.fw-table td{font-size:13px;line-height:1.7;vertical-align:middle}
+.fw-table td{overflow-wrap:anywhere}
+@media(max-width:680px){.fw-cheque-details{grid-template-columns:1fr}.fw-modal{padding:15px}.fw-cheque-toolbar input{max-width:none;width:100%}.fw-table th,.fw-table td{font-size:12px;padding:8px 6px}}
