@@ -217,8 +217,8 @@
     const bars=months.map(m=>'<div class="fw-bar-group"><div class="fw-bar-pair"><span class="fw-bar sales" style="height:'+Math.max(3,m.sales/max*150)+'px" title="فروش '+money(m.sales)+'"></span><span class="fw-bar purchases" style="height:'+Math.max(3,m.purchases/max*150)+'px" title="خرید '+money(m.purchases)+'"></span></div><small>'+m.label+'</small></div>').join('');
     const sales=[...state.documents,...state.legacyDocuments].filter(d=>['goods_sale','service_sale'].includes(d.document_type)&&(d.legacy_source||d.status==='posted')).reduce((n,d)=>n+Number(d.total_amount||0),0);
     const purchases=state.documents.filter(d=>['purchase','service_purchase'].includes(d.document_type)&&d.status==='posted').reduce((n,d)=>n+Number(d.total_amount||0),0);
-    const receipts=state.transactions.filter(t=>t.direction==='in'&&t.status==='posted').reduce((n,t)=>n+Number(t.amount||0),0);
-    const payments=state.transactions.filter(t=>t.direction==='out'&&t.status==='posted').reduce((n,t)=>n+Number(t.amount||0),0);
+    const receipts=state.transactions.filter(t=>transactionIsPosted(t)&&transactionDirection(t)==='in').reduce((n,t)=>n+Number(t.amount||0),0);
+    const payments=state.transactions.filter(t=>transactionIsPosted(t)&&transactionDirection(t)==='out').reduce((n,t)=>n+Number(t.amount||0),0);
     const rows=months.slice().reverse().map(m=>'<tr><td>'+m.label+'</td><td>'+money(m.sales)+'</td><td>'+money(m.purchases)+'</td><td>'+money(m.sales-m.purchases)+'</td></tr>');
     shell('<div class="fw-grid"><section class="fw-card fw-stat"><div><small>مجموع فروش اسناد بارگذاری‌شده</small><strong>'+money(sales)+'</strong><em>ریال</em></div></section><section class="fw-card fw-stat"><div><small>مجموع خرید</small><strong>'+money(purchases)+'</strong><em>ریال</em></div></section><section class="fw-card fw-stat"><div><small>دریافت‌های ثبت‌شده</small><strong>'+money(receipts)+'</strong><em>ریال</em></div></section><section class="fw-card fw-stat"><div><small>پرداخت‌های ثبت‌شده</small><strong>'+money(payments)+'</strong><em>ریال</em></div></section></div>'+
     '<section class="fw-card"><div class="fw-section-head"><div><h2>روند شش‌ماهه فروش و خرید</h2><p>بر اساس اسناد ثبت نهایی موجود در فضای حسابداری</p></div><div class="fw-legend"><span class="sales-dot"></span> فروش <span class="purchase-dot"></span> خرید</div></div><div class="fw-bars">'+bars+'</div></section>'+
@@ -350,7 +350,8 @@
   }
   function cheques(){
     const legacy=(state.legacyCollections.pay||[]).filter(r=>r.payload?.kind==='cheque').map(r=>{const p=r.payload||{},c=state.contacts.find(x=>x.legacy_id===p.cid)||state.contacts.find(x=>x.id===p.cid);return {id:'legacy:'+r.legacy_id,legacy:true,cheque_number:p.no||r.legacy_id,cheque_direction:'received',contact_name:c?.name||p.person||p.name||'—',amount:p.amt||p.amount||0,issue_date:p.idt||null,due_date:p.cdt||null,status:p.status||'pending',bank_name:p.bank||p.bank_name||'',account_holder:p.holder||'',drawer_name:p.drawer||'',payee_name:p.payee||'',note:p.note||p.desc||''};});
-    const all=[...state.cheques.map(q=>({...q,contact_name:q.contacts?.name||state.contacts.find(c=>c.id===q.contact_id)?.name||'—'})),...legacy];
+    const normalized=state.cheques.map(q=>({...q,contact_name:q.contacts?.name||state.contacts.find(c=>c.id===q.contact_id)?.name||'—'}));
+    const all=[...normalized,...legacy.filter(old=>!normalized.some(q=>String(q.cheque_number||'').trim()===String(old.cheque_number||'').trim()&&Number(q.amount)===Number(old.amount)))];
     const search=String(state.chequeSearch||'').trim().toLowerCase(),filtered=all.filter(q=>!search||String(q.cheque_number||'').toLowerCase().includes(search)||String(q.sayad_id||'').toLowerCase().includes(search));
     const size=10,pages=Math.max(1,Math.ceil(filtered.length/size));state.chequePage=Math.min(Math.max(1,state.chequePage||1),pages);
     const shown=filtered.slice((state.chequePage-1)*size,state.chequePage*size),faStatus={pending:'در انتظار',deposited:'واگذار شده',cleared:'وصول شده',bounced:'برگشتی',cancelled:'لغو شده',returned:'عودت شده',received:'وصول شده'};
