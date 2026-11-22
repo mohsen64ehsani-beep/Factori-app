@@ -23,10 +23,10 @@ jobs:
           cp -R assets dist/factoori-web-accounting/
           cp -R templates dist/factoori-web-accounting/
           cd dist
-          zip -r factoori-web-accounting-0.3.0.zip factoori-web-accounting
-          unzip -t factoori-web-accounting-0.3.0.zip
+          zip -r factoori-web-accounting-0.3.1.zip factoori-web-accounting
+          unzip -t factoori-web-accounting-0.3.1.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: factoori-web-accounting-0.3.0-install
-          path: dist/factoori-web-accounting-0.3.0.zip
+          name: factoori-web-accounting-0.3.1-install
+          path: dist/factoori-web-accounting-0.3.1.zip
           if-no-files-found: error
