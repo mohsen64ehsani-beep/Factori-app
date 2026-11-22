@@ -51,6 +51,12 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Optional mobile-app download link configured in Settings > Factoori Web and displayed in the workspace navigation.
 * Optional prominent professional-upgrade link.
 
+== 0.2.8 ==
+* Rebuilt the dashboard around the approved executive sample: purple and teal palette, metric cards, financial trend chart, shortcuts and recent activity.
+* Rebuilt invoice creation as a hybrid three-pane workspace with product rows and a live totals summary.
+* Removed raw JSON/HTML payload dumps from legacy sync, finance and inventory details; only readable field summaries are displayed.
+* Updated the shared interface palette to purple #6258e8 and teal #18b89a, including navigation, controls, cards and date picker.
+
 == Security ==
 The plugin uses only the Supabase Publishable key in the browser. Never enter a service_role or secret key. Row Level Security and permission-checked database functions enforce business access. Invoice creation and posting are performed by database RPCs; the plugin does not write journal or stock records directly.
 
