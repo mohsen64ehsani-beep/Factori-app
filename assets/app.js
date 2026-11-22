@@ -75,7 +75,7 @@
     const saved=getStored();
     if(!saved?.access_token){render();return;}
     saveSession(saved);
-    try{state.user=await request('/auth/v1/user');await loadBusinesses();}
+    try{state.user=await request('/auth/v1/user');await loadBusinesses();const start=state.advancedSettings?.appearance?.start_section;if(['dashboard','invoices','finance'].includes(start))state.section=start;}
     catch(_){saveSession(null);state.user=null;}
     render();
   }
