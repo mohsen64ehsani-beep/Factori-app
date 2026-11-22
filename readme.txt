@@ -4,7 +4,7 @@ Tags: accounting, invoice, supabase, factoori
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.3.3
+Stable tag: 0.3.4
 License: GPLv2 or later
 
 A full-screen, responsive Factoori accounting workspace that uses the same Supabase Auth account and business data as the Factoori Android app.
@@ -18,6 +18,9 @@ A full-screen, responsive Factoori accounting workspace that uses the same Supab
 
 == Shared account ==
 Users sign in or register with Supabase Auth. They must use the same email and password as the Android application. Business membership and business records are read from the shared Factoori database.
+
+== Version 0.3.4 ==
+* Adds a shared business-level Rial / Toman display-unit selector to web settings; the selection is stored separately from the underlying currency code and amount values are not rescaled.
 
 == Current web features ==
 * Shared email/password sign-in and sign-up.
@@ -51,7 +54,7 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Optional mobile-app download link configured in Settings > Factoori Web and displayed in the workspace navigation.
 * Optional prominent professional-upgrade link.
 
-== 0.3.3 ==
+== 0.3.4 ==
 * Added a dedicated professional settings area for invoice behavior, inventory alerts, financial defaults, notifications and web workspace preferences. The section remains visible to free users with a clear premium lock; saving is enforced server-side by the license entitlement.
 * Added a dedicated SMS settings panel for Faraz SMS with sender line, API key storage in a private schema, message-pattern codes and legacy Android SMS history display. API credentials are never returned to the browser after saving.
 * Added the database migration under supabase/migrations. Apply it once in Supabase SQL Editor before saving professional or SMS settings; WordPress does not apply database migrations automatically.
