@@ -659,3 +659,33 @@ begin
 end;
 $function$
 ;
+
+
+-- Enforce the same free-tier service and warehouse caps for web-created records.
+create or replace function private.enforce_web_master_feature_limits()
+returns trigger
+language plpgsql
+security invoker
+set search_path=''
+as $function$
+begin
+ if tg_table_name='services' then
+  perform private.assert_feature_limit(new.business_id,'services.total_limit',1);
+ elsif tg_table_name='warehouses' then
+  perform private.assert_feature_limit(new.business_id,'warehouses.total_limit',1);
+ end if;
+ return new;
+end;
+$function$;
+
+revoke all on function private.enforce_web_master_feature_limits() from public,anon,authenticated;
+
+drop trigger if exists services_free_feature_limit on public.services;
+create trigger services_free_feature_limit
+before insert on public.services
+for each row execute function private.enforce_web_master_feature_limits();
+
+drop trigger if exists warehouses_free_feature_limit on public.warehouses;
+create trigger warehouses_free_feature_limit
+before insert on public.warehouses
+for each row execute function private.enforce_web_master_feature_limits();
