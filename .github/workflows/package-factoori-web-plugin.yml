@@ -21,12 +21,12 @@ jobs:
           cp factoori-web-accounting.php dist/factoori-web-accounting/
           cp readme.txt dist/factoori-web-accounting/
           cp -R assets dist/factoori-web-accounting/
-          cp -R templates dist/factoori-web-accounting/
+          cp -R templates dist/factoori-web-accounting/\n          mkdir -p dist/factoori-web-accounting/supabase/migrations\n          cp supabase/migrations/20261122090000_factoori_atomic_sales_settlement.sql dist/factoori-web-accounting/supabase/migrations/
           cd dist
-          zip -r factoori-web-accounting-0.3.1.zip factoori-web-accounting
+          zip -r factoori-web-accounting-0.3.2.zip factoori-web-accounting
           unzip -t factoori-web-accounting-0.3.1.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: factoori-web-accounting-0.3.1-install
+          name: factoori-web-accounting-0.3.2-install
           path: dist/factoori-web-accounting-0.3.1.zip
           if-no-files-found: error
