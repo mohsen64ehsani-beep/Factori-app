@@ -4,7 +4,7 @@ Tags: accounting, invoice, supabase, factoori
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.3.2
+Stable tag: 0.3.3
 License: GPLv2 or later
 
 A full-screen, responsive Factoori accounting workspace that uses the same Supabase Auth account and business data as the Factoori Android app.
@@ -50,6 +50,12 @@ Users sign in or register with Supabase Auth. They must use the same email and p
 * Invoice composer includes selectable visual styles and accent colors for print/PDF. The selected print appearance is saved locally in the browser.
 * Optional mobile-app download link configured in Settings > Factoori Web and displayed in the workspace navigation.
 * Optional prominent professional-upgrade link.
+
+== 0.3.3 ==
+* Added a dedicated professional settings area for invoice behavior, inventory alerts, financial defaults, notifications and web workspace preferences. The section remains visible to free users with a clear premium lock; saving is enforced server-side by the license entitlement.
+* Added a dedicated SMS settings panel for Faraz SMS with sender line, API key storage in a private schema, message-pattern codes and legacy Android SMS history display. API credentials are never returned to the browser after saving.
+* Added the database migration under supabase/migrations. Apply it once in Supabase SQL Editor before saving professional or SMS settings; WordPress does not apply database migrations automatically.
+* The SMS settings and history screen is present, but live SMS sending / delivery-status polling is intentionally not enabled in this release because Faraz SMS announced retirement of its older web-service APIs and the current replacement API contract has not yet been verified. Do not use the old HTTP API endpoints.
 
 == 0.3.2 ==
 * Unified normalized and legacy cheque records into one searchable, paginated register with at least 10 records per page, deduplication, readable contact names, and per-cheque detail/history modal.
