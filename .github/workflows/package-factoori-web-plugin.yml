@@ -23,7 +23,7 @@ jobs:
           cp -R assets dist/factoori-web-accounting/
           cp -R templates dist/factoori-web-accounting/
           mkdir -p dist/factoori-web-accounting/supabase/migrations
-          cp supabase/migrations/20261122090000_factoori_atomic_sales_settlement.sql dist/factoori-web-accounting/supabase/migrations/
+          cp supabase/migrations/*.sql dist/factoori-web-accounting/supabase/migrations/
           cd dist
           zip -r factoori-web-accounting-0.3.3.zip factoori-web-accounting
           unzip -t factoori-web-accounting-0.3.3.zip
