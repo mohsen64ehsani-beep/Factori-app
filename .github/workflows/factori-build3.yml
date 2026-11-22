@@ -8,7 +8,7 @@ concurrency:
 
 on:
   push:
-    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings, feature/factori-v1.2.15-sms-guide-customers-advanced-dialogs, fix/factori-1.2.16-advanced-settings-selectors, feature/factori-v1.2.17-home-promo-copy, release/myket-first-release, work/factoori-redesign-myket-iap, work/factoori-shared-db-integration, work/factoori-web-fixes-0.2.3, fix/settings-dashboard-1.2.55, release/factoori-v1.2.59-from-v58]
+    branches: [main, license-integration, feature/finance-dashboard-sms, feature/creditors-dashboard-redesign, feature/factori-v1.2.11-safe-updates, feature/factori-v1.2.12-date-picker-cleanup, feature/factori-v1.2.13-date-services, feature/factori-advanced-settings, feature/factori-v1.2.15-sms-guide-customers-advanced-dialogs, fix/factori-1.2.16-advanced-settings-selectors, feature/factori-v1.2.17-home-promo-copy, release/myket-first-release, work/factoori-redesign-myket-iap, work/factoori-shared-db-integration, work/factoori-web-fixes-0.2.3, fix/settings-dashboard-1.2.55, release/factoori-v1.2.59-from-v58, release/factoori-v1.2.60-from-v58]
   workflow_dispatch:
 
 jobs:
