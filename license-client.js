@@ -18,7 +18,7 @@ const b64u = s => {
   return Uint8Array.from(raw, c => c.charCodeAt(0));
 };
 
-async function verifyToken(token, thumbprint) {
+async function verifyToken(token, thumbprint, allowExpired = false) {
   if (!token || typeof token !== 'string') return false;
   const p = token.split('.');
   if (p.length !== 3) return false;
@@ -37,9 +37,10 @@ async function verifyToken(token, thumbprint) {
     claims.iss !== 'factori-license' ||
     claims.aud !== 'com.factori.app' ||
     claims.device !== thumbprint ||
-    claims.permanent !== true ||
+    typeof claims.permanent !== 'boolean' ||
     !claims.sub ||
-    !Number.isFinite(claims.iat)
+    !Number.isFinite(claims.iat) ||
+    (!claims.permanent && (!Number.isFinite(claims.exp) || (!allowExpired && claims.exp <= Math.floor(Date.now() / 1000))))
   ) return false;
 
   try {
@@ -104,7 +105,7 @@ async function checkRemoteStatus(activationId, thumbprint) {
     if (!res.ok) return null;
     const data = await res.json();
     if (data?.ok !== true) return null;
-    return data.active === true;
+    return { active: data.active === true, token: data.token || null, license_type: data.license_type || null, expires_at: data.expires_at || null };
   } catch {
     // Keep offline accounting available; a confirmed server revocation is still enforced.
     return null;
@@ -116,17 +117,23 @@ async function isLicensed() {
     await native();
     const device = await LicenseManager.getPublicKey();
     const stored = await LicenseManager.getToken();
-    if (!stored.token || !await verifyToken(stored.token, device.thumbprint)) return false;
+    if (!stored.token || !await verifyToken(stored.token, device.thumbprint, true)) return false;
 
     const claims = JSON.parse(new TextDecoder().decode(b64u(stored.token.split('.')[1])));
     const remoteStatus = await checkRemoteStatus(claims.sub, device.thumbprint);
-    return remoteStatus === null ? true : remoteStatus;
+    if (remoteStatus === null) return await verifyToken(stored.token, device.thumbprint);
+    if (!remoteStatus.active) return false;
+    if (remoteStatus.token && remoteStatus.token !== stored.token) {
+      await LicenseManager.saveToken({ token: remoteStatus.token });
+      return await verifyToken(remoteStatus.token, device.thumbprint);
+    }
+    return await verifyToken(stored.token, device.thumbprint);
   } catch {
     return false;
   }
 }
 
-async function activate(licenseKey, onProgress) {
+async function activate(licenseKey, onProgress, email = '') {
   let stage = 'آماده‌سازی افزونه اندروید';
   const progress = value => { stage = value; try { onProgress?.(value); } catch {} };
   progress(stage);
@@ -220,7 +227,8 @@ async function activate(licenseKey, onProgress) {
         licenseKey,
         nonce: n.nonce,
         signature: signed.signature,
-        deviceJwk: device.jwk
+        deviceJwk: device.jwk,
+        ...(String(email || '').trim() ? { email: String(email).trim().toLowerCase() } : {})
       }),
       'ارسال درخواست فعال‌سازی',
       18000
@@ -242,7 +250,7 @@ async function activate(licenseKey, onProgress) {
       stage
     );
 
-    return { ok: true };
+    return { ok: true, license_type: result.license_type || 'permanent', expires_at: result.expires_at || null };
 
   } catch (error) {
     console.error('[Factori License]', stage, error);
