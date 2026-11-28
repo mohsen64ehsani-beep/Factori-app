@@ -894,7 +894,16 @@ licensecheck:async()=>{
   toast('لایسنس با موفقیت فعال شد.');
   if(trialInfo)showTrialActivationNotice(trialInfo);
  }catch(error){
-  const message=error?.message||'فعال‌سازی ناموفق بود.';
+  const reason=error?.message||'';
+  const friendly={
+   assigned_email_required:'ایمیل مالک لایسنس را وارد کنید.',
+   email_mismatch:'این کد لایسنس برای ایمیل دیگری صادر شده است؛ با همان ایمیل ثبت‌شده وارد شوید.',
+   expired:'مهلت لایسنس آزمایشی به پایان رسیده است؛ برای ادامه، لایسنس دائمی تهیه کنید.',
+   revoked:'این لایسنس توسط مدیر غیرفعال شده است.',
+   unused:'لایسنس هنوز قابل فعال‌سازی نیست؛ وضعیت آن را در پنل بررسی کنید.',
+   active:'این لایسنس قبلاً فعال شده است.'
+  };
+  const message=friendly[reason]||reason||'فعال‌سازی ناموفق بود.';
   if(status){status.style.color='var(--dg)';status.textContent='خطا: '+message}
   console.error('[Factori activation UI]',error);
  }finally{
