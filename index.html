@@ -875,6 +875,7 @@ licensecheck:async()=>{
    if(!window.FactooriCloud?.claimLicense)throw new Error('نسخه سرویس حساب ابری از ثبت مالکیت لایسنس پشتیبانی نمی‌کند.');
    if(status)status.textContent='در حال ثبت مالکیت لایسنس برای حساب و کسب‌وکار شما...';
    result=await window.FactooriCloud.claimLicense(cloudActiveBusinessId,code);
+   if(result?.ok===false)throw new Error(result.error||'ثبت لایسنس ناموفق بود.');
    await refreshLicenseStatus(false);
    if(!licenseActive)throw new Error('کد ثبت شد، اما وضعیت حرفه‌ای هنوز از سرور تأیید نشده است. اتصال را بررسی کنید.');
   }else if(accountLicenseMode){
