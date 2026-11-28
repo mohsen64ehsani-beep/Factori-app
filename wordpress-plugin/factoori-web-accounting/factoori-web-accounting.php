@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Factoori Web Accounting
- * Description: Full-screen Factoori accounting workspace backed by the same Supabase account and business data as the Android app.
- * Version: 0.2.6
+ * Plugin Name: حسابداری آنلاین فاکتوری
+ * Description: فضای حسابداری آنلاین فاکتوری با اطلاعات مشترک با برنامه اندروید.
+ * Version: 0.2.7
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: Factoori
@@ -10,7 +10,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
-define('FACTOORI_WEB_VERSION', '0.2.6');
+define('FACTOORI_WEB_VERSION', '0.2.7');
 define('FACTOORI_WEB_FILE', __FILE__);
 define('FACTOORI_WEB_DIR', plugin_dir_path(__FILE__));
 
@@ -40,7 +40,7 @@ add_action('admin_init', function () {
     register_setting('factoori_web_group', 'factoori_web_settings', array('sanitize_callback' => 'factoori_web_sanitize_settings'));
 });
 add_action('admin_menu', function () {
-    add_options_page('Factoori Web Accounting', 'Factoori Web', 'manage_options', 'factoori-web-accounting', 'factoori_web_settings_page');
+    add_options_page('حسابداری آنلاین فاکتوری', 'حسابداری وب', 'manage_options', 'factoori-web-accounting', 'factoori_web_settings_page');
 });
 function factoori_web_settings_page() {
     if (!current_user_can('manage_options')) { return; }
@@ -49,13 +49,13 @@ function factoori_web_settings_page() {
     $page_url = $page_id ? get_permalink($page_id) : '';
     ?>
     <div class="wrap">
-      <h1>Factoori Web Accounting</h1>
+      <h1>حسابداری آنلاین فاکتوری</h1>
       <p>تنظیمات اتصال نسخه وب به همان حساب و پایگاه داده اپلیکیشن فاکتوری.</p>
       <form method="post" action="options.php">
         <?php settings_fields('factoori_web_group'); ?>
         <table class="form-table" role="presentation">
-          <tr><th><label for="factoori_supabase_url">Supabase URL</label></th><td><input id="factoori_supabase_url" class="regular-text" type="url" name="factoori_web_settings[supabase_url]" value="<?php echo esc_attr($s['supabase_url']); ?>" required></td></tr>
-          <tr><th><label for="factoori_publishable_key">Publishable key</label></th><td><input id="factoori_publishable_key" class="large-text" type="text" name="factoori_web_settings[publishable_key]" value="<?php echo esc_attr($s['publishable_key']); ?>" required><p class="description">فقط کلید عمومی Publishable را وارد کنید؛ هرگز service_role یا secret key را اینجا قرار ندهید.</p></td></tr>
+          <tr><th><label for="factoori_supabase_url">نشانی پایگاه داده</label></th><td><input id="factoori_supabase_url" class="regular-text" type="url" name="factoori_web_settings[supabase_url]" value="<?php echo esc_attr($s['supabase_url']); ?>" required></td></tr>
+          <tr><th><label for="factoori_publishable_key">کلید عمومی اتصال</label></th><td><input id="factoori_publishable_key" class="large-text" type="text" name="factoori_web_settings[publishable_key]" value="<?php echo esc_attr($s['publishable_key']); ?>" required><p class="description">فقط کلید عمومی اتصال را وارد کنید؛ هرگز کلید محرمانه مدیریتی را در این بخش قرار ندهید.</p></td></tr>
           <tr><th><label for="factoori_purchase_url">لینک خرید نسخه حرفه‌ای</label></th><td><input id="factoori_purchase_url" class="regular-text" type="url" name="factoori_web_settings[purchase_url]" value="<?php echo esc_attr($s['purchase_url']); ?>"></td></tr>
           <tr><th><label for="factoori_mobile_download_url">لینک دانلود اپ موبایل</label></th><td><input id="factoori_mobile_download_url" class="regular-text" type="url" name="factoori_web_settings[mobile_download_url]" value="<?php echo esc_attr($s['mobile_download_url']); ?>" placeholder="لینک مستقیم APK یا صفحه بازار/مایکت"><p class="description">پس از ثبت، دکمه دانلود اپ در منوی نسخه وب نمایش داده می‌شود.</p></td></tr>
         </table>
