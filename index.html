@@ -307,6 +307,7 @@ let reportPeriod='month';
 let homeOpen={invoices:false,activities:false};
 let smsHistory=[];
 let smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:'',brandName:'',autoInvoice:false,autoPayment:false};
+async function loadSmsSettingsForCurrentAccount(){const uid=String(cloudSession?.user?.id||'').trim();if(!uid){smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:'',brandName:'',autoInvoice:false,autoPayment:false};return smsSettings}try{smsSettings=await window.FactoriLicenseApi?.getSmsSettings?.(uid)||{apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:'',brandName:'',autoInvoice:false,autoPayment:false}}catch(e){console.warn('[Factoori account SMS settings]',e);smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:'',brandName:'',autoInvoice:false,autoPayment:false}}return smsSettings}
 let realDb=db,demoMode=false,licenseActive=false;
 const makeDemoDb=()=>({
  cust:[
@@ -523,6 +524,7 @@ async function initCloudSession(){
    markAccountLicenseMode();
    cloudSchemaReady=await api.getClientHealth();
    await loadCloudBusinesses();
+   await loadSmsSettingsForCurrentAccount();
   }
  }catch(e){cloudSession=null;cloudSchemaReady=false;console.warn('[Factoori cloud session]',e)}
  if(!cloudAuthSubscription)cloudAuthSubscription=api.onAuthStateChange(async(_event,session)=>{
@@ -543,11 +545,14 @@ async function initCloudSession(){
      markAccountLicenseMode();
     }
     await loadCloudBusinesses();
+    await loadSmsSettingsForCurrentAccount();
    }else if(previousSession){
     restoreLocalDataAfterCloudSession(true);
+    await loadSmsSettingsForCurrentAccount();
     await refreshLicenseStatus(false);
    }else{
     cloudSession=null;cloudSchemaReady=false;cloudBusinesses=[];cloudActiveBusinessId='';
+    await loadSmsSettingsForCurrentAccount();
    }
   }catch(e){console.warn('[Factoori business/session state]',e)}
   if(!lock&&!demoMode)render();
@@ -797,7 +802,7 @@ const nd=x=>({no:String(db.seq+1),dt:today(),cid:'',items:[{pid:'',q:'1',p:''}],
 async function readSmsForm(){
 const settings={apiKey:$('smsApiKey')?.value.trim()||'',fromNumber:$('smsFrom')?.value.trim()||'',invoicePattern:$('smsInvoicePattern')?.value.trim()||'',paymentPattern:$('smsPaymentPattern')?.value.trim()||'',testPhone:$('smsTestPhone')?.value.trim()||'',brandName:$('smsBrandName')?.value.trim()||'',autoInvoice:!!$('smsAutoInvoice')?.checked,autoPayment:!!$('smsAutoPayment')?.checked};
 if(!settings.apiKey||!settings.fromNumber||!settings.invoicePattern||!settings.paymentPattern)throw new Error('توکن، شماره خط و هر دو کد پترن را کامل کن');
-await window.FactoriLicenseApi.saveSmsSettings(settings);smsSettings=settings;return settings;
+await window.FactoriLicenseApi.saveSmsSettings(settings,cloudSession?.user?.id);smsSettings=settings;return settings;
 }
 const smsAmount=n=>Math.round(db.cu==='ریال'?num(n)/10:num(n));
 const smsJDate=dt=>{const a=String(dt||today()).split('-').map(Number),j=g2j(a[0],a[1],a[2]);return String(j[0])+'/'+String(j[1]).padStart(2,'0')+'/'+String(j[2]).padStart(2,'0')};
@@ -856,7 +861,7 @@ const rows=[['بخش','عنوان','مقدار'],['فروش کالا','مجمو�
 const csv='\uFEFF'+rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\n'),nm='factori-report-'+today()+'.csv',cp=window.Capacitor;try{if(cp&&cp.isNativePlatform&&cp.isNativePlatform()){const w=await cp.Plugins.Filesystem.writeFile({path:nm,data:btoa(unescape(encodeURIComponent(csv))),directory:'CACHE'});await cp.Plugins.Share.share({title:nm,url:w.uri});return}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=nm;a.click();toast('گزارش آماده شد')}catch(e){toast('خروجی گزارش ناموفق بود: '+(e.message||e))}},reportperiod:(id,b)=>{reportPeriod=b.value||id||'month';render()},
 smshelp:()=>{window.open('https://factoori.ir/faraz-sms-activation/','_blank','noopener')},
 savesms:async()=>{try{await readSmsForm();toast('تنظیمات پیامک با رمزنگاری Android Keystore ذخیره شد');render()}catch(e){toast(e.message||'ذخیره ناموفق بود')}},
-clearsms:async()=>{if(!confirm('اطلاعات اتصال پیامک پاک شود؟'))return;try{await window.FactoriLicenseApi.clearSmsSettings();smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:'',brandName:'',autoInvoice:false,autoPayment:false};render();toast('اطلاعات پیامک پاک شد')}catch(e){toast('پاک‌کردن اطلاعات ناموفق بود')}},
+clearsms:async()=>{if(!confirm('اطلاعات اتصال پیامک پاک شود؟'))return;try{await window.FactoriLicenseApi.clearSmsSettings(cloudSession?.user?.id);smsSettings={apiKey:'',fromNumber:'',invoicePattern:'',paymentPattern:'',testPhone:'',brandName:'',autoInvoice:false,autoPayment:false};render();toast('اطلاعات پیامک پاک شد')}catch(e){toast('پاک‌کردن اطلاعات ناموفق بود')}},
 checkpatterns:async()=>{try{const cfg=await readSmsForm();toast('در حال بررسی پترن صدور فاکتور…');const a=await window.FactoriLicenseApi.getFarazPatternDetails({settings:cfg,patternCode:cfg.invoicePattern});const aNames=(a.attributes||[]).map(x=>x.name);const b=await window.FactoriLicenseApi.getFarazPatternDetails({settings:cfg,patternCode:cfg.paymentPattern});const bNames=(b.attributes||[]).map(x=>x.name);const issues=[];if(cfg.brandName&&!aNames.includes('brand'))issues.push('پترن فاکتور متغیر brand ندارد');if(cfg.brandName&&!bNames.includes('brand'))issues.push('پترن دریافت وجه متغیر brand ندارد');toast(issues.length?issues.join('؛ '):'پترن‌ها بررسی شدند. متغیرهای فاکتور: '+aNames.join('، ')+' | دریافت وجه: '+bNames.join('، '))}catch(e){toast('بررسی پترن ناموفق: '+(e.message||e))}},sendtest:async()=>{try{const cfg=await readSmsForm();if(!/^(09\d{9}|\+989\d{9})$/.test(cfg.testPhone))throw new Error('شماره موبایل آزمایشی را با 09 وارد کن');await sendCustomerPattern('invoice',{n:'آزمایش فاکتوری',ph:cfg.testPhone},{no:'1000',total:1000,paid:500,remain:500});toast('پیامک آزمایشی به فراز ارسال شد')}catch(e){toast('آزمایش ناموفق: '+(e.message||e))}},
 openSettings:()=>{settingsActiveIndex=null;try{go('set',{tab:'set'})}catch(error){console.error('[Factoori open settings]',error);toast('خطای تنظیمات: '+(error?.message||String(error)));try{v={t:'set',tab:'set'};const app=$('app');app.innerHTML='<main>'+VIEWS.set()+'</main>';const main=app.querySelector('main');main.querySelectorAll('.settings-dashboard,.settings-dashboard-detail').forEach(el=>el.remove());main.querySelectorAll('.settings-dashboard-original').forEach(el=>{el.hidden=false;el.classList.remove('settings-dashboard-original')})}catch(fallbackError){console.error('[Factoori settings fallback]',fallbackError);toast('باز کردن تنظیمات ناموفق بود: '+(fallbackError?.message||String(fallbackError)))}}},openweb:()=>{window.open('https://factoori.ir/web-factoori/','_blank','noopener')},demo:()=>enterDemo(),exitdemo:()=>exitDemo(),licenseui:()=>licenseUi(),
 licensecheck:async()=>{
@@ -1093,7 +1098,7 @@ async function refreshLicenseStatus(shouldRender=true){
  if(changed&&shouldRender&&!lock&&!demoMode)render();
  return active;
 }
-(async()=>{try{if(!window.FactoriLicenseApi)await new Promise(resolve=>{window.addEventListener('factori-license-ready',resolve,{once:true});setTimeout(resolve,8000)});await refreshLicenseStatus(false);const api=window.FactoriLicenseApi;if(api?.getSmsSettings){try{smsSettings=await Promise.race([api.getSmsSettings(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000))])}catch(e){console.warn('SMS settings unavailable',e)}}}catch(e){console.warn('[Factori startup license check]',e);licenseActive=false;}render();})();
+(async()=>{try{if(!window.FactoriLicenseApi)await new Promise(resolve=>{window.addEventListener('factori-license-ready',resolve,{once:true});setTimeout(resolve,8000)});await refreshLicenseStatus(false);const api=window.FactoriLicenseApi;if(api?.getSmsSettings){try{await Promise.race([loadSmsSettingsForCurrentAccount(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000))])}catch(e){console.warn('SMS settings unavailable',e)}}}catch(e){console.warn('[Factori startup license check]',e);licenseActive=false;}render();})();
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshLicenseStatus(true)});
 window.addEventListener('focus',()=>refreshLicenseStatus(true));
 </script>
