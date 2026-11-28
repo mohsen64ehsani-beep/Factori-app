@@ -29,12 +29,6 @@ from private.business_state_records r
 join public.stock_movements sm
  on sm.business_id=r.business_id and sm.id::text=r.legacy_id
 where r.collection='stockMoves' and r.deleted_at is null
-on conflict (business_id,legacy_collection,legacy_id) do update
- set target_table='stock_movements',
-     normalized_id=excluded.normalized_id,
-     source_fingerprint=excluded.source_fingerprint,
-     import_status='mapped',
-     import_generation=excluded.import_generation,
-     updated_at=now();
+on conflict (business_id,legacy_collection,legacy_id) do nothing;
 
 commit;
