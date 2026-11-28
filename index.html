@@ -1052,7 +1052,7 @@ function updateTrialCountdown(){
 }
 function showTrialActivationNotice(info){
  const expiry=info?.expires_at?new Date(info.expires_at).toLocaleString('fa-IR'):'۲۴ ساعت پس از صدور';
- $('ov').innerHTML='<div class="c" style="max-width:520px;margin:12vh auto;text-align:center"><div style="font-size:38px">⏱️</div><h2>لایسنس آزمایشی فعال شد</h2><p>دسترسی آزمایشی نسخه حرفه‌ای فاکتوری برای شما فعال شد. این لایسنس صرفاً جهت تست است و پس از ۲۴ ساعت به‌صورت خودکار منقضی می‌شود.</p><div class="page-note">زمان پایان اعتبار: <b>'+expiry+'</b></div><p>پس از پایان مهلت، برای ادامه استفاده از امکانات حرفه‌ای باید لایسنس دائمی تهیه کنید.</p><button class="b w100" data-a="cls">متوجه شدم</button></div>';
+ $('ov').innerHTML='<div class="c" style="max-width:520px;margin:12vh auto;text-align:center"><div style="font-size:38px">⏱️</div><h2>لایسنس آزمایشی فعال شد</h2><p>دسترسی آزمایشی نسخه حرفه‌ای فاکتوری برای شما فعال شد. این لایسنس صرفاً جهت تست است؛ مهلت ۲۴ساعته از زمان صدور کد آغاز می‌شود و پس از آن به‌صورت خودکار منقضی خواهد شد.</p><div class="page-note">زمان پایان اعتبار: <b>'+expiry+'</b></div><p>پس از پایان مهلت، برای ادامه استفاده از امکانات حرفه‌ای باید لایسنس دائمی تهیه کنید.</p><button class="b w100" data-a="cls">متوجه شدم</button></div>';
  $('ov').className='on';
 }
 async function refreshLicenseStatus(shouldRender=true){
