@@ -2,7 +2,7 @@
 /**
  * Plugin Name: حسابداری آنلاین فاکتوری
  * Description: فضای حسابداری آنلاین فاکتوری با اطلاعات مشترک با برنامه اندروید.
- * Version: 0.2.7
+ * Version: 0.2.8
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: Factoori
@@ -10,7 +10,7 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
-define('FACTOORI_WEB_VERSION', '0.2.7');
+define('FACTOORI_WEB_VERSION', '0.2.8');
 define('FACTOORI_WEB_FILE', __FILE__);
 define('FACTOORI_WEB_DIR', plugin_dir_path(__FILE__));
 
