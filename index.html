@@ -217,6 +217,7 @@ sum=a=>a.reduce((x,y)=>x+num(y),0);
 const K='db:v2';
 let cloudSession=null,cloudBusinesses=[],cloudActiveBusinessId='',cloudSchemaReady=false;
 let currentLicenseEntitlement=null;
+let licenseExpiryTimer=null;
 let accountLicenseMode=false;
 try{accountLicenseMode=localStorage.getItem('factoori:account-license-mode')==='1'}catch(e){}
 function markAccountLicenseMode(){accountLicenseMode=true;try{localStorage.setItem('factoori:account-license-mode','1')}catch(e){}}
@@ -1054,6 +1055,11 @@ async function refreshLicenseStatus(shouldRender=true){
    active=!!await Promise.race([api.isLicensed(),new Promise(resolve=>setTimeout(()=>resolve(false),12000))]);
    currentLicenseEntitlement=active&&api.getLicenseInfo?await api.getLicenseInfo():null;
   }catch(e){console.warn('[Factori legacy device license status]',e);currentLicenseEntitlement=null}
+ }
+ if(licenseExpiryTimer){clearTimeout(licenseExpiryTimer);licenseExpiryTimer=null;}
+ if(active&&currentLicenseEntitlement?.expires_at){
+  const delay=Math.max(0,Date.parse(currentLicenseEntitlement.expires_at)-Date.now());
+  licenseExpiryTimer=setTimeout(async()=>{const stillActive=await refreshLicenseStatus(true);if(!stillActive)toast('مهلت لایسنس آزمایشی به پایان رسید؛ برای ادامه استفاده، لایسنس دائمی تهیه کنید.')},Math.min(delay+1200,2147483000));
  }
  const changed=licenseActive!==active;licenseActive=active;
  if(changed&&shouldRender&&!lock&&!demoMode)render();
