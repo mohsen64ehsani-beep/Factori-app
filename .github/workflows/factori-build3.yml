@@ -1,5 +1,6 @@
 name: Build Android APK
 # Trigger dedicated 1.2.61 build
+# Trial licensing update: account email binding, expiry enforcement, in-app notice and upgrade support
 # Factori 1.2.61: Capacitor 8 migration, Node 22 / Java 21, Android API 24+
 
 concurrency:
