@@ -286,23 +286,54 @@ async function getLicenseAuthToken() {
   return stored.token;
 }
 
-async function getSmsSettings() {
+const EMPTY_SMS_SETTINGS = () => ({ apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '', brandName: '', autoInvoice: false, autoPayment: false });
+
+async function getSmsSettings(accountId = '') {
   await native();
+  const scope = String(accountId || '').trim();
+  if (!scope) return EMPTY_SMS_SETTINGS();
   const stored = await LicenseManager.getSmsSettings();
-  if (!stored?.value) return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '', brandName: '' };
-  try { return JSON.parse(stored.value); } catch { return { apiKey: '', fromNumber: '', invoicePattern: '', paymentPattern: '', testPhone: '', brandName: '' }; }
+  if (!stored?.value) return EMPTY_SMS_SETTINGS();
+  let parsed;
+  try { parsed = JSON.parse(stored.value); } catch { await LicenseManager.clearSmsSettings(); return EMPTY_SMS_SETTINGS(); }
+  // Old releases stored one device-wide object. Its owner cannot be established safely,
+  // so discard it rather than disclose one account's Faraz credentials to another.
+  if (!parsed || parsed.schema !== 'factoori-sms-by-account-v1' || !parsed.accounts || typeof parsed.accounts !== 'object') {
+    await LicenseManager.clearSmsSettings();
+    return EMPTY_SMS_SETTINGS();
+  }
+  return { ...EMPTY_SMS_SETTINGS(), ...(parsed.accounts[scope] || {}) };
 }
 
-async function saveSmsSettings(settings) {
+async function saveSmsSettings(settings, accountId = '') {
   await native();
-  await LicenseManager.saveSmsSettings({ value: JSON.stringify(settings) });
+  const scope = String(accountId || '').trim();
+  if (!scope) throw new Error('برای ذخیره تنظیمات پیامک ابتدا وارد حساب کاربری شوید.');
+  const stored = await LicenseManager.getSmsSettings();
+  let container = { schema: 'factoori-sms-by-account-v1', accounts: {} };
+  try {
+    const parsed = stored?.value ? JSON.parse(stored.value) : null;
+    if (parsed?.schema === 'factoori-sms-by-account-v1' && parsed.accounts && typeof parsed.accounts === 'object') container = parsed;
+  } catch {}
+  container.accounts[scope] = { ...EMPTY_SMS_SETTINGS(), ...(settings || {}) };
+  await LicenseManager.saveSmsSettings({ value: JSON.stringify(container) });
 }
 
-async function clearSmsSettings() {
+async function clearSmsSettings(accountId = '') {
   await native();
-  await LicenseManager.clearSmsSettings();
+  const scope = String(accountId || '').trim();
+  if (!scope) throw new Error('برای پاک‌کردن تنظیمات، ابتدا وارد حساب کاربری شوید.');
+  const stored = await LicenseManager.getSmsSettings();
+  let container = null;
+  try { container = stored?.value ? JSON.parse(stored.value) : null; } catch {}
+  if (!container || container.schema !== 'factoori-sms-by-account-v1' || !container.accounts) {
+    await LicenseManager.clearSmsSettings();
+    return;
+  }
+  delete container.accounts[scope];
+  if (!Object.keys(container.accounts).length) await LicenseManager.clearSmsSettings();
+  else await LicenseManager.saveSmsSettings({ value: JSON.stringify(container) });
 }
-
 async function getFarazPatternDetails({ settings, patternCode }) {
   const licenseToken = await getLicenseAuthToken();
   const res = await fetch(SUPABASE_URL + '/functions/v1/send-faraz-sms', {
