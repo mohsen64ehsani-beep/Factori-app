@@ -23,10 +23,10 @@ jobs:
           cd wordpress-plugin
           zip -r ../dist/factoori-web-accounting-0.2.7.zip factoori-web-accounting
       - name: Verify ZIP
-        run: unzip -t dist/factoori-web-accounting-0.2.6.zip
+        run: unzip -t dist/factoori-web-accounting-0.2.7.zip
       - uses: actions/upload-artifact@v4
         with:
           name: factoori-web-accounting-0.2.7
-          path: dist/factoori-web-accounting-0.2.6.zip
+          path: dist/factoori-web-accounting-0.2.7.zip
           if-no-files-found: error
           retention-days: 30
