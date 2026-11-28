@@ -1,63 +1,47 @@
-=== Factoori Web Accounting ===
+=== حسابداری آنلاین فاکتوری ===
 Contributors: factoori
-Tags: accounting, invoice, supabase, factoori
+Tags: حسابداری, فاکتور, فروش, انبار, دریافت, پرداخت
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.2.4
+Stable tag: 0.2.7
 License: GPLv2 or later
 
-A full-screen, responsive Factoori accounting workspace that uses the same Supabase Auth account and business data as the Factoori Android app.
+فضای حسابداری آنلاین فاکتوری با اطلاعات مشترک با برنامه اندروید؛ ورود با همان حساب کاربری و مدیریت یکپارچه اسناد، اشخاص، کالاها و امور مالی.
 
-== Installation ==
-1. Upload and activate the plugin ZIP in WordPress.
-2. Open Settings > Factoori Web and verify the Supabase URL and Publishable key.
-3. The plugin automatically creates a product introduction page at `/web-factoori` and a dedicated accounting page at `/factoori-accounting`.
-4. Open Settings > Factoori Web and use the direct link to the automatically created accounting page.
-5. Set the professional-version purchase URL in Settings > Factoori Web if needed.
+== نصب و راه‌اندازی ==
+1. پرونده فشرده افزونه را از بخش افزونه‌های وردپرس بارگذاری و فعال کنید.
+2. از بخش تنظیمات، صفحه «حسابداری وب» را باز کنید و نشانی پایگاه داده و کلید عمومی اتصال را بررسی کنید.
+3. افزونه صفحه معرفی فاکتوری و صفحه اختصاصی حسابداری آنلاین را به‌صورت خودکار ایجاد می‌کند.
+4. برای ورود به فضای حسابداری، صفحه اختصاصی حسابداری آنلاین را باز کنید.
+5. در صورت نیاز، پیوند خرید نسخه حرفه‌ای و پیوند دریافت برنامه اندروید را در تنظیمات ثبت کنید.
 
-== Product introduction page ==
-The `/web-factoori` page explains Factoori, compares free and premium access, describes registration and license activation, and links to the web accounting workspace. The page is created automatically when the updated plugin runs.
+== امکانات ==
+* ورود و ثبت‌نام با همان ایمیل و گذرواژه برنامه اندروید.
+* ساخت و جابه‌جایی میان کسب‌وکارهای متعلق به حساب.
+* پیشخوان مدیریتی شامل فروش، خرید، دریافت، پرداخت، چک‌های در انتظار و وضعیت موجودی.
+* ثبت و مدیریت مشتریان و تأمین‌کنندگان، مشاهده گردش حساب و مانده بدهی و طلب.
+* ثبت و مدیریت کالاها، خدمات، دسته‌بندی‌ها، قیمت‌ها و انبارها.
+* نمایش فاکتورهای واردشده از برنامه با وضعیت واقعی «ثبت نهایی» و جلوگیری از نمایش دوباره سوابق متناظر.
+* مشاهده جزئیات فاکتور و اقلام آن، چاپ و دریافت نسخه قابل چاپ.
+* ویرایش و بایگانی امن فاکتورهای واردشده از برنامه، فقط در صورتی که هنوز اثر حسابداری یا انبارداری ثبت‌شده نداشته باشند.
+* جلوگیری از ویرایش یا حذف فاکتورهایی که دارای سند حسابداری، گردش انبار یا پرداخت مرتبط هستند؛ این موارد به اصلاح حسابداری معکوس نیاز دارند.
+* ثبت دریافت از مشتری، پرداخت به تأمین‌کننده، هزینه، درآمد متفرقه و انتقال وجه میان حساب‌ها.
+* دفتر چک‌ها، پیگیری سررسید، واگذاری، وصول، برگشت و لغو.
+* مدیریت موجودی، انتقال انبار، موجودی اول دوره و ضایعات.
+* همگام‌سازی دوسویه اطلاعات پشتیبانی‌شده میان برنامه اندروید و نسخه وب.
+* جلوگیری از نمایش دوباره سوابق قدیمی که به رکورد اصلی وب متصل شده‌اند.
+* نمایش تقویم و ورود تاریخ به‌شکل شمسی.
+* تنظیم واحد پول، منطقه زمانی، مالیات و روش بهایابی موجودی.
+* گزارش فروش و خرید و نمودارهای مالی.
+* خروجی پشتیبان از اطلاعات کسب‌وکار با رعایت جداسازی داده‌های محرمانه.
+* نمایش پیام‌های خطا و راهنمای عملیات به زبان فارسی.
 
-The Android dashboard includes a direct link to the introduction page. The web accounting page remains a separate full-screen workspace.
+== حساب مشترک ==
+برای مشاهده اطلاعات یکسان، در برنامه اندروید و نسخه وب با همان ایمیل وارد شوید و همان کسب‌وکار را انتخاب کنید. سوابقی که در هر دو نسخه به یک شناسه مشترک متصل شده‌اند، فقط یک بار در فهرست اصلی نمایش داده می‌شوند.
 
-== Shared account ==
-Users sign in or register with Supabase Auth. They must use the same email and password as the Android application. Business membership and business records are read from the shared Factoori database.
+== امنیت ==
+افزونه فقط از کلید عمومی اتصال در مرورگر استفاده می‌کند. کلید محرمانه مدیریتی نباید در تنظیمات یا کد قابل مشاهده کاربران قرار گیرد. دسترسی به اطلاعات کسب‌وکار با مجوزهای حساب و کنترل دسترسی پایگاه داده محدود می‌شود.
 
-== Current web features ==
-* Shared email/password sign-in and sign-up.
-* Business creation and business switching.
-* Management dashboard with sales, purchases, receipts, payments, pending cheques, low-stock indicators, estimated financial-account balances and current stock quantities.
-* Contact/customer/supplier creation, editing and safe archive (historical documents and balances are retained), per-contact financial profile, shared contact-ledger balances, customer receivables and supplier payables.
-* Product creation, editing and safe archive (stock movements and invoice history are retained), with unit cost, sale price, live gross-margin preview, product categories and optional initial warehouse quantity posted through the FIFO opening-stock RPC; cost values are served only to members with the sensitive catalog.cost.read permission.
-* Multi-line sales and purchase invoice draft creation for goods and services, invoice detail pages with item-level information, editing drafts while preserving their document number and identity, safe draft archiving without physical deletion, and printable invoice / browser PDF output. Print layouts support modern, classic and minimal styles with configurable HTTPS logo, signature and footer.
-* Bidirectional customer, supplier, product cost and category sync with the Android legacy sync stream; cost fields remain in the private sync payload and are permission-filtered in web reads.
-* Web-created goods-sale drafts are mirrored into the Android invoice stream; Android-origin invoice records are visible in the web invoice list.
-* Posting supported goods-sale and purchase drafts through validated database RPCs.
-* Shared financial transaction entry for customer receipts, supplier payments, expenses, other income and account-to-account transfers.
-* Dedicated expense/other-income register and supplier ledger with approximate purchase/payment balances.
-* Cheque register with deposit, settlement, bounce, cancellation, return and audited settlement-reversal actions plus event history.
-* Shared due-date register for receivables, payables and cheques, with settle/cancel actions and legacy Android synchronization.
-* Fiscal-period creation, overlap prevention, guarded close/reopen and Android legacy synchronization.
-* Inventory balances from the complete movement history, FIFO stock transfers, opening stock and wastage posting.
-* Validated sales and purchase returns from original posted goods invoices, including stock, FIFO and ledger effects.
-* Read-only legacy data preview and guarded import of supported customers, suppliers, products, services, warehouses, fiscal periods, sales/service invoice drafts, purchase drafts, cash receipts, pending cheques, supplier payments, expenses and other income.
-* Web-origin financial, account-transfer and inventory operations mirrored to the Android sync collections.
-* Shared service catalog management and service-sale invoice drafts with Android `serviceInv` synchronization.
-* Web purchase invoice lines are mirrored to Android `purchases`; unit cost remains in the private sync payload partition.
-* Six-month sales/purchase report with responsive charts and monthly comparison, including legacy Android sales history where available; dashboard adds six-month sales, purchases, receipts and payments visualization.
-* Editable business settings for currency, timezone, Jalali calendar, costing/tax policy and negative-stock rules, with safeguards against changing currency or costing after posted activity.
-* Permission-gated team member listing, role changes and suspend/reactivate controls; inviting a new member is not yet available in the web workspace.
-* Secure JSON business backup export, including normalized records and public Android sync records; private sync payloads and secret settings are excluded.
-* Create financial accounts with automatic chart-of-accounts mapping and create warehouses; both publish compatible master records for Android sync. Existing legacy app accounts can be adopted into normalized web accounts with conflict detection. Opening balances are deliberately not auto-imported.
-* Persian (Jalali) calendar display and date entry across invoice, financial, cheque, inventory and report screens; dates are converted to Gregorian ISO before database writes.
-* Responsive full-screen desktop and mobile interface with refreshed dashboard, cards, tables, compact five-item mobile navigation with an expandable menu, touch-friendly forms and financial charts.
-* Invoice composer includes selectable visual styles and accent colors for print/PDF. The selected print appearance is saved locally in the browser.
-* Optional mobile-app download link configured in Settings > Factoori Web and displayed in the workspace navigation.
-* Optional prominent professional-upgrade link.
-
-== Security ==
-The plugin uses only the Supabase Publishable key in the browser. Never enter a service_role or secret key. Row Level Security and permission-checked database functions enforce business access. Invoice creation and posting are performed by database RPCs; the plugin does not write journal or stock records directly.
-
-== Notes ==
-This is the first web workspace release. Customer, supplier and product records are bridged bidirectionally between the normalized web tables and the Android sync stream. Goods-sale drafts created on the web are mirrored into Android; mobile-origin invoice records are listed on the web but must pass the owner-controlled normalized import/reconciliation workflow before web posting. Cleared/returned legacy cheques, account transfers, opening balances and invoice allocations remain visible as deferred legacy records until their mappings and event dates can be reconciled safely; new web financial transactions, cheques and stock movements are mirrored to Android.
+== نکته درباره ویرایش و حذف فاکتور ==
+فاکتورهای قدیمی واردشده از برنامه که هنوز سند حسابداری، پرداخت یا گردش انبار وابسته ندارند، قابل ویرایش و بایگانی هستند. فاکتورهایی که اثر مالی یا انبارداری ثبت‌شده دارند، تا زمان پیاده‌سازی کامل سند اصلاحی و برگشت حسابداری، به‌صورت محافظت‌شده باقی می‌مانند تا مانده‌ها و موجودی اشتباه نشوند.
