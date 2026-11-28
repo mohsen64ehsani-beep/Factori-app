@@ -1024,27 +1024,38 @@ document.addEventListener('change',e=>{const t=e.target,d=t.dataset;if(t.hasAttr
  else if(d.j){if(demoMode){denyDemo();return}const[y,m,dd]=[...t.parentNode.querySelectorAll('select')].map(s=>+s.value),mx=m<7?31:m<12?30:29,g=j2g(y,m,Math.min(dd,mx));D[d.j]=g[0]+'-'+String(g[1]).padStart(2,'0')+'-'+String(g[2]).padStart(2,'0');if(dd>mx)render()}
  else if(d.f){if(demoMode){denyDemo();return}D[d.f]=t.value;if(d.f=='kind'||d.f=='costMode'||d.f=='method'||d.f=='chequeSource'){if($('ov')?.classList.contains('on')&&v.advId)showAdvForm();else render()}}else if(Object.prototype.hasOwnProperty.call(d,'chequeImage')){readChequeImage(t);t.value=''}else if(d.img){img(t,d.img);t.value=''}else if(d.d=='cu')render()});
 ;initCloudSession();
+function trialLicenseBanner(){
+ const x=currentLicenseEntitlement;
+ if(x?.license_type!=='trial_24h'||!x.expires_at)return '';
+ const ms=Math.max(0,Date.parse(x.expires_at)-Date.now()),hh=Math.floor(ms/3600000),mm=Math.floor((ms%3600000)/60000);
+ return '<div class="free-quota" style="border-color:#d6a64b"><div><b>دسترسی آزمایشی نسخه حرفه‌ای</b><small>این لایسنس فقط برای تست است و در '+fa(hh)+' ساعت و '+fa(mm)+' دقیقه آینده منقضی می‌شود.</small></div><strong>'+new Date(x.expires_at).toLocaleString('fa-IR')+'</strong></div>';
+}
+function showTrialActivationNotice(info){
+ const expiry=info?.expires_at?new Date(info.expires_at).toLocaleString('fa-IR'):'۲۴ ساعت پس از صدور';
+ $('ov').innerHTML='<div class="c" style="max-width:520px;margin:12vh auto;text-align:center"><div style="font-size:38px">⏱️</div><h2>لایسنس آزمایشی فعال شد</h2><p>دسترسی آزمایشی نسخه حرفه‌ای فاکتوری برای شما فعال شد. این لایسنس صرفاً جهت تست است و پس از ۲۴ ساعت به‌صورت خودکار منقضی می‌شود.</p><div class="page-note">زمان پایان اعتبار: <b>'+expiry+'</b></div><p>پس از پایان مهلت، برای ادامه استفاده از امکانات حرفه‌ای باید لایسنس دائمی تهیه کنید.</p><button class="b w100" data-a="cls">متوجه شدم</button></div>';
+ $('ov').className='on';
+}
 async function refreshLicenseStatus(shouldRender=true){
  const api=window.FactoriLicenseApi;
  let active=false;
  if(cloudSession?.user?.id||accountLicenseMode){
-  // Once an account has been used on this installation, never fall back to a
-  // handset token. The selected business entitlement is the only Premium source.
+  currentLicenseEntitlement=null;
   if(cloudSession?.user?.id&&cloudSchemaReady&&cloudActiveBusinessId&&window.FactooriCloud?.getEntitlements){
    try{
-    const entitlement=await Promise.race([
-     window.FactooriCloud.getEntitlements(cloudActiveBusinessId),
-     new Promise(resolve=>setTimeout(()=>resolve(null),12000))
-    ]);
-    active=entitlement?.is_premium===true&&entitlement?.plan_status==='premium';
-   }catch(e){console.warn('[Factori account entitlement]',e);active=false}
+    const entitlement=await Promise.race([window.FactooriCloud.getEntitlements(cloudActiveBusinessId),new Promise(resolve=>setTimeout(()=>resolve(null),12000))]);
+    currentLicenseEntitlement=entitlement||null;
+    const validPlan=entitlement?.plan_status==='premium'||entitlement?.plan_status==='trial';
+    const notExpired=!entitlement?.expires_at||Date.parse(entitlement.expires_at)>Date.now();
+    active=entitlement?.is_premium===true&&validPlan&&notExpired;
+   }catch(e){console.warn('[Factori account entitlement]',e);active=false;currentLicenseEntitlement=null}
   }
  }else if(api&&typeof api.isLicensed==='function'){
-  try{active=!!await Promise.race([api.isLicensed(),new Promise(resolve=>setTimeout(()=>resolve(false),12000))])}
-  catch(e){console.warn('[Factori legacy device license status]',e)}
+  try{
+   active=!!await Promise.race([api.isLicensed(),new Promise(resolve=>setTimeout(()=>resolve(false),12000))]);
+   currentLicenseEntitlement=active&&api.getLicenseInfo?await api.getLicenseInfo():null;
+  }catch(e){console.warn('[Factori legacy device license status]',e);currentLicenseEntitlement=null}
  }
- const changed=licenseActive!==active;
- licenseActive=active;
+ const changed=licenseActive!==active;licenseActive=active;
  if(changed&&shouldRender&&!lock&&!demoMode)render();
  return active;
 }
