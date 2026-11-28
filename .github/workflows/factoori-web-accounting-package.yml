@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - work/factoori-web-fixes-0.2.3
+      - release/factoori-v1.2.61-from-v58
     paths:
       - 'wordpress-plugin/factoori-web-accounting/**'
       - '.github/workflows/factoori-web-accounting-package.yml'
@@ -20,12 +21,12 @@ jobs:
         run: |
           mkdir -p dist
           cd wordpress-plugin
-          zip -r ../dist/factoori-web-accounting-0.2.6.zip factoori-web-accounting
+          zip -r ../dist/factoori-web-accounting-0.2.7.zip factoori-web-accounting
       - name: Verify ZIP
         run: unzip -t dist/factoori-web-accounting-0.2.6.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: factoori-web-accounting-0.2.6
+          name: factoori-web-accounting-0.2.7
           path: dist/factoori-web-accounting-0.2.6.zip
           if-no-files-found: error
           retention-days: 30
