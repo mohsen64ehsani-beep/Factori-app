@@ -903,7 +903,12 @@ licensecheck:async()=>{
    unused:'لایسنس هنوز قابل فعال‌سازی نیست؛ وضعیت آن را در پنل بررسی کنید.',
    active:'این لایسنس قبلاً فعال شده است.'
   };
-  const message=friendly[reason]||reason||'فعال‌سازی ناموفق بود.';
+  const message= friendly[reason]
+   || (reason.includes('License email does not match')?'این کد لایسنس برای ایمیل دیگری صادر شده است؛ با همان ایمیل ثبت‌نامی وارد شوید.'
+   : reason.includes('License has expired')?'مهلت لایسنس آزمایشی به پایان رسیده است؛ برای ادامه، لایسنس دائمی تهیه کنید.'
+   : reason.includes('already has an active license')?'برای این کسب‌وکار یک لایسنس فعال ثبت شده است؛ ابتدا وضعیت لایسنس فعلی را بررسی کنید.'
+   : reason.includes('already claimed')?'این کد قبلاً به حساب یا کسب‌وکار دیگری متصل شده است.'
+   : reason) || 'فعال‌سازی ناموفق بود.';
   if(status){status.style.color='var(--dg)';status.textContent='خطا: '+message}
   console.error('[Factori activation UI]',error);
  }finally{
