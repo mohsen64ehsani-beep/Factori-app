@@ -218,6 +218,7 @@ const K='db:v2';
 let cloudSession=null,cloudBusinesses=[],cloudActiveBusinessId='',cloudSchemaReady=false;
 let currentLicenseEntitlement=null;
 let licenseExpiryTimer=null;
+let licenseCountdownInterval=null;
 let accountLicenseMode=false;
 try{accountLicenseMode=localStorage.getItem('factoori:account-license-mode')==='1'}catch(e){}
 function markAccountLicenseMode(){accountLicenseMode=true;try{localStorage.setItem('factoori:account-license-mode','1')}catch(e){}}
@@ -1025,11 +1026,20 @@ document.addEventListener('change',e=>{const t=e.target,d=t.dataset;if(t.hasAttr
  else if(d.j){if(demoMode){denyDemo();return}const[y,m,dd]=[...t.parentNode.querySelectorAll('select')].map(s=>+s.value),mx=m<7?31:m<12?30:29,g=j2g(y,m,Math.min(dd,mx));D[d.j]=g[0]+'-'+String(g[1]).padStart(2,'0')+'-'+String(g[2]).padStart(2,'0');if(dd>mx)render()}
  else if(d.f){if(demoMode){denyDemo();return}D[d.f]=t.value;if(d.f=='kind'||d.f=='costMode'||d.f=='method'||d.f=='chequeSource'){if($('ov')?.classList.contains('on')&&v.advId)showAdvForm();else render()}}else if(Object.prototype.hasOwnProperty.call(d,'chequeImage')){readChequeImage(t);t.value=''}else if(d.img){img(t,d.img);t.value=''}else if(d.d=='cu')render()});
 ;initCloudSession();
+function trialRemainingText(expiresAt){
+ const ms=Math.max(0,Date.parse(expiresAt)-Date.now());
+ const hh=Math.floor(ms/3600000),mm=Math.floor((ms%3600000)/60000),ss=Math.floor((ms%60000)/1000);
+ return 'این لایسنس فقط برای تست است؛ زمان باقی‌مانده: '+fa(hh)+' ساعت، '+fa(mm)+' دقیقه و '+fa(ss)+' ثانیه.';
+}
 function trialLicenseBanner(){
  const x=currentLicenseEntitlement;
  if(x?.license_type!=='trial_24h'||!x.expires_at)return '';
- const ms=Math.max(0,Date.parse(x.expires_at)-Date.now()),hh=Math.floor(ms/3600000),mm=Math.floor((ms%3600000)/60000);
- return '<div class="free-quota" style="border-color:#d6a64b"><div><b>دسترسی آزمایشی نسخه حرفه‌ای</b><small>این لایسنس فقط برای تست است و در '+fa(hh)+' ساعت و '+fa(mm)+' دقیقه آینده منقضی می‌شود.</small></div><strong>'+new Date(x.expires_at).toLocaleString('fa-IR')+'</strong></div>';
+ return '<div class="free-quota" style="border-color:#d6a64b"><div><b>دسترسی آزمایشی نسخه حرفه‌ای</b><small id="trialLicenseRemaining">'+trialRemainingText(x.expires_at)+'</small></div><strong>'+new Date(x.expires_at).toLocaleString('fa-IR')+'</strong></div>';
+}
+function updateTrialCountdown(){
+ const x=currentLicenseEntitlement,el=$('trialLicenseRemaining');
+ if(!el||x?.license_type!=='trial_24h'||!x.expires_at)return;
+ el.textContent=trialRemainingText(x.expires_at);
 }
 function showTrialActivationNotice(info){
  const expiry=info?.expires_at?new Date(info.expires_at).toLocaleString('fa-IR'):'۲۴ ساعت پس از صدور';
@@ -1057,8 +1067,11 @@ async function refreshLicenseStatus(shouldRender=true){
   }catch(e){console.warn('[Factori legacy device license status]',e);currentLicenseEntitlement=null}
  }
  if(licenseExpiryTimer){clearTimeout(licenseExpiryTimer);licenseExpiryTimer=null;}
- if(active&&currentLicenseEntitlement?.expires_at){
+ if(licenseCountdownInterval){clearInterval(licenseCountdownInterval);licenseCountdownInterval=null;}
+ if(active&&currentLicenseEntitlement?.license_type==='trial_24h'&&currentLicenseEntitlement?.expires_at){
   const delay=Math.max(0,Date.parse(currentLicenseEntitlement.expires_at)-Date.now());
+  updateTrialCountdown();
+  licenseCountdownInterval=setInterval(updateTrialCountdown,1000);
   licenseExpiryTimer=setTimeout(async()=>{const stillActive=await refreshLicenseStatus(true);if(!stillActive)toast('مهلت لایسنس آزمایشی به پایان رسید؛ برای ادامه استفاده، لایسنس دائمی تهیه کنید.')},Math.min(delay+1200,2147483000));
  }
  const changed=licenseActive!==active;licenseActive=active;
