@@ -133,6 +133,21 @@ async function isLicensed() {
   }
 }
 
+async function getLicenseInfo() {
+  try {
+    await native();
+    const device = await LicenseManager.getPublicKey();
+    const stored = await LicenseManager.getToken();
+    if (!stored?.token || !await verifyToken(stored.token, device.thumbprint)) return null;
+    const claims = JSON.parse(new TextDecoder().decode(b64u(stored.token.split('.')[1])));
+    return {
+      license_type: claims.license_type || (claims.permanent ? 'permanent' : 'trial_24h'),
+      plan_status: claims.permanent ? 'premium' : 'trial',
+      expires_at: claims.exp ? new Date(claims.exp * 1000).toISOString() : null
+    };
+  } catch { return null; }
+}
+
 async function activate(licenseKey, onProgress, email = '') {
   let stage = 'آماده‌سازی افزونه اندروید';
   const progress = value => { stage = value; try { onProgress?.(value); } catch {} };
@@ -330,5 +345,5 @@ async function sendFarazPattern({ settings, recipient, patternCode, params }) {
   return data;
 }
 
-window.FactoriLicenseApi = { isLicensed, activate, getLicenseAuthToken, getSmsSettings, saveSmsSettings, clearSmsSettings, getFarazPatternDetails, sendFarazPattern, exitApp: () => LicenseManager.exitApp() };
+window.FactoriLicenseApi = { isLicensed, getLicenseInfo, activate, getLicenseAuthToken, getSmsSettings, saveSmsSettings, clearSmsSettings, getFarazPatternDetails, sendFarazPattern, exitApp: () => LicenseManager.exitApp() };
 window.dispatchEvent(new Event('factori-license-ready'));
