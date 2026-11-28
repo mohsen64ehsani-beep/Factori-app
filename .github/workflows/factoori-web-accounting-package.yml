@@ -17,6 +17,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate plugin PHP
         run: php -l wordpress-plugin/factoori-web-accounting/factoori-web-accounting.php
+      - name: Validate web application JavaScript
+        run: node --check wordpress-plugin/factoori-web-accounting/assets/app.js
       - name: Build installable ZIP
         run: |
           mkdir -p dist
