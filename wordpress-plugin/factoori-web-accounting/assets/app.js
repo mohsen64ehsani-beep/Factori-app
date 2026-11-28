@@ -32,6 +32,25 @@
   const getStored = () => { try { return JSON.parse(localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey) || 'null'); } catch (_) { return null; } };
   const saveSession = s => { state.session=s; try { if(s){localStorage.setItem(storageKey,JSON.stringify(s));sessionStorage.setItem(storageKey,JSON.stringify(s));}else{localStorage.removeItem(storageKey);sessionStorage.removeItem(storageKey);} } catch (_) {} };
   async function bridgeWordPressSession(session){if(!session?.access_token)return;try{await fetch('/wp-json/factoori-auth/v1/session',{method:'POST',credentials:'same-origin',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'}});}catch(_){} }
+  const friendlyError = message => {
+    const raw=String(message||'').trim();
+    const known=[
+      [/Authentication required/i,'نشست ورود شما معتبر نیست؛ دوباره وارد حساب شوید.'],
+      [/permission denied|not permitted|permission.*denied/i,'برای انجام این عملیات دسترسی کافی ندارید.'],
+      [/document not found|sales document not found|service document not found/i,'فاکتور موردنظر پیدا نشد یا دیگر در دسترس نیست.'],
+      [/only a draft .*can be edited/i,'ویرایش این فاکتور در وضعیت فعلی امکان‌پذیر نیست.'],
+      [/only a draft .*can be archived/i,'بایگانی فقط برای پیش‌نویس امکان‌پذیر است.'],
+      [/goods sale requires a customer and source warehouse/i,'برای فاکتور فروش کالا، انتخاب مشتری و انبار مبدأ الزامی است.'],
+      [/insufficient fifo stock layers/i,'موجودی کافی در انبار انتخاب‌شده وجود ندارد.'],
+      [/fiscal period is closed|outside the period/i,'دوره مالی بسته است یا تاریخ فاکتور خارج از بازه آن قرار دارد.'],
+      [/duplicate key|already exists/i,'این اطلاعات قبلاً ثبت شده‌اند و امکان ثبت دوباره آن‌ها وجود ندارد.'],
+      [/networkerror|failed to fetch|load failed/i,'ارتباط با سامانه برقرار نشد؛ اتصال اینترنت را بررسی و دوباره تلاش کنید.'],
+      [/jwt expired|invalid jwt|token.*expired/i,'نشست شما منقضی شده است؛ دوباره وارد حساب شوید.']
+    ];
+    for(const [pattern,label] of known)if(pattern.test(raw))return label;
+    if(/[A-Za-z]{3}/.test(raw))return 'انجام عملیات با خطا روبه‌رو شد. اطلاعات واردشده و دسترسی حساب را بررسی کنید؛ در صورت تکرار، با پشتیبانی تماس بگیرید.';
+    return raw||'انجام عملیات با خطا روبه‌رو شد.';
+  };
   const toast = message => { let el=document.querySelector('.fw-toast'); if(!el){el=document.createElement('div');el.className='fw-toast';document.body.appendChild(el);} el.textContent=message; el.hidden=false; clearTimeout(el._t); el._t=setTimeout(()=>el.remove(),3600); };
   async function request(path, options={}, retry=true) {
     if (!base || !key) throw new Error('تنظیمات اتصال به پایگاه داده کامل نیست.');
@@ -43,7 +62,7 @@
       if(refreshed.ok){const s=await refreshed.json();saveSession(s);return request(path,options,false);}
     }
     const raw=await response.text(); let data=null; try{data=raw?JSON.parse(raw):null;}catch(_){data=raw;}
-    if(!response.ok){const msg=data?.msg||data?.message||data?.error_description||data?.error||('HTTP '+response.status);throw new Error(typeof msg==='string'?msg:JSON.stringify(msg));}
+    if(!response.ok){const msg=data?.msg||data?.message||data?.error_description||data?.error||('HTTP '+response.status);throw new Error(friendlyError(typeof msg==='string'?msg:JSON.stringify(msg)));}
     return data;
   }
   const rest = (table, query='') => request('/rest/v1/'+table+(query?'?'+query:''),{method:'GET'});
@@ -278,7 +297,7 @@
   }
   function invoices(){
     const rows=[...state.documents,...state.legacyDocuments].sort((a,b)=>String(b.created_at||b.document_date).localeCompare(String(a.created_at||a.document_date))).map(d=>'<tr><td>'+esc(d.document_number||'—')+'</td><td>'+({goods_sale:'فروش کالا',service_sale:'فروش خدمات',purchase:'خرید کالا',service_purchase:'خرید خدمات'}[d.document_type]||esc(d.document_type))+'</td><td>'+dateFa(d.document_date)+'</td><td>'+money(d.total_amount)+'</td><td><span class="fw-badge '+(d.legacy_source||d.status==='posted'?'green':'gray')+'">'+(d.legacy_source?'همگام از اپ':d.status==='posted'?'ثبت نهایی':d.status==='voided'?'باطل / بایگانی‌شده':'پیش‌نویس')+'</span></td><td>'+(d.legacy_source?'':'<button class="fw-link" data-action="invoice-detail" data-id="'+esc(d.id)+'">مشاهده</button> ')+'<button class="fw-link" data-action="print-invoice" data-id="'+esc(d.id)+'" data-legacy="'+(d.legacy_source?'1':'0')+'">چاپ / PDF</button> '+(d.legacy_source?'از اپلیکیشن':d.status==='draft'?'<button class="fw-link" data-action="post-invoice" data-id="'+esc(d.id)+'">ثبت نهایی</button> <button class="fw-link" data-action="archive-invoice" data-id="'+esc(d.id)+'">بایگانی</button>':'—')+'</td></tr>');
-    const legacyHistory=['serviceInv','purchases','returns'].flatMap(k=>(state.legacyCollections[k]||[]).map(r=>({collection:k,...r}))).sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))).slice(0,40);
+    const legacyHistory=['serviceInv','purchases','returns'].flatMap(k=>(state.legacyCollections[k]||[]).filter(r=>!r.normalized_id).map(r=>({collection:k,...r}))).sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))).slice(0,40);
     const legacyHistoryRows=legacyHistory.map(r=>'<tr><td>'+esc(({serviceInv:'فاکتور خدمات اپ',purchases:'خریدهای اپ',returns:'مرجوعی‌های اپ'}[r.collection]||r.collection))+'</td><td>'+esc(r.legacy_id)+'</td><td>'+dateFa(r.payload?.dt||r.updated_at?.slice(0,10))+'</td><td>'+money(r.payload?.total||r.payload?.amount||r.payload?.amt||0)+'</td><td><details><summary>جزئیات</summary><pre>'+esc(JSON.stringify(r.payload||{},null,2))+'</pre></details></td></tr>');
     const customers=state.contacts;
     const products=state.products;
@@ -300,7 +319,7 @@
     const transferRows=state.accountTransfers.map(t=>'<tr><td>'+dateFa(t.transfer_date)+'</td><td>'+esc(state.accounts.find(a=>a.id===t.from_account_id)?.name||'—')+'</td><td>'+esc(state.accounts.find(a=>a.id===t.to_account_id)?.name||'—')+'</td><td>'+money(t.amount)+'</td><td>'+esc(t.note||'—')+'</td></tr>');
     const transferForm='<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>انتقال بین صندوق و حساب‌ها</h2><p>ثبت انتقال با سند حسابداری و همگام‌سازی با اپلیکیشن</p></div></div><form data-form="account-transfer"><div class="fw-form-grid"><div class="fw-field"><label>از حساب</label><select name="from_account_id" required><option value="">انتخاب حساب مبدأ</option>'+accountOptions+'</select></div><div class="fw-field"><label>به حساب</label><select name="to_account_id" required><option value="">انتخاب حساب مقصد</option>'+accountOptions+'</select></div><div class="fw-field"><label>مبلغ ('+currencyLabel()+')</label><input name="amount" type="number" min="1" step="1" required></div><div class="fw-field"><label>تاریخ</label><input name="transfer_date" type="date" value="'+today()+'" required></div><div class="fw-field wide"><label>شرح</label><input name="note" maxlength="500"></div></div><button class="fw-btn" type="submit">ثبت انتقال وجه</button></form></section><section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>انتقال‌های ثبت‌شده</h2><p>'+money(state.accountTransfers.length)+' انتقال</p></div></div>'+table(transferRows,['تاریخ','از حساب','به حساب','مبلغ','شرح'],'انتقالی ثبت نشده است.')+'</section>';
     const legacyNames=['pay','debt','creditors','creditorPayments','supplierPayments','expenses','otherincome','moneytransfers'];
-    const legacy=legacyNames.flatMap(k=>(state.legacyCollections[k]||[]).map(r=>({collection:k,...r}))).sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))).slice(0,30);
+    const legacy=legacyNames.flatMap(k=>(state.legacyCollections[k]||[]).filter(r=>!r.normalized_id).map(r=>({collection:k,...r}))).sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))).slice(0,30);
     const legacyRows=legacy.map(r=>'<tr><td>'+esc(({pay:'دریافت‌های اپ',debt:'سوابق بدهی و طلب اپ',creditors:'دفتر بستانکاران قدیمی اپ',creditorPayments:'پرداخت بستانکاران',supplierPayments:'پرداخت تأمین‌کننده',expenses:'هزینه‌های اپ',otherincome:'درآمد متفرقه',moneytransfers:'انتقال وجه'}[r.collection]||r.collection))+'</td><td>'+esc(r.legacy_id)+'</td><td>'+dateFa(r.payload?.dt||r.updated_at?.slice(0,10))+'</td><td>'+money(r.payload?.amt||r.payload?.amount||r.payload?.price||r.payload?.total||r.payload?.balance||0)+'</td><td><details><summary>جزئیات</summary><pre>'+esc(JSON.stringify(r.payload||{},null,2))+'</pre></details></td></tr>');
     const form='<section class="fw-card"><div class="fw-section-head"><div><h2>ثبت دریافت یا پرداخت</h2><p>ثبت مستقیم در دفتر مالی و حسابداری مشترک</p></div></div><form data-form="finance"><div class="fw-form-grid"><div class="fw-field"><label>نوع عملیات</label><select name="transaction_type"><option value="customer_receipt">دریافت از مشتری</option><option value="supplier_payment">پرداخت به تأمین‌کننده</option><option value="expense_payment">پرداخت هزینه</option><option value="other_income">درآمد متفرقه</option></select></div><div class="fw-field"><label>شخص مرتبط</label><select name="contact_id"><option value="">بدون شخص</option>'+customerOptions+supplierOptions+'</select></div><div class="fw-field"><label>صندوق / حساب بانکی</label><select name="account_id" required><option value="">انتخاب حساب</option>'+accountOptions+'</select></div><div class="fw-field"><label>مبلغ ('+currencyLabel()+')</label><input name="amount" type="number" min="1" step="1" required></div><div class="fw-field"><label>تاریخ</label><input name="transaction_date" type="date" value="'+today()+'" required></div><div class="fw-field"><label>شماره پیگیری</label><input name="reference_number" maxlength="120"></div><div class="fw-field wide"><label>شرح</label><input name="description" maxlength="500"></div></div><button class="fw-btn" type="submit">ثبت عملیات مالی</button></form></section>';
     shell(form+transferForm+'<section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>گردش مالی ثبت‌شده</h2><p>'+money(state.transactions.length)+' تراکنش</p></div></div>'+table(rows,['تاریخ','نوع','شخص','حساب','مبلغ ('+currencyLabel()+')','وضعیت'],'تراکنش مالی ثبت‌شده‌ای وجود ندارد.')+'</section><section class="fw-card" style="margin-top:16px"><div class="fw-section-head"><div><h2>سوابق مالی همگام‌شده از اپ</h2><p>سوابق قدیمی اپ بدون تغییر در دفتر اصلی نمایش داده می‌شوند</p></div></div>'+table(legacyRows,['مجموعه','شناسه','تاریخ','مبلغ تقریبی','داده خام'],'رکورد قدیمی برای نمایش موجود نیست.')+'</section>','دریافت و پرداخت','ثبت تراکنش و مشاهده سوابق مالی دو نسخه');
@@ -319,7 +338,7 @@
   }
   function cheques(){
     const rows=state.cheques.map(q=>{const options=q.cheque_direction==='received'?(q.status==='pending'?['deposited','cleared','bounced','cancelled','returned']:q.status==='deposited'?['cleared','bounced','cancelled','returned']:[]):(q.status==='pending'?['cleared','bounced','cancelled']:[]);const actions=options.map(status=>'<button class="fw-link" data-action="cheque-status" data-id="'+esc(q.id)+'" data-status="'+status+'">'+({deposited:'واگذاری',cleared:'تسویه',bounced:'برگشتی',cancelled:'لغو',returned:'عودت'}[status])+'</button>').join(' ')+(q.status==='cleared'?'<button class="fw-link" data-action="cheque-reverse" data-id="'+esc(q.id)+'">برگشت تسویه</button>':'');return '<tr><td>'+esc(q.cheque_number)+'</td><td>'+esc(q.cheque_direction==='received'?'دریافتی':'پرداختی')+'</td><td>'+esc(q.contacts?.name||'—')+'</td><td>'+dateFa(q.due_date)+'</td><td>'+money(q.amount)+'</td><td>'+esc(({pending:'در انتظار',deposited:'واگذار شده',cleared:'وصول شده',bounced:'برگشتی',cancelled:'لغو شده',returned:'عودت شده'}[q.status]||q.status))+'</td><td>'+actions+'</td></tr>';});
-    const legacyCheques=(state.legacyCollections.pay||[]).filter(r=>r.payload?.kind==='cheque').map(r=>'<tr><td>'+esc(r.payload?.no||r.legacy_id)+'</td><td>دریافتی قدیمی اپ</td><td>'+esc(state.contacts.find(x=>x.legacy_id===r.payload?.cid)?.name||r.payload?.cid||'—')+'</td><td>'+dateFa(r.payload?.cdt)+'</td><td>'+money(r.payload?.amt)+'</td><td>'+esc(({pending:'در انتظار',received:'وصول شده',returned:'برگشتی'}[r.payload?.status]||r.payload?.status||'—'))+'</td><td><span class="fw-sub">سوابق قدیمی · فقط‌خواندنی</span></td></tr>');
+    const legacyCheques=(state.legacyCollections.pay||[]).filter(r=>!r.normalized_id&&r.payload?.kind==='cheque').map(r=>'<tr><td>'+esc(r.payload?.no||r.legacy_id)+'</td><td>دریافتی قدیمی اپ</td><td>'+esc(state.contacts.find(x=>x.legacy_id===r.payload?.cid)?.name||r.payload?.cid||'—')+'</td><td>'+dateFa(r.payload?.cdt)+'</td><td>'+money(r.payload?.amt)+'</td><td>'+esc(({pending:'در انتظار',received:'وصول شده',returned:'برگشتی'}[r.payload?.status]||r.payload?.status||'—'))+'</td><td><span class="fw-sub">سوابق قدیمی · فقط‌خواندنی</span></td></tr>');
     const people=state.contacts.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
     const accounts=state.accounts.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
     const eventRows=state.chequeEvents.map(ev=>{const q=state.cheques.find(x=>x.id===ev.cheque_id);return '<tr><td>'+esc(q?.cheque_number||'—')+'</td><td>'+dateFa(ev.event_date?.slice(0,10))+'</td><td>'+esc(({deposited:'واگذاری',cleared:'تسویه',bounced:'برگشتی',cancelled:'لغو',returned:'عودت',reversed:'برگشت تسویه'}[ev.event_type]||ev.event_type))+'</td><td>'+money(ev.amount)+'</td><td>'+esc(ev.note||'—')+'</td></tr>';});
@@ -329,7 +348,7 @@
   function inventory(){
     const rows=state.inventoryBalances.map(x=>'<tr><td>'+esc(x.product_name)+'</td><td>'+esc(x.warehouse_name)+'</td><td>'+money(x.quantity)+'</td></tr>');
     const moves=state.stockMovements.slice(0,40).map(m=>'<tr><td>'+dateFa(m.movement_date?.slice(0,10))+'</td><td>'+esc(m.products?.name||'—')+'</td><td>'+esc(m.warehouses?.name||'—')+'</td><td>'+esc(m.movement_type)+'</td><td>'+money(m.quantity_delta)+'</td></tr>');
-    const legacyStock=['stockMoves','wastage','transfers','opening','warehouseStocks','warehouses'].flatMap(k=>(state.legacyCollections[k]||[]).map(r=>({collection:k,...r}))).sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))).slice(0,40);
+    const legacyStock=['stockMoves','wastage','transfers','opening','warehouseStocks','warehouses'].flatMap(k=>(state.legacyCollections[k]||[]).filter(r=>!r.normalized_id).map(r=>({collection:k,...r}))).sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))).slice(0,40);
     const legacyStockRows=legacyStock.map(r=>'<tr><td>'+esc(({stockMoves:'گردش کالا',wastage:'ضایعات',transfers:'انتقال انبار',opening:'موجودی اول دوره',warehouseStocks:'مانده انبار'}[r.collection]||r.collection))+'</td><td>'+esc(r.legacy_id)+'</td><td>'+dateFa(r.payload?.dt||r.updated_at?.slice(0,10))+'</td><td>'+money(r.payload?.delta||r.payload?.qty||r.payload?.quantity||0)+'</td><td><details><summary>جزئیات</summary><pre>'+esc(JSON.stringify(r.payload||{},null,2))+'</pre></details></td></tr>');
     const products=state.products.filter(x=>x.track_inventory).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
     const warehouses=state.warehouses.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
@@ -385,7 +404,7 @@
   }
   async function withBusy(fn){
     if(state.busy)return;state.busy=true;root.classList.add('fw-busy');
-    try{await fn();}catch(e){toast(e.message||'خطا در انجام عملیات');}
+    try{await fn();}catch(e){toast(friendlyError(e.message||'خطا در انجام عملیات'));}
     finally{state.busy=false;root.classList.remove('fw-busy');}
   }
   root.addEventListener('click',e=>{
