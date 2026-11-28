@@ -557,7 +557,7 @@
         await loadData();render();toast('مرجوعی با موفقیت ثبت و در حسابداری و موجودی اعمال شد.');
       } else if(kind==='invoice-edit'){
         const doc=state.documents.find(x=>x.id===data.document_id);
-        if(!doc||doc.status!=='draft')throw new Error('فقط پیش‌نویس قابل ویرایش است.');
+        if(!doc||!(doc.status==='draft'||isEditableIssued(doc)))throw new Error('این فاکتور در وضعیت فعلی قابل ویرایش نیست.');
         const isService=['service_sale','service_purchase'].includes(doc.document_type);
         const rows=Array.from(form.querySelectorAll('[data-invoice-edit-row]'));
         if(!rows.length)throw new Error('حداقل یک قلم لازم است.');
